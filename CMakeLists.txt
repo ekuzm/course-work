@@ -15,7 +15,7 @@ set(CMAKE_AUTORCC ON)
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Source file
+# Source files
 set(SOURCES
     src/main.cpp
     src/MainWindow.cpp
