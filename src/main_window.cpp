@@ -898,8 +898,9 @@ void MainWindow::editProject() {
     form->addRow("Status:", statusCombo);
 
     // Set current status
-    int statusIndex = statusCombo->findText(project->getStatus());
-    if (statusIndex >= 0) statusCombo->setCurrentIndex(statusIndex);
+    if (int statusIndex = statusCombo->findText(project->getStatus());
+        statusIndex >= 0)
+        statusCombo->setCurrentIndex(statusIndex);
 
     auto* startDate = new QDateEdit();
     startDate->setDate(project->getStartDate());
@@ -955,8 +956,8 @@ void MainWindow::editProject() {
             }
 
             // Check for duplicate name (excluding current project)
-            QString projectName = nameEdit->text().trimmed();
-            if (!checkDuplicateProjectOnEdit(projectName, projectId,
+            if (QString projectName = nameEdit->text().trimmed();
+                !checkDuplicateProjectOnEdit(projectName, projectId,
                                                companyData.currentCompany)) {
                     QMessageBox::warning(
                         this, "Duplicate Error",
@@ -1130,7 +1131,7 @@ void MainWindow::autoSave() const {
     } catch (const FileManagerException& e) {
         // Silently fail - don't interrupt user workflow
         // Could optionally log to console in debug mode
-        Q_UNUSED(e);  // Suppress unused parameter warning
+        (void)e;  // Suppress unused parameter warning
     }
 }
 
