@@ -21,6 +21,8 @@ set(SOURCES
     src/project.cpp
     src/file_manager.cpp
     src/employee_dialog_helper.cpp
+    src/company_manager.cpp
+    src/display_helper.cpp
 )
 
 set(HEADERS

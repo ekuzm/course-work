@@ -22,7 +22,9 @@
 #include <vector>
 
 #include "company.h"
+#include "company_manager.h"
 #include "consts.h"
+#include "display_helper.h"
 #include "employee_dialog_helper.h"
 #include "file_manager.h"
 
@@ -76,8 +78,6 @@ class MainWindow : public QMainWindow {
     void setupStatisticsTab();
 
     // Helper methods
-    void displayEmployees();
-    void displayProjects();
     int getSelectedEmployeeId() const;
     int getSelectedProjectId() const;
     void autoSave() const;  // Automatic save without dialog
@@ -126,20 +126,14 @@ class MainWindow : public QMainWindow {
         QPushButton* deleteBtn = nullptr;
     };
 
-    struct DataFields {
-        std::vector<Company*> companies;
-        Company* currentCompany = nullptr;
-        int currentCompanyIndex = -1;
-        int nextEmployeeId = 1;
-        int nextProjectId = 1;
-    };
+    using CompanyData = CompanyManager::CompanyData;
 
     EmployeeTabUI employeeTabUI;
     ProjectTabUI projectTabUI;
     TabWidgets tabWidgets;
     MenuBarUI menuBarUI;
     CompanyManagementUI companyManagementUI;
-    DataFields dataFields;
+    CompanyData companyData;
 };
 
 #endif  // MAINWINDOW_H
