@@ -29,7 +29,6 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
    private:
-
    public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
@@ -76,8 +75,8 @@ class MainWindow : public QMainWindow {
     // Helper methods
     void displayEmployees();
     void displayProjects();
-    int getSelectedEmployeeId();
-    int getSelectedProjectId();
+    int getSelectedEmployeeId() const;
+    int getSelectedProjectId() const;
     void autoSave();  // Automatic save without dialog
 
     // Employee dialog helper methods
@@ -104,12 +103,12 @@ class MainWindow : public QMainWindow {
         QLabel* qaBugsLabel = nullptr;
     };
 
-    EmployeeFormWidgets createEmployeeDialog(QDialog& dialog, QFormLayout* form);
+    static EmployeeFormWidgets createEmployeeDialog(QDialog& dialog,
+                                                      QFormLayout* form);
     EmployeeFormWidgets createEditEmployeeDialog(
-        QDialog& dialog, QFormLayout* form,
-        std::shared_ptr<Employee> employee);
-    void populateEmployeeFields(const EmployeeFormWidgets& widgets,
-                                std::shared_ptr<Employee> employee);
+        QDialog& dialog, QFormLayout* form, std::shared_ptr<Employee> employee);
+    static void populateEmployeeFields(const EmployeeFormWidgets& widgets,
+                                       std::shared_ptr<Employee> employee);
     bool validateEmployeeInput(const QString& name, double salary,
                                const QString& department);
     bool checkDuplicateEmployee(const QString& name);

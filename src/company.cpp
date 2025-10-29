@@ -4,6 +4,12 @@
 #include <ostream>
 #include <utility>
 
+CompanyException::CompanyException(QString msg) : message(std::move(msg)) {}
+
+const char* CompanyException::what() const noexcept {
+    return message.toLocal8Bit().constData();
+}
+
 // EmployeeContainer implementation
 void EmployeeContainer::add(std::shared_ptr<Employee> employee) {
     employees.push_back(employee);
@@ -110,7 +116,7 @@ void Company::addEmployee(std::shared_ptr<Employee> employee) {
     // Check if employee already exists
     auto existing = getEmployee(employee->getId());
     if (existing) {
-        throw std::runtime_error("Employee with this ID already exists");
+        throw CompanyException("Employee with this ID already exists");
     }
     employees.add(employee);
 }
@@ -128,7 +134,7 @@ std::vector<std::shared_ptr<Employee>> Company::getAllEmployees() const {
 void Company::addProject(const Project& project) {
     auto* existing = getProject(project.getId());
     if (existing != nullptr) {
-        throw std::runtime_error("Project with this ID already exists");
+        throw CompanyException("Project with this ID already exists");
     }
     projects.add(std::make_shared<Project>(project));
 }
@@ -205,9 +211,3 @@ Company& Company::operator+=(const Project& project) {
     return *this;
 }
 
-std::ostream& operator<<(std::ostream& outputStream, const Company& company) {
-    outputStream << company.name.toStdString() << " - "
-                 << company.industry.toStdString() << " ("
-                 << company.location.toStdString() << ")";
-    return outputStream;
-}

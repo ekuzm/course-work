@@ -2,7 +2,9 @@
 #define COMPANY_H
 
 #include <QString>
+#include <exception>
 #include <memory>
+#include <ostream>
 #include <vector>
 
 #include "derived_employees.h"
@@ -10,6 +12,15 @@
 #include "project.h"
 
 class MainWindow;
+
+class CompanyException : public std::exception {
+   private:
+    QString message;
+
+   public:
+    explicit CompanyException(QString msg);
+    const char* what() const noexcept override;
+};
 
 class EmployeeContainer {
    private:
@@ -82,8 +93,16 @@ class Company {
 
     bool operator==(const Company& otherCompany) const;
     Company& operator+=(const Project& project);
+
+    // Hidden friend
     friend std::ostream& operator<<(std::ostream& outputStream,
-                                    const Company& company);
+                                    const Company& company) {
+        outputStream << company.name.toStdString() << " - "
+                     << company.industry.toStdString() << " ("
+                     << company.location.toStdString() << ")";
+        return outputStream;
+    }
+
     friend class MainWindow;
 
     EmployeeContainer::iterator employeeBegin();

@@ -67,15 +67,10 @@ bool Employee::operator==(const Employee &otherEmployee) const {
     return id == otherEmployee.id && name == otherEmployee.name;
 }
 
-std::partial_ordering Employee::operator<=>(const Employee &otherEmployee) const {
+std::partial_ordering Employee::operator <=> (const Employee &otherEmployee) const {
     if (auto cmp = salary <=> otherEmployee.salary; cmp != 0) {
         return cmp;
     }
     return id <=> otherEmployee.id;
 }
 
-std::ostream &operator<<(std::ostream &outputStream, const Employee &employee) {
-    outputStream << employee.id << " - " << employee.name.toStdString() << " ("
-       << employee.position.toStdString() << ")";
-    return outputStream;
-}

@@ -3,14 +3,20 @@
 #include <QDate>
 #include <fstream>
 #include <memory>
+#include <utility>
 
 #include "../include/derived_employees.h"
+
+FileManagerException::FileManagerException(QString msg) : message(std::move(msg)) {}
+
+const char* FileManagerException::what() const noexcept {
+    return message.toLocal8Bit().constData();
+}
 
 void FileManager::saveToFile(Company& company, const QString& fileName) {
     std::ofstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
-        throw std::runtime_error("Cannot open file for writing: " +
-                                 fileName.toStdString());
+        throw FileManagerException("Cannot open file for writing: " + fileName);
     }
 
     saveSingleCompany(company, fileStream);
@@ -40,8 +46,7 @@ void FileManager::saveSingleCompany(Company& company,
 Company FileManager::loadFromFile(const QString& fileName) {
     std::ifstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
-        throw std::runtime_error("Cannot open file for reading: " +
-                                 fileName.toStdString());
+        throw FileManagerException("Cannot open file for reading: " + fileName);
     }
 
     Company company = loadSingleCompany(fileStream);
@@ -66,7 +71,7 @@ Company FileManager::loadSingleCompany(std::ifstream& fileStream) {
     try {
         companyFoundedYear = std::stoi(lineContent);
     } catch (const std::exception&) {
-        throw std::runtime_error("Invalid founded year format in file");
+        throw FileManagerException("Invalid founded year format in file");
     }
 
     Company company(companyName, companyIndustry, companyLocation,
@@ -146,7 +151,7 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
         try {
             employeeId = std::stoi(lineContent);
         } catch (const std::exception&) {
-            throw std::runtime_error("Invalid employee ID format in file");
+            throw FileManagerException("Invalid employee ID format in file");
         }
 
         std::getline(fileStream, lineContent);
@@ -157,7 +162,7 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
         try {
             employeeSalary = std::stod(lineContent);
         } catch (const std::exception&) {
-            throw std::runtime_error("Invalid salary format in file");
+            throw FileManagerException("Invalid salary format in file");
         }
 
         std::getline(fileStream, lineContent);
@@ -169,7 +174,7 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
             try {
                 managerTeamSize = std::stoi(lineContent);
             } catch (const std::exception&) {
-                throw std::runtime_error("Invalid team size format in file");
+                throw FileManagerException("Invalid team size format in file");
             }
             std::getline(fileStream, lineContent);
             QString managedProject = QString::fromStdString(lineContent);
@@ -185,7 +190,7 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
             try {
                 developerYearsOfExperience = std::stoi(lineContent);
             } catch (const std::exception&) {
-                throw std::runtime_error("Invalid experience format in file");
+                throw FileManagerException("Invalid experience format in file");
             }
             auto developer = std::make_shared<Developer>(
                 employeeId, employeeName, employeeSalary, employeeDepartment,
@@ -199,7 +204,7 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
             try {
                 designerNumberOfProjects = std::stoi(lineContent);
             } catch (const std::exception&) {
-                throw std::runtime_error(
+                throw FileManagerException(
                     "Invalid number of projects format in file");
             }
             auto designer = std::make_shared<Designer>(
@@ -214,7 +219,7 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
             try {
                 qaBugsFound = std::stoi(lineContent);
             } catch (const std::exception&) {
-                throw std::runtime_error("Invalid bugs found format in file");
+                throw FileManagerException("Invalid bugs found format in file");
             }
             auto qaEmployee = std::make_shared<QA>(
                 employeeId, employeeName, employeeSalary, employeeDepartment,
@@ -253,7 +258,7 @@ void FileManager::loadProjects(Company& company, std::ifstream& fileStream) {
         try {
             projectId = std::stoi(lineContent);
         } catch (const std::exception&) {
-            throw std::runtime_error("Invalid project ID format in file");
+            throw FileManagerException("Invalid project ID format in file");
         }
 
         std::getline(fileStream, lineContent);
@@ -278,7 +283,7 @@ void FileManager::loadProjects(Company& company, std::ifstream& fileStream) {
         try {
             projectBudget = std::stod(lineContent);
         } catch (const std::exception&) {
-            throw std::runtime_error("Invalid budget format in file");
+            throw FileManagerException("Invalid budget format in file");
         }
 
         std::getline(fileStream, lineContent);
@@ -295,8 +300,7 @@ void FileManager::saveCompanies(const std::vector<Company*>& companies,
                                 const QString& fileName) {
     std::ofstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
-        throw std::runtime_error("Cannot open file for writing: " +
-                                 fileName.toStdString());
+        throw FileManagerException("Cannot open file for writing: " + fileName);
     }
 
     fileStream << "[COMPANIES]\n";
@@ -315,8 +319,7 @@ void FileManager::saveCompanies(const std::vector<Company*>& companies,
 std::vector<Company*> FileManager::loadCompanies(const QString& fileName) {
     std::ifstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
-        throw std::runtime_error("Cannot open file for reading: " +
-                                 fileName.toStdString());
+        throw FileManagerException("Cannot open file for reading: " + fileName);
     }
 
     std::vector<Company*> companies;
@@ -331,7 +334,7 @@ std::vector<Company*> FileManager::loadCompanies(const QString& fileName) {
         try {
             companyCount = std::stoi(lineContent);
         } catch (const std::exception&) {
-            throw std::runtime_error("Invalid company count format in file");
+            throw FileManagerException("Invalid company count format in file");
         }
 
         for (int index = 0; index < companyCount; ++index) {

@@ -257,8 +257,9 @@ void MainWindow::setupUI() {
     // Company selector widget
     auto* companyWidget = new QWidget();
     auto* companyLayout = new QHBoxLayout(companyWidget);
-    companyLayout->setContentsMargins(kCompanyLayoutMargins, kCompanyLayoutVerticalMargins,
-                                      kCompanyLayoutMargins, kCompanyLayoutVerticalMargins);
+    companyLayout->setContentsMargins(
+        kCompanyLayoutMargins, kCompanyLayoutVerticalMargins,
+        kCompanyLayoutMargins, kCompanyLayoutVerticalMargins);
 
     auto* companyLabel = new QLabel("Current Company:");
     companySelector = new QComboBox();  // NOLINT
@@ -333,8 +334,8 @@ void MainWindow::setupEmployeeTab() {
 
     auto* mainLayout = new QVBoxLayout(employeeTab);
     mainLayout->setSpacing(kLayoutSpacing);
-    mainLayout->setContentsMargins(kLayoutMargins, kLayoutMargins, kLayoutMargins,
-                                    kLayoutMargins);
+    mainLayout->setContentsMargins(kLayoutMargins, kLayoutMargins,
+                                   kLayoutMargins, kLayoutMargins);
 
     // Search bar
     auto* searchLayout = new QHBoxLayout();
@@ -359,12 +360,13 @@ void MainWindow::setupEmployeeTab() {
     employeeTable->setAlternatingRowColors(true);
 
     // Set column widths for better visibility
-    employeeTable->setColumnWidth(0, kTableColumnWidthId);            // ID
-    employeeTable->setColumnWidth(1, kTableColumnWidthName);           // Name
-    employeeTable->setColumnWidth(2, kTableColumnWidthPosition);       // Position
-    employeeTable->setColumnWidth(3, kTableColumnWidthDepartment);     // Department
-    employeeTable->setColumnWidth(4, kTableColumnWidthSalary);         // Salary
-    employeeTable->setColumnWidth(5, kTableColumnWidthType);            // Type
+    employeeTable->setColumnWidth(0, kTableColumnWidthId);        // ID
+    employeeTable->setColumnWidth(1, kTableColumnWidthName);      // Name
+    employeeTable->setColumnWidth(2, kTableColumnWidthPosition);  // Position
+    employeeTable->setColumnWidth(3,
+                                  kTableColumnWidthDepartment);  // Department
+    employeeTable->setColumnWidth(4, kTableColumnWidthSalary);   // Salary
+    employeeTable->setColumnWidth(5, kTableColumnWidthType);     // Type
 
     // Set row height for better readability
     employeeTable->verticalHeader()->setDefaultSectionSize(kTableRowHeight);
@@ -398,8 +400,8 @@ void MainWindow::setupProjectTab() {
 
     auto* mainLayout = new QVBoxLayout(projectTab);
     mainLayout->setSpacing(kLayoutSpacing);
-    mainLayout->setContentsMargins(kLayoutMargins, kLayoutMargins, kLayoutMargins,
-                                    kLayoutMargins);
+    mainLayout->setContentsMargins(kLayoutMargins, kLayoutMargins,
+                                   kLayoutMargins, kLayoutMargins);
 
     // Search bar
     auto* searchLayout = new QHBoxLayout();
@@ -424,10 +426,10 @@ void MainWindow::setupProjectTab() {
 
     // Set column widths for better visibility
     projectTable->setColumnWidth(0, kTableColumnWidthId);           // ID
-    projectTable->setColumnWidth(1, kTableColumnWidthProjectName);    // Name
-    projectTable->setColumnWidth(2, kTableColumnWidthStatus);         // Status
-    projectTable->setColumnWidth(3, kTableColumnWidthBudget);         // Budget
-    projectTable->setColumnWidth(4, kTableColumnWidthClient);         // Client
+    projectTable->setColumnWidth(1, kTableColumnWidthProjectName);  // Name
+    projectTable->setColumnWidth(2, kTableColumnWidthStatus);       // Status
+    projectTable->setColumnWidth(3, kTableColumnWidthBudget);       // Budget
+    projectTable->setColumnWidth(4, kTableColumnWidthClient);       // Client
 
     // Set row height for better readability
     projectTable->verticalHeader()->setDefaultSectionSize(kTableRowHeight);
@@ -460,7 +462,7 @@ void MainWindow::setupCompanyInfoTab() {
     infoTab = new QWidget();  // NOLINT
     auto* layout = new QVBoxLayout(infoTab);
     layout->setContentsMargins(kLayoutMargins, kLayoutMargins, kLayoutMargins,
-                                kLayoutMargins);
+                               kLayoutMargins);
 
     companyInfoText = new QTextEdit();  // NOLINT
     companyInfoText->setReadOnly(true);
@@ -474,7 +476,7 @@ void MainWindow::setupStatisticsTab() {
     statsTab = new QWidget();  // NOLINT
     auto* layout = new QVBoxLayout(statsTab);
     layout->setContentsMargins(kLayoutMargins, kLayoutMargins, kLayoutMargins,
-                                kLayoutMargins);
+                               kLayoutMargins);
 
     statisticsText = new QTextEdit();  // NOLINT
     statisticsText->setReadOnly(true);
@@ -546,7 +548,7 @@ void MainWindow::displayProjects() {
     }
 }
 
-int MainWindow::getSelectedEmployeeId() {
+int MainWindow::getSelectedEmployeeId() const {
     int rowIndex = employeeTable->currentRow();
     if (rowIndex >= 0) {
         QTableWidgetItem* tableItem = employeeTable->item(rowIndex, 0);
@@ -559,7 +561,7 @@ int MainWindow::getSelectedEmployeeId() {
     return -1;
 }
 
-int MainWindow::getSelectedProjectId() {
+int MainWindow::getSelectedProjectId() const {
     int rowIndex = projectTable->currentRow();
     if (rowIndex >= 0) {
         QTableWidgetItem* tableItem = projectTable->item(rowIndex, 0);
@@ -654,7 +656,7 @@ MainWindow::EmployeeFormWidgets MainWindow::createEmployeeDialog(
     widgets.qaBugs->setVisible(false);
 
     // Setup field visibility handler
-    auto updateFields = [=](int index) {
+    auto updateFields = [widgets](int index) {
         bool showManager = (index == 0);
         widgets.managerProjectLabel->setVisible(showManager);
         widgets.managerProject->setVisible(showManager);
@@ -690,20 +692,21 @@ MainWindow::EmployeeFormWidgets MainWindow::createEmployeeDialog(
 bool MainWindow::validateEmployeeInput(const QString& name, double salary,
                                        const QString& department) {
     if (name.isEmpty()) {
-        QMessageBox::warning(this, "Validation Error",
-                             "Name cannot be empty!");
+        QMessageBox::warning(this, "Validation Error", "Name cannot be empty!");
         return false;
     }
 
     if (salary < kMinSalary) {
-        QMessageBox::warning(this, "Validation Error",
-                             QString("Salary must be at least $%1!").arg(kMinSalary));
+        QMessageBox::warning(
+            this, "Validation Error",
+            QString("Salary must be at least $%1!").arg(kMinSalary));
         return false;
     }
 
     if (salary > kMaxSalary) {
-        QMessageBox::warning(this, "Validation Error",
-                             QString("Salary cannot exceed $%1!").arg(kMaxSalary));
+        QMessageBox::warning(
+            this, "Validation Error",
+            QString("Salary cannot exceed $%1!").arg(kMaxSalary));
         return false;
     }
 
@@ -718,13 +721,16 @@ bool MainWindow::validateEmployeeInput(const QString& name, double salary,
 
 bool MainWindow::checkDuplicateEmployee(const QString& name) {
     auto existingEmployees = currentCompany->getAllEmployees();
-    for (const auto& employee : existingEmployees) {
-        if (employee != nullptr &&
-            employee->getName().toLower() == name.toLower()) {
-            QMessageBox::warning(this, "Duplicate Error",
-                                  "An employee with this name already exists!");
-            return false;
-        }
+    auto duplicateFound = std::any_of(
+        existingEmployees.begin(), existingEmployees.end(),
+        [&name](const auto& employee) {
+            return employee != nullptr &&
+                   employee->getName().toLower() == name.toLower();
+        });
+    if (duplicateFound) {
+        QMessageBox::warning(this, "Duplicate Error",
+                             "An employee with this name already exists!");
+        return false;
     }
     return true;
 }
@@ -742,7 +748,8 @@ std::shared_ptr<Employee> MainWindow::createEmployeeFromType(
         }
 
         bool conversionSuccess = false;
-        int teamSize = widgets.managerTeamSize->text().toInt(&conversionSuccess);
+        int teamSize =
+            widgets.managerTeamSize->text().toInt(&conversionSuccess);
         if (!conversionSuccess || teamSize < 0) {
             QMessageBox::warning(this, "Validation Error",
                                  "Please enter a valid team size!");
@@ -782,7 +789,8 @@ std::shared_ptr<Employee> MainWindow::createEmployeeFromType(
         }
 
         bool conversionSuccess = false;
-        int projects = widgets.designerProjects->text().toInt(&conversionSuccess);
+        int projects =
+            widgets.designerProjects->text().toInt(&conversionSuccess);
         if (!conversionSuccess || projects < 0) {
             QMessageBox::warning(this, "Validation Error",
                                  "Please enter a valid number of projects!");
@@ -885,7 +893,7 @@ MainWindow::EmployeeFormWidgets MainWindow::createEditEmployeeDialog(
     form->addRow(widgets.qaBugsLabel, widgets.qaBugs);
 
     // Populate and show/hide fields based on employee type
-    populateEmployeeFields(widgets, employee);
+    MainWindow::populateEmployeeFields(widgets, employee);
 
     return widgets;
 }
@@ -917,7 +925,8 @@ void MainWindow::populateEmployeeFields(const EmployeeFormWidgets& widgets,
         auto* manager = dynamic_cast<Manager*>(employee.get());
         if (manager != nullptr) {
             widgets.managerProject->setText(manager->getProjectManaged());
-            widgets.managerTeamSize->setText(QString::number(manager->getTeamSize()));
+            widgets.managerTeamSize->setText(
+                QString::number(manager->getTeamSize()));
         }
         widgets.managerProjectLabel->setVisible(true);
         widgets.managerProject->setVisible(true);
@@ -949,7 +958,8 @@ void MainWindow::populateEmployeeFields(const EmployeeFormWidgets& widgets,
         auto* qaEmployee = dynamic_cast<QA*>(employee.get());
         if (qaEmployee != nullptr) {
             widgets.qaTestType->setText(qaEmployee->getTestingType());
-            widgets.qaBugs->setText(QString::number(qaEmployee->getBugsFound()));
+            widgets.qaBugs->setText(
+                QString::number(qaEmployee->getBugsFound()));
         }
         widgets.qaTestTypeLabel->setVisible(true);
         widgets.qaTestType->setVisible(true);
@@ -958,15 +968,19 @@ void MainWindow::populateEmployeeFields(const EmployeeFormWidgets& widgets,
     }
 }
 
-bool MainWindow::checkDuplicateEmployeeOnEdit(const QString& name, int excludeId) {
+bool MainWindow::checkDuplicateEmployeeOnEdit(const QString& name,
+                                              int excludeId) {
     auto existingEmployees = currentCompany->getAllEmployees();
-    for (const auto& employee : existingEmployees) {
-        if (employee != nullptr && employee->getId() != excludeId &&
-            employee->getName().toLower() == name.toLower()) {
-            QMessageBox::warning(this, "Duplicate Error",
-                                  "An employee with this name already exists!");
-            return false;
-        }
+    auto duplicateFound = std::any_of(
+        existingEmployees.begin(), existingEmployees.end(),
+        [&name, excludeId](const auto& employee) {
+            return employee != nullptr && employee->getId() != excludeId &&
+                   employee->getName().toLower() == name.toLower();
+        });
+    if (duplicateFound) {
+        QMessageBox::warning(this, "Duplicate Error",
+                             "An employee with this name already exists!");
+        return false;
     }
     return true;
 }
@@ -980,7 +994,7 @@ void MainWindow::addEmployee() {
     dialog.setStyleSheet("QDialog { background-color: white; }");
 
     auto* form = new QFormLayout(&dialog);
-    EmployeeFormWidgets widgets = createEmployeeDialog(dialog, form);
+    EmployeeFormWidgets widgets = MainWindow::createEmployeeDialog(dialog, form);
 
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
@@ -1003,8 +1017,8 @@ void MainWindow::addEmployee() {
             int employeeId = nextEmployeeId++;
             QString employeeType = widgets.typeCombo->currentText();
 
-            auto employee = createEmployeeFromType(employeeType, employeeId, name,
-                                                    salary, department, widgets);
+            auto employee = createEmployeeFromType(
+                employeeType, employeeId, name, salary, department, widgets);
             if (employee == nullptr) {
                 return;
             }
@@ -1017,8 +1031,8 @@ void MainWindow::addEmployee() {
             QMessageBox::information(this, "Success",
                                      "Employee added successfully!");
         } catch (const std::exception& e) {
-            QMessageBox::warning(this, "Error",
-                                 QString("Failed to add employee: ") + e.what());
+            QMessageBox::warning(
+                this, "Error", QString("Failed to add employee: ") + e.what());
         }
     }
 }
@@ -1046,7 +1060,8 @@ void MainWindow::editEmployee() {
 
     auto* form = new QFormLayout(&dialog);
     QString currentType = employee->getEmployeeType();
-    EmployeeFormWidgets widgets = createEditEmployeeDialog(dialog, form, employee);
+    EmployeeFormWidgets widgets =
+        createEditEmployeeDialog(dialog, form, employee);
 
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
@@ -1082,8 +1097,9 @@ void MainWindow::editEmployee() {
             QMessageBox::information(this, "Success",
                                      "Employee updated successfully!");
         } catch (const std::exception& e) {
-            QMessageBox::warning(this, "Error",
-                                 QString("Failed to update employee: ") + e.what());
+            QMessageBox::warning(
+                this, "Error",
+                QString("Failed to update employee: ") + e.what());
         }
     }
 }
@@ -1226,7 +1242,8 @@ void MainWindow::addProject() {
     // Show/hide client fields based on project type
     connect(projectTypeCombo,
             QOverload<int>::of(&QComboBox::currentIndexChanged),
-            [=](int index) {
+            [clientIndustryLabel, clientIndustryEdit, clientContactLabel,
+             clientContactEdit](int index) {
                 // For consulting and other types, show additional client fields
                 constexpr int CONSULTING_INDEX = 3;
                 constexpr int OTHER_INDEX = 4;

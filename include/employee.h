@@ -4,6 +4,7 @@
 #include <compare>
 #include <QString>
 #include <memory>
+#include <ostream>
 
 class EmployeeException : public std::exception {
    private:
@@ -42,11 +43,17 @@ class Employee {
     void setSalary(double newSalary);
     void setDepartment(const QString& newDepartment);
 
-    // Operator overloading (for friend function demonstration)
+    // Operator overloading
     bool operator==(const Employee& otherEmployee) const;
-    std::partial_ordering operator<=>(const Employee& otherEmployee) const;
+    std::partial_ordering operator <=> (const Employee& otherEmployee) const;
+
+    // Hidden friend
     friend std::ostream& operator<<(std::ostream& outputStream,
-                                    const Employee& employee);
+                                    const Employee& employee) {
+        outputStream << employee.id << " - " << employee.name.toStdString() << " ("
+                     << employee.position.toStdString() << ")";
+        return outputStream;
+    }
 };
 
 #endif  // EMPLOYEE_

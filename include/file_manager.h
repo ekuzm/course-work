@@ -2,10 +2,20 @@
 #define FILEMANAGER_H
 
 #include <QString>
+#include <exception>
 #include <memory>
 #include <vector>
 
 #include "company.h"
+
+class FileManagerException : public std::exception {
+   private:
+    QString message;
+
+   public:
+    explicit FileManagerException(QString msg);
+    const char* what() const noexcept override;
+};
 
 // File manager for saving/loading company data
 class FileManager {
