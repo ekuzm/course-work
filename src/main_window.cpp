@@ -86,14 +86,14 @@ void MainWindow::initializeCompanySetup() {
         }
 
         // All validation passed, create company
-        currentCompany = new Company(companyName, companyIndustry,
-                                     companyLocation, foundedYear);
-        companies.push_back(currentCompany);
-        currentCompanyIndex = companies.size() - 1;
+        dataFields.currentCompany =
+            new Company(companyName, companyIndustry, companyLocation, foundedYear);
+        dataFields.companies.push_back(dataFields.currentCompany);
+        dataFields.currentCompanyIndex = dataFields.companies.size() - 1;
 
         // Update company selector
-        companySelector->addItem(companyName);
-        companySelector->setCurrentIndex(currentCompanyIndex);
+        companyManagementUI.selector->addItem(companyName);
+        companyManagementUI.selector->setCurrentIndex(dataFields.currentCompanyIndex);
 
         displayEmployees();
         displayProjects();
@@ -106,7 +106,7 @@ void MainWindow::initializeCompanySetup() {
 }
 
 MainWindow::~MainWindow() {
-    for (auto* company : companies) {
+    for (auto* company : dataFields.companies) {
         delete company;
     }
 }
@@ -240,17 +240,19 @@ void MainWindow::setupUI() {
     )");
 
     // Create menu bar
-    menuBar = new QMenuBar(this);  // NOLINT
-    setMenuBar(menuBar);
+    menuBarUI.menuBar = new QMenuBar(this);  // NOLINT
+    setMenuBar(menuBarUI.menuBar);
 
-    fileMenu = menuBar->addMenu("File");
-    saveAction = fileMenu->addAction("Save");
-    loadAction = fileMenu->addAction("Load");
-    connect(saveAction, &QAction::triggered, this, &MainWindow::saveData);
-    connect(loadAction, &QAction::triggered, this, &MainWindow::loadData);
+    menuBarUI.fileMenu = menuBarUI.menuBar->addMenu("File");
+    menuBarUI.saveAction = menuBarUI.fileMenu->addAction("Save");
+    menuBarUI.loadAction = menuBarUI.fileMenu->addAction("Load");
+    connect(menuBarUI.saveAction, &QAction::triggered, this,
+            &MainWindow::saveData);
+    connect(menuBarUI.loadAction, &QAction::triggered, this,
+            &MainWindow::loadData);
 
     // Company management in menu
-    QMenu* companyMenu = menuBar->addMenu("Company");
+    QMenu* companyMenu = menuBarUI.menuBar->addMenu("Company");
     companyMenu->addAction("Add Company", this, &MainWindow::addCompany);
     companyMenu->addAction("Delete Company", this, &MainWindow::deleteCompany);
 
@@ -262,9 +264,9 @@ void MainWindow::setupUI() {
         kCompanyLayoutMargins, kCompanyLayoutVerticalMargins);
 
     auto* companyLabel = new QLabel("Current Company:");
-    companySelector = new QComboBox();  // NOLINT
-    companySelector->setMinimumWidth(kCompanySelectorMinWidth);
-    companySelector->setStyleSheet(R"(
+    companyManagementUI.selector = new QComboBox();  // NOLINT
+    companyManagementUI.selector->setMinimumWidth(kCompanySelectorMinWidth);
+    companyManagementUI.selector->setStyleSheet(R"(
         QComboBox {
             background-color: white;
             color: black;
@@ -293,25 +295,25 @@ void MainWindow::setupUI() {
         }
     )");
 
-    addCompanyBtn = new QPushButton("Add");        // NOLINT
-    deleteCompanyBtn = new QPushButton("Delete");  // NOLINT
+    companyManagementUI.addBtn = new QPushButton("Add");        // NOLINT
+    companyManagementUI.deleteBtn = new QPushButton("Delete");  // NOLINT
 
     companyLayout->addWidget(companyLabel);
-    companyLayout->addWidget(companySelector);
-    companyLayout->addWidget(addCompanyBtn);
-    companyLayout->addWidget(deleteCompanyBtn);
+    companyLayout->addWidget(companyManagementUI.selector);
+    companyLayout->addWidget(companyManagementUI.addBtn);
+    companyLayout->addWidget(companyManagementUI.deleteBtn);
     companyLayout->addStretch();
 
-    connect(companySelector,
+    connect(companyManagementUI.selector,
             QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             &MainWindow::switchCompany);
-    connect(addCompanyBtn, &QPushButton::clicked, this,
+    connect(companyManagementUI.addBtn, &QPushButton::clicked, this,
             &MainWindow::addCompany);
-    connect(deleteCompanyBtn, &QPushButton::clicked, this,
+    connect(companyManagementUI.deleteBtn, &QPushButton::clicked, this,
             &MainWindow::deleteCompany);
 
     // Create tab widget
-    tabWidget = new QTabWidget(this);  // NOLINT
+    tabWidgets.mainTabWidget = new QTabWidget(this);  // NOLINT
 
     // Main widget with company selector and tabs
     auto* centralWidget = new QWidget();
@@ -319,7 +321,7 @@ void MainWindow::setupUI() {
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
     mainLayout->addWidget(companyWidget);
-    mainLayout->addWidget(tabWidget);
+    mainLayout->addWidget(tabWidgets.mainTabWidget);
 
     setCentralWidget(centralWidget);
 
@@ -330,228 +332,228 @@ void MainWindow::setupUI() {
 }
 
 void MainWindow::setupEmployeeTab() {
-    employeeTab = new QWidget();  // NOLINT
+    employeeTabUI.tab = new QWidget();  // NOLINT
 
-    auto* mainLayout = new QVBoxLayout(employeeTab);
+    auto* mainLayout = new QVBoxLayout(employeeTabUI.tab);
     mainLayout->setSpacing(kLayoutSpacing);
     mainLayout->setContentsMargins(kLayoutMargins, kLayoutMargins,
                                    kLayoutMargins, kLayoutMargins);
 
     // Search bar
     auto* searchLayout = new QHBoxLayout();
-    searchEmployeeEdit = new QLineEdit();  // NOLINT
-    searchEmployeeEdit->setPlaceholderText(
+    employeeTabUI.searchEdit = new QLineEdit();  // NOLINT
+    employeeTabUI.searchEdit->setPlaceholderText(
         "Search employees by name, department, or position...");
-    searchEmployeeEdit->setMinimumHeight(kSearchEditMinHeight);
-    searchEmployeeBtn = new QPushButton("Search");  // NOLINT
-    searchLayout->addWidget(searchEmployeeEdit);
-    searchLayout->addWidget(searchEmployeeBtn);
+    employeeTabUI.searchEdit->setMinimumHeight(kSearchEditMinHeight);
+    employeeTabUI.searchBtn = new QPushButton("Search");  // NOLINT
+    searchLayout->addWidget(employeeTabUI.searchEdit);
+    searchLayout->addWidget(employeeTabUI.searchBtn);
     mainLayout->addLayout(searchLayout);
 
     // Table
-    employeeTable = new QTableWidget();  // NOLINT
-    employeeTable->setColumnCount(6);
+    employeeTabUI.table = new QTableWidget();  // NOLINT
+    employeeTabUI.table->setColumnCount(6);
     QStringList headers = {"ID",         "Name",   "Position",
                            "Department", "Salary", "Type"};
-    employeeTable->setHorizontalHeaderLabels(headers);
-    employeeTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    employeeTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    employeeTable->horizontalHeader()->setStretchLastSection(true);
-    employeeTable->setAlternatingRowColors(true);
+    employeeTabUI.table->setHorizontalHeaderLabels(headers);
+    employeeTabUI.table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    employeeTabUI.table->setSelectionMode(QAbstractItemView::SingleSelection);
+    employeeTabUI.table->horizontalHeader()->setStretchLastSection(true);
+    employeeTabUI.table->setAlternatingRowColors(true);
 
     // Set column widths for better visibility
-    employeeTable->setColumnWidth(0, kTableColumnWidthId);        // ID
-    employeeTable->setColumnWidth(1, kTableColumnWidthName);      // Name
-    employeeTable->setColumnWidth(2, kTableColumnWidthPosition);  // Position
-    employeeTable->setColumnWidth(3,
+    employeeTabUI.table->setColumnWidth(0, kTableColumnWidthId);        // ID
+    employeeTabUI.table->setColumnWidth(1, kTableColumnWidthName);      // Name
+    employeeTabUI.table->setColumnWidth(2, kTableColumnWidthPosition);  // Position
+    employeeTabUI.table->setColumnWidth(3,
                                   kTableColumnWidthDepartment);  // Department
-    employeeTable->setColumnWidth(4, kTableColumnWidthSalary);   // Salary
-    employeeTable->setColumnWidth(5, kTableColumnWidthType);     // Type
+    employeeTabUI.table->setColumnWidth(4, kTableColumnWidthSalary);   // Salary
+    employeeTabUI.table->setColumnWidth(5, kTableColumnWidthType);     // Type
 
     // Set row height for better readability
-    employeeTable->verticalHeader()->setDefaultSectionSize(kTableRowHeight);
+    employeeTabUI.table->verticalHeader()->setDefaultSectionSize(kTableRowHeight);
 
-    mainLayout->addWidget(employeeTable);
+    mainLayout->addWidget(employeeTabUI.table);
 
     // Buttons
     auto* buttonLayout = new QHBoxLayout();
-    addEmployeeBtn = new QPushButton("Add Employee");        // NOLINT
-    editEmployeeBtn = new QPushButton("Edit Employee");      // NOLINT
-    deleteEmployeeBtn = new QPushButton("Delete Employee");  // NOLINT
-    buttonLayout->addWidget(addEmployeeBtn);
-    buttonLayout->addWidget(editEmployeeBtn);
-    buttonLayout->addWidget(deleteEmployeeBtn);
+    employeeTabUI.addBtn = new QPushButton("Add Employee");        // NOLINT
+    employeeTabUI.editBtn = new QPushButton("Edit Employee");      // NOLINT
+    employeeTabUI.deleteBtn = new QPushButton("Delete Employee");  // NOLINT
+    buttonLayout->addWidget(employeeTabUI.addBtn);
+    buttonLayout->addWidget(employeeTabUI.editBtn);
+    buttonLayout->addWidget(employeeTabUI.deleteBtn);
     mainLayout->addLayout(buttonLayout);
 
-    connect(addEmployeeBtn, &QPushButton::clicked, this,
+    connect(employeeTabUI.addBtn, &QPushButton::clicked, this,
             &MainWindow::addEmployee);
-    connect(editEmployeeBtn, &QPushButton::clicked, this,
+    connect(employeeTabUI.editBtn, &QPushButton::clicked, this,
             &MainWindow::editEmployee);
-    connect(deleteEmployeeBtn, &QPushButton::clicked, this,
+    connect(employeeTabUI.deleteBtn, &QPushButton::clicked, this,
             &MainWindow::deleteEmployee);
-    connect(searchEmployeeBtn, &QPushButton::clicked, this,
+    connect(employeeTabUI.searchBtn, &QPushButton::clicked, this,
             &MainWindow::searchEmployee);
 
-    tabWidget->addTab(employeeTab, "Employees");
+    tabWidgets.mainTabWidget->addTab(employeeTabUI.tab, "Employees");
 }
 
 void MainWindow::setupProjectTab() {
-    projectTab = new QWidget();  // NOLINT
+    projectTabUI.tab = new QWidget();  // NOLINT
 
-    auto* mainLayout = new QVBoxLayout(projectTab);
+    auto* mainLayout = new QVBoxLayout(projectTabUI.tab);
     mainLayout->setSpacing(kLayoutSpacing);
     mainLayout->setContentsMargins(kLayoutMargins, kLayoutMargins,
                                    kLayoutMargins, kLayoutMargins);
 
     // Search bar
     auto* searchLayout = new QHBoxLayout();
-    searchProjectEdit = new QLineEdit();  // NOLINT
-    searchProjectEdit->setPlaceholderText(
+    projectTabUI.searchEdit = new QLineEdit();  // NOLINT
+    projectTabUI.searchEdit->setPlaceholderText(
         "Search projects by name, status, or client...");
-    searchProjectEdit->setMinimumHeight(kSearchEditMinHeight);
-    searchProjectBtn = new QPushButton("Search");  // NOLINT
-    searchLayout->addWidget(searchProjectEdit);
-    searchLayout->addWidget(searchProjectBtn);
+    projectTabUI.searchEdit->setMinimumHeight(kSearchEditMinHeight);
+    projectTabUI.searchBtn = new QPushButton("Search");  // NOLINT
+    searchLayout->addWidget(projectTabUI.searchEdit);
+    searchLayout->addWidget(projectTabUI.searchBtn);
     mainLayout->addLayout(searchLayout);
 
     // Table
-    projectTable = new QTableWidget();  // NOLINT
-    projectTable->setColumnCount(5);
+    projectTabUI.table = new QTableWidget();  // NOLINT
+    projectTabUI.table->setColumnCount(5);
     QStringList headers = {"ID", "Name", "Status", "Budget", "Client"};
-    projectTable->setHorizontalHeaderLabels(headers);
-    projectTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    projectTable->setSelectionMode(QAbstractItemView::SingleSelection);
-    projectTable->horizontalHeader()->setStretchLastSection(true);
-    projectTable->setAlternatingRowColors(true);
+    projectTabUI.table->setHorizontalHeaderLabels(headers);
+    projectTabUI.table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    projectTabUI.table->setSelectionMode(QAbstractItemView::SingleSelection);
+    projectTabUI.table->horizontalHeader()->setStretchLastSection(true);
+    projectTabUI.table->setAlternatingRowColors(true);
 
     // Set column widths for better visibility
-    projectTable->setColumnWidth(0, kTableColumnWidthId);           // ID
-    projectTable->setColumnWidth(1, kTableColumnWidthProjectName);  // Name
-    projectTable->setColumnWidth(2, kTableColumnWidthStatus);       // Status
-    projectTable->setColumnWidth(3, kTableColumnWidthBudget);       // Budget
-    projectTable->setColumnWidth(4, kTableColumnWidthClient);       // Client
+    projectTabUI.table->setColumnWidth(0, kTableColumnWidthId);           // ID
+    projectTabUI.table->setColumnWidth(1, kTableColumnWidthProjectName);  // Name
+    projectTabUI.table->setColumnWidth(2, kTableColumnWidthStatus);       // Status
+    projectTabUI.table->setColumnWidth(3, kTableColumnWidthBudget);       // Budget
+    projectTabUI.table->setColumnWidth(4, kTableColumnWidthClient);       // Client
 
     // Set row height for better readability
-    projectTable->verticalHeader()->setDefaultSectionSize(kTableRowHeight);
+    projectTabUI.table->verticalHeader()->setDefaultSectionSize(kTableRowHeight);
 
-    mainLayout->addWidget(projectTable);
+    mainLayout->addWidget(projectTabUI.table);
 
     // Buttons
     auto* buttonLayout = new QHBoxLayout();
-    addProjectBtn = new QPushButton("Add Project");        // NOLINT
-    editProjectBtn = new QPushButton("Edit Project");      // NOLINT
-    deleteProjectBtn = new QPushButton("Delete Project");  // NOLINT
-    buttonLayout->addWidget(addProjectBtn);
-    buttonLayout->addWidget(editProjectBtn);
-    buttonLayout->addWidget(deleteProjectBtn);
+    projectTabUI.addBtn = new QPushButton("Add Project");        // NOLINT
+    projectTabUI.editBtn = new QPushButton("Edit Project");      // NOLINT
+    projectTabUI.deleteBtn = new QPushButton("Delete Project");  // NOLINT
+    buttonLayout->addWidget(projectTabUI.addBtn);
+    buttonLayout->addWidget(projectTabUI.editBtn);
+    buttonLayout->addWidget(projectTabUI.deleteBtn);
     mainLayout->addLayout(buttonLayout);
 
-    connect(addProjectBtn, &QPushButton::clicked, this,
+    connect(projectTabUI.addBtn, &QPushButton::clicked, this,
             &MainWindow::addProject);
-    connect(editProjectBtn, &QPushButton::clicked, this,
+    connect(projectTabUI.editBtn, &QPushButton::clicked, this,
             &MainWindow::editProject);
-    connect(deleteProjectBtn, &QPushButton::clicked, this,
+    connect(projectTabUI.deleteBtn, &QPushButton::clicked, this,
             &MainWindow::deleteProject);
-    connect(searchProjectBtn, &QPushButton::clicked, this,
+    connect(projectTabUI.searchBtn, &QPushButton::clicked, this,
             &MainWindow::searchProject);
 
-    tabWidget->addTab(projectTab, "Projects");
+    tabWidgets.mainTabWidget->addTab(projectTabUI.tab, "Projects");
 }
 
 void MainWindow::setupCompanyInfoTab() {
-    infoTab = new QWidget();  // NOLINT
-    auto* layout = new QVBoxLayout(infoTab);
+    tabWidgets.infoTab = new QWidget();  // NOLINT
+    auto* layout = new QVBoxLayout(tabWidgets.infoTab);
     layout->setContentsMargins(kLayoutMargins, kLayoutMargins, kLayoutMargins,
                                kLayoutMargins);
 
-    companyInfoText = new QTextEdit();  // NOLINT
-    companyInfoText->setReadOnly(true);
-    companyInfoText->setStyleSheet("font-size: 14px; line-height: 1.6;");
-    layout->addWidget(companyInfoText);
+    tabWidgets.companyInfoText = new QTextEdit();  // NOLINT
+    tabWidgets.companyInfoText->setReadOnly(true);
+    tabWidgets.companyInfoText->setStyleSheet("font-size: 14px; line-height: 1.6;");
+    layout->addWidget(tabWidgets.companyInfoText);
 
-    tabWidget->addTab(infoTab, "Company Info");
+    tabWidgets.mainTabWidget->addTab(tabWidgets.infoTab, "Company Info");
 }
 
 void MainWindow::setupStatisticsTab() {
-    statsTab = new QWidget();  // NOLINT
-    auto* layout = new QVBoxLayout(statsTab);
+    tabWidgets.statsTab = new QWidget();  // NOLINT
+    auto* layout = new QVBoxLayout(tabWidgets.statsTab);
     layout->setContentsMargins(kLayoutMargins, kLayoutMargins, kLayoutMargins,
                                kLayoutMargins);
 
-    statisticsText = new QTextEdit();  // NOLINT
-    statisticsText->setReadOnly(true);
-    statisticsText->setStyleSheet(
+    tabWidgets.statisticsText = new QTextEdit();  // NOLINT
+    tabWidgets.statisticsText->setReadOnly(true);
+    tabWidgets.statisticsText->setStyleSheet(
         "font-size: 14px; line-height: 1.6; background-color: white; color: "
         "black;");
-    layout->addWidget(statisticsText);
+    layout->addWidget(tabWidgets.statisticsText);
 
-    refreshStatsBtn = new QPushButton("Refresh Statistics");  // NOLINT
-    layout->addWidget(refreshStatsBtn);
+    tabWidgets.refreshStatsBtn = new QPushButton("Refresh Statistics");  // NOLINT
+    layout->addWidget(tabWidgets.refreshStatsBtn);
 
-    connect(refreshStatsBtn, &QPushButton::clicked, this,
+    connect(tabWidgets.refreshStatsBtn, &QPushButton::clicked, this,
             &MainWindow::showStatistics);
 
-    tabWidget->addTab(statsTab, "Statistics");
+    tabWidgets.mainTabWidget->addTab(tabWidgets.statsTab, "Statistics");
 }
 
 void MainWindow::displayEmployees() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
-    auto employees = currentCompany->getAllEmployees();
-    employeeTable->setRowCount(employees.size());
+    auto employees = dataFields.currentCompany->getAllEmployees();
+    employeeTabUI.table->setRowCount(employees.size());
 
     for (size_t index = 0; index < employees.size(); ++index) {
         const auto& employee = employees[index];
-        employeeTable->setItem(
+        employeeTabUI.table->setItem(
             index, 0, new QTableWidgetItem(QString::number(employee->getId())));
-        employeeTable->setItem(index, 1,
+        employeeTabUI.table->setItem(index, 1,
                                new QTableWidgetItem(employee->getName()));
-        employeeTable->setItem(index, 2,
+        employeeTabUI.table->setItem(index, 2,
                                new QTableWidgetItem(employee->getPosition()));
-        employeeTable->setItem(index, 3,
+        employeeTabUI.table->setItem(index, 3,
                                new QTableWidgetItem(employee->getDepartment()));
-        employeeTable->setItem(index, 4,
+        employeeTabUI.table->setItem(index, 4,
                                new QTableWidgetItem(QString::number(
                                    employee->getSalary(), 'f', 2)));
-        employeeTable->setItem(
+        employeeTabUI.table->setItem(
             index, 5, new QTableWidgetItem(employee->getEmployeeType()));
     }
 
     if (!employees.empty()) {
-        nextEmployeeId = employees.back()->getId() + 1;
+        dataFields.nextEmployeeId = employees.back()->getId() + 1;
     }
 }
 
 void MainWindow::displayProjects() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
-    auto projects = currentCompany->getAllProjects();
-    projectTable->setRowCount(projects.size());
+    auto projects = dataFields.currentCompany->getAllProjects();
+    projectTabUI.table->setRowCount(projects.size());
 
     for (size_t index = 0; index < projects.size(); ++index) {
         const auto& project = projects[index];
-        projectTable->setItem(
+        projectTabUI.table->setItem(
             index, 0, new QTableWidgetItem(QString::number(project.getId())));
-        projectTable->setItem(index, 1,
+        projectTabUI.table->setItem(index, 1,
                               new QTableWidgetItem(project.getName()));
-        projectTable->setItem(index, 2,
+        projectTabUI.table->setItem(index, 2,
                               new QTableWidgetItem(project.getStatus()));
-        projectTable->setItem(
+        projectTabUI.table->setItem(
             index, 3,
             new QTableWidgetItem(QString::number(project.getBudget(), 'f', 2)));
-        projectTable->setItem(index, 4,
+        projectTabUI.table->setItem(index, 4,
                               new QTableWidgetItem(project.getClientName()));
     }
 
     if (!projects.empty()) {
-        nextProjectId = projects.back().getId() + 1;
+        dataFields.nextProjectId = projects.back().getId() + 1;
     }
 }
 
 int MainWindow::getSelectedEmployeeId() const {
-    int rowIndex = employeeTable->currentRow();
+    int rowIndex = employeeTabUI.table->currentRow();
     if (rowIndex >= 0) {
-        QTableWidgetItem* tableItem = employeeTable->item(rowIndex, 0);
+        QTableWidgetItem* tableItem = employeeTabUI.table->item(rowIndex, 0);
         if (tableItem != nullptr) {
             bool conversionSuccess = false;
             int employeeId = tableItem->text().toInt(&conversionSuccess);
@@ -562,9 +564,9 @@ int MainWindow::getSelectedEmployeeId() const {
 }
 
 int MainWindow::getSelectedProjectId() const {
-    int rowIndex = projectTable->currentRow();
+    int rowIndex = projectTabUI.table->currentRow();
     if (rowIndex >= 0) {
-        QTableWidgetItem* tableItem = projectTable->item(rowIndex, 0);
+        QTableWidgetItem* tableItem = projectTabUI.table->item(rowIndex, 0);
         if (tableItem != nullptr) {
             bool conversionSuccess = false;
             int projectId = tableItem->text().toInt(&conversionSuccess);
@@ -574,419 +576,9 @@ int MainWindow::getSelectedProjectId() const {
     return -1;
 }
 
-MainWindow::EmployeeFormWidgets MainWindow::createEmployeeDialog(
-    QDialog& dialog, QFormLayout* form) {
-    EmployeeFormWidgets widgets;
-
-    widgets.typeCombo = new QComboBox();
-    widgets.typeCombo->addItems({"Manager", "Developer", "Designer", "QA"});
-    widgets.typeCombo->setStyleSheet("background-color: white;");
-    form->addRow("Type:", widgets.typeCombo);
-
-    widgets.nameEdit = new QLineEdit();
-    widgets.nameEdit->setPlaceholderText("e.g., John Doe");
-    form->addRow("Name:", widgets.nameEdit);
-
-    widgets.salaryEdit = new QLineEdit();
-    widgets.salaryEdit->setPlaceholderText("e.g., 5000");
-    form->addRow("Salary ($):", widgets.salaryEdit);
-
-    widgets.deptEdit = new QLineEdit();
-    widgets.deptEdit->setPlaceholderText("e.g., Development, Design");
-    form->addRow("Department:", widgets.deptEdit);
-
-    // Manager fields
-    widgets.managerProject = new QLineEdit();
-    widgets.managerProject->setPlaceholderText("e.g., Mobile App Project");
-    widgets.managerProjectLabel = new QLabel("Managed Project:");
-    form->addRow(widgets.managerProjectLabel, widgets.managerProject);
-    widgets.managerProjectLabel->setVisible(false);
-    widgets.managerProject->setVisible(false);
-
-    widgets.managerTeamSize = new QLineEdit();
-    widgets.managerTeamSize->setPlaceholderText("e.g., 5");
-    widgets.managerTeamSizeLabel = new QLabel("Team Size:");
-    form->addRow(widgets.managerTeamSizeLabel, widgets.managerTeamSize);
-    widgets.managerTeamSizeLabel->setVisible(false);
-    widgets.managerTeamSize->setVisible(false);
-
-    // Developer fields
-    widgets.devLanguage = new QLineEdit();
-    widgets.devLanguage->setPlaceholderText("e.g., C++, Java, Python");
-    widgets.devLanguageLabel = new QLabel("Programming Language:");
-    form->addRow(widgets.devLanguageLabel, widgets.devLanguage);
-    widgets.devLanguageLabel->setVisible(false);
-    widgets.devLanguage->setVisible(false);
-
-    widgets.devExperience = new QLineEdit();
-    widgets.devExperience->setPlaceholderText("e.g., 3");
-    widgets.devExperienceLabel = new QLabel("Years of Experience:");
-    form->addRow(widgets.devExperienceLabel, widgets.devExperience);
-    widgets.devExperienceLabel->setVisible(false);
-    widgets.devExperience->setVisible(false);
-
-    // Designer fields
-    widgets.designerTool = new QLineEdit();
-    widgets.designerTool->setPlaceholderText("e.g., Figma, Adobe XD");
-    widgets.designerToolLabel = new QLabel("Design Tool:");
-    form->addRow(widgets.designerToolLabel, widgets.designerTool);
-    widgets.designerToolLabel->setVisible(false);
-    widgets.designerTool->setVisible(false);
-
-    widgets.designerProjects = new QLineEdit();
-    widgets.designerProjects->setPlaceholderText("e.g., 10");
-    widgets.designerProjectsLabel = new QLabel("Number of Projects:");
-    form->addRow(widgets.designerProjectsLabel, widgets.designerProjects);
-    widgets.designerProjectsLabel->setVisible(false);
-    widgets.designerProjects->setVisible(false);
-
-    // QA fields
-    widgets.qaTestType = new QLineEdit();
-    widgets.qaTestType->setPlaceholderText("e.g., Manual, Automated");
-    widgets.qaTestTypeLabel = new QLabel("Testing Type:");
-    form->addRow(widgets.qaTestTypeLabel, widgets.qaTestType);
-    widgets.qaTestTypeLabel->setVisible(false);
-    widgets.qaTestType->setVisible(false);
-
-    widgets.qaBugs = new QLineEdit();
-    widgets.qaBugs->setPlaceholderText("e.g., 25");
-    widgets.qaBugsLabel = new QLabel("Bugs Found:");
-    form->addRow(widgets.qaBugsLabel, widgets.qaBugs);
-    widgets.qaBugsLabel->setVisible(false);
-    widgets.qaBugs->setVisible(false);
-
-    // Setup field visibility handler
-    auto updateFields = [widgets](int index) {
-        bool showManager = (index == 0);
-        widgets.managerProjectLabel->setVisible(showManager);
-        widgets.managerProject->setVisible(showManager);
-        widgets.managerTeamSizeLabel->setVisible(showManager);
-        widgets.managerTeamSize->setVisible(showManager);
-
-        bool showDev = (index == 1);
-        widgets.devLanguageLabel->setVisible(showDev);
-        widgets.devLanguage->setVisible(showDev);
-        widgets.devExperienceLabel->setVisible(showDev);
-        widgets.devExperience->setVisible(showDev);
-
-        bool showDesigner = (index == 2);
-        widgets.designerToolLabel->setVisible(showDesigner);
-        widgets.designerTool->setVisible(showDesigner);
-        widgets.designerProjectsLabel->setVisible(showDesigner);
-        widgets.designerProjects->setVisible(showDesigner);
-
-        bool showQA = (index == 3);
-        widgets.qaTestTypeLabel->setVisible(showQA);
-        widgets.qaTestType->setVisible(showQA);
-        widgets.qaBugsLabel->setVisible(showQA);
-        widgets.qaBugs->setVisible(showQA);
-    };
-
-    connect(widgets.typeCombo,
-            QOverload<int>::of(&QComboBox::currentIndexChanged), updateFields);
-    updateFields(0);
-
-    return widgets;
-}
-
-bool MainWindow::validateEmployeeInput(const QString& name, double salary,
-                                       const QString& department) {
-    if (name.isEmpty()) {
-        QMessageBox::warning(this, "Validation Error", "Name cannot be empty!");
-        return false;
-    }
-
-    if (salary < kMinSalary) {
-        QMessageBox::warning(
-            this, "Validation Error",
-            QString("Salary must be at least $%1!").arg(kMinSalary));
-        return false;
-    }
-
-    if (salary > kMaxSalary) {
-        QMessageBox::warning(
-            this, "Validation Error",
-            QString("Salary cannot exceed $%1!").arg(kMaxSalary));
-        return false;
-    }
-
-    if (department.isEmpty()) {
-        QMessageBox::warning(this, "Validation Error",
-                             "Department cannot be empty!");
-        return false;
-    }
-
-    return true;
-}
-
-bool MainWindow::checkDuplicateEmployee(const QString& name) {
-    auto existingEmployees = currentCompany->getAllEmployees();
-    auto duplicateFound = std::any_of(
-        existingEmployees.begin(), existingEmployees.end(),
-        [&name](const auto& employee) {
-            return employee != nullptr &&
-                   employee->getName().toLower() == name.toLower();
-        });
-    if (duplicateFound) {
-        QMessageBox::warning(this, "Duplicate Error",
-                             "An employee with this name already exists!");
-        return false;
-    }
-    return true;
-}
-
-std::shared_ptr<Employee> MainWindow::createEmployeeFromType(
-    const QString& employeeType, int employeeId, const QString& name,
-    double salary, const QString& department,
-    const EmployeeFormWidgets& widgets) {
-    if (employeeType == "Manager") {
-        QString projectName = widgets.managerProject->text().trimmed();
-        if (projectName.isEmpty()) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Managed project cannot be empty!");
-            return nullptr;
-        }
-
-        bool conversionSuccess = false;
-        int teamSize =
-            widgets.managerTeamSize->text().toInt(&conversionSuccess);
-        if (!conversionSuccess || teamSize < 0) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Please enter a valid team size!");
-            return nullptr;
-        }
-
-        return std::make_shared<Manager>(employeeId, name, salary, department,
-                                         teamSize, projectName);
-    }
-
-    if (employeeType == "Developer") {
-        QString language = widgets.devLanguage->text().trimmed();
-        if (language.isEmpty()) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Programming language cannot be empty!");
-            return nullptr;
-        }
-
-        bool conversionSuccess = false;
-        int years = widgets.devExperience->text().toInt(&conversionSuccess);
-        if (!conversionSuccess || years < 0) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Please enter valid years of experience!");
-            return nullptr;
-        }
-
-        return std::make_shared<Developer>(employeeId, name, salary, department,
-                                           language, years);
-    }
-
-    if (employeeType == "Designer") {
-        QString tool = widgets.designerTool->text().trimmed();
-        if (tool.isEmpty()) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Design tool cannot be empty!");
-            return nullptr;
-        }
-
-        bool conversionSuccess = false;
-        int projects =
-            widgets.designerProjects->text().toInt(&conversionSuccess);
-        if (!conversionSuccess || projects < 0) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Please enter a valid number of projects!");
-            return nullptr;
-        }
-
-        return std::make_shared<Designer>(employeeId, name, salary, department,
-                                          tool, projects);
-    }
-
-    if (employeeType == "QA") {
-        QString testType = widgets.qaTestType->text().trimmed();
-        if (testType.isEmpty()) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Testing type cannot be empty!");
-            return nullptr;
-        }
-
-        bool conversionSuccess = false;
-        int bugs = widgets.qaBugs->text().toInt(&conversionSuccess);
-        if (!conversionSuccess || bugs < 0) {
-            QMessageBox::warning(this, "Validation Error",
-                                 "Please enter a valid number of bugs!");
-            return nullptr;
-        }
-
-        return std::make_shared<QA>(employeeId, name, salary, department,
-                                    testType, bugs);
-    }
-
-    return nullptr;
-}
-
-MainWindow::EmployeeFormWidgets MainWindow::createEditEmployeeDialog(
-    QDialog& dialog, QFormLayout* form, std::shared_ptr<Employee> employee) {
-    EmployeeFormWidgets widgets;
-
-    // Type is read-only
-    auto* typeLabel = new QLabel("Type:");
-    auto* typeDisplay = new QLineEdit();
-    typeDisplay->setText(employee->getEmployeeType());
-    typeDisplay->setReadOnly(true);
-    typeDisplay->setStyleSheet("QLineEdit { background-color: #f5f5f5; }");
-    form->addRow(typeLabel, typeDisplay);
-
-    widgets.nameEdit = new QLineEdit();
-    widgets.nameEdit->setPlaceholderText("e.g., John Doe");
-    widgets.nameEdit->setText(employee->getName());
-    form->addRow("Name:", widgets.nameEdit);
-
-    widgets.salaryEdit = new QLineEdit();
-    widgets.salaryEdit->setPlaceholderText("e.g., 5000");
-    widgets.salaryEdit->setText(QString::number(employee->getSalary(), 'f', 2));
-    form->addRow("Salary ($):", widgets.salaryEdit);
-
-    widgets.deptEdit = new QLineEdit();
-    widgets.deptEdit->setPlaceholderText("e.g., Development, Design");
-    widgets.deptEdit->setText(employee->getDepartment());
-    form->addRow("Department:", widgets.deptEdit);
-
-    // Create all type-specific fields (same as addEmployee)
-    widgets.managerProject = new QLineEdit();
-    widgets.managerProject->setPlaceholderText("e.g., Mobile App Project");
-    widgets.managerProjectLabel = new QLabel("Managed Project:");
-    form->addRow(widgets.managerProjectLabel, widgets.managerProject);
-
-    widgets.managerTeamSize = new QLineEdit();
-    widgets.managerTeamSize->setPlaceholderText("e.g., 5");
-    widgets.managerTeamSizeLabel = new QLabel("Team Size:");
-    form->addRow(widgets.managerTeamSizeLabel, widgets.managerTeamSize);
-
-    widgets.devLanguage = new QLineEdit();
-    widgets.devLanguage->setPlaceholderText("e.g., C++, Java, Python");
-    widgets.devLanguageLabel = new QLabel("Programming Language:");
-    form->addRow(widgets.devLanguageLabel, widgets.devLanguage);
-
-    widgets.devExperience = new QLineEdit();
-    widgets.devExperience->setPlaceholderText("e.g., 3");
-    widgets.devExperienceLabel = new QLabel("Years of Experience:");
-    form->addRow(widgets.devExperienceLabel, widgets.devExperience);
-
-    widgets.designerTool = new QLineEdit();
-    widgets.designerTool->setPlaceholderText("e.g., Figma, Adobe XD");
-    widgets.designerToolLabel = new QLabel("Design Tool:");
-    form->addRow(widgets.designerToolLabel, widgets.designerTool);
-
-    widgets.designerProjects = new QLineEdit();
-    widgets.designerProjects->setPlaceholderText("e.g., 10");
-    widgets.designerProjectsLabel = new QLabel("Number of Projects:");
-    form->addRow(widgets.designerProjectsLabel, widgets.designerProjects);
-
-    widgets.qaTestType = new QLineEdit();
-    widgets.qaTestType->setPlaceholderText("e.g., Manual, Automated");
-    widgets.qaTestTypeLabel = new QLabel("Testing Type:");
-    form->addRow(widgets.qaTestTypeLabel, widgets.qaTestType);
-
-    widgets.qaBugs = new QLineEdit();
-    widgets.qaBugs->setPlaceholderText("e.g., 25");
-    widgets.qaBugsLabel = new QLabel("Bugs Found:");
-    form->addRow(widgets.qaBugsLabel, widgets.qaBugs);
-
-    // Populate and show/hide fields based on employee type
-    MainWindow::populateEmployeeFields(widgets, employee);
-
-    return widgets;
-}
-
-void MainWindow::populateEmployeeFields(const EmployeeFormWidgets& widgets,
-                                        std::shared_ptr<Employee> employee) {
-    QString currentType = employee->getEmployeeType();
-
-    // Hide all fields first
-    widgets.managerProjectLabel->setVisible(false);
-    widgets.managerProject->setVisible(false);
-    widgets.managerTeamSizeLabel->setVisible(false);
-    widgets.managerTeamSize->setVisible(false);
-    widgets.devLanguageLabel->setVisible(false);
-    widgets.devLanguage->setVisible(false);
-    widgets.devExperienceLabel->setVisible(false);
-    widgets.devExperience->setVisible(false);
-    widgets.designerToolLabel->setVisible(false);
-    widgets.designerTool->setVisible(false);
-    widgets.designerProjectsLabel->setVisible(false);
-    widgets.designerProjects->setVisible(false);
-    widgets.qaTestTypeLabel->setVisible(false);
-    widgets.qaTestType->setVisible(false);
-    widgets.qaBugsLabel->setVisible(false);
-    widgets.qaBugs->setVisible(false);
-
-    // Show and populate fields based on type
-    if (currentType == "Manager") {
-        auto* manager = dynamic_cast<Manager*>(employee.get());
-        if (manager != nullptr) {
-            widgets.managerProject->setText(manager->getProjectManaged());
-            widgets.managerTeamSize->setText(
-                QString::number(manager->getTeamSize()));
-        }
-        widgets.managerProjectLabel->setVisible(true);
-        widgets.managerProject->setVisible(true);
-        widgets.managerTeamSizeLabel->setVisible(true);
-        widgets.managerTeamSize->setVisible(true);
-    } else if (currentType == "Developer") {
-        auto* developer = dynamic_cast<Developer*>(employee.get());
-        if (developer != nullptr) {
-            widgets.devLanguage->setText(developer->getProgrammingLanguage());
-            widgets.devExperience->setText(
-                QString::number(developer->getYearsOfExperience()));
-        }
-        widgets.devLanguageLabel->setVisible(true);
-        widgets.devLanguage->setVisible(true);
-        widgets.devExperienceLabel->setVisible(true);
-        widgets.devExperience->setVisible(true);
-    } else if (currentType == "Designer") {
-        auto* designer = dynamic_cast<Designer*>(employee.get());
-        if (designer != nullptr) {
-            widgets.designerTool->setText(designer->getDesignTool());
-            widgets.designerProjects->setText(
-                QString::number(designer->getNumberOfProjects()));
-        }
-        widgets.designerToolLabel->setVisible(true);
-        widgets.designerTool->setVisible(true);
-        widgets.designerProjectsLabel->setVisible(true);
-        widgets.designerProjects->setVisible(true);
-    } else if (currentType == "QA") {
-        auto* qaEmployee = dynamic_cast<QA*>(employee.get());
-        if (qaEmployee != nullptr) {
-            widgets.qaTestType->setText(qaEmployee->getTestingType());
-            widgets.qaBugs->setText(
-                QString::number(qaEmployee->getBugsFound()));
-        }
-        widgets.qaTestTypeLabel->setVisible(true);
-        widgets.qaTestType->setVisible(true);
-        widgets.qaBugsLabel->setVisible(true);
-        widgets.qaBugs->setVisible(true);
-    }
-}
-
-bool MainWindow::checkDuplicateEmployeeOnEdit(const QString& name,
-                                              int excludeId) {
-    auto existingEmployees = currentCompany->getAllEmployees();
-    auto duplicateFound = std::any_of(
-        existingEmployees.begin(), existingEmployees.end(),
-        [&name, excludeId](const auto& employee) {
-            return employee != nullptr && employee->getId() != excludeId &&
-                   employee->getName().toLower() == name.toLower();
-        });
-    if (duplicateFound) {
-        QMessageBox::warning(this, "Duplicate Error",
-                             "An employee with this name already exists!");
-        return false;
-    }
-    return true;
-}
 
 void MainWindow::addEmployee() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
     QDialog dialog(this);
     dialog.setWindowTitle("Add Employee");
@@ -994,7 +586,8 @@ void MainWindow::addEmployee() {
     dialog.setStyleSheet("QDialog { background-color: white; }");
 
     auto* form = new QFormLayout(&dialog);
-    EmployeeFormWidgets widgets = MainWindow::createEmployeeDialog(dialog, form);
+    EmployeeFormWidgets widgets =
+        EmployeeDialogHelper::createEmployeeDialog(dialog, form);
 
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
@@ -1006,39 +599,49 @@ void MainWindow::addEmployee() {
             double salary = widgets.salaryEdit->text().toDouble();
             QString department = widgets.deptEdit->text().trimmed();
 
-            if (!validateEmployeeInput(name, salary, department)) {
+            if (!EmployeeDialogHelper::validateEmployeeInput(name, salary,
+                                                              department)) {
+                QMessageBox::warning(this, "Validation Error",
+                                     "Invalid input! Please check all fields.");
                 return;
             }
 
-            if (!checkDuplicateEmployee(name)) {
+            if (!EmployeeDialogHelper::checkDuplicateEmployee(
+                    name, dataFields.currentCompany)) {
                 return;
             }
 
-            int employeeId = nextEmployeeId++;
+            int employeeId = dataFields.nextEmployeeId;
+            dataFields.nextEmployeeId++;
             QString employeeType = widgets.typeCombo->currentText();
 
-            auto employee = createEmployeeFromType(
+            auto employee = EmployeeDialogHelper::createEmployeeFromType(
                 employeeType, employeeId, name, salary, department, widgets);
             if (employee == nullptr) {
+                QMessageBox::warning(this, "Validation Error",
+                                     "Invalid employee data!");
                 return;
             }
 
-            currentCompany->addEmployee(employee);
+            dataFields.currentCompany->addEmployee(employee);
             displayEmployees();
             showCompanyInfo();
             showStatistics();
             autoSave();
             QMessageBox::information(this, "Success",
                                      "Employee added successfully!");
-        } catch (const std::exception& e) {
+        } catch (const CompanyException& e) {
             QMessageBox::warning(
                 this, "Error", QString("Failed to add employee: ") + e.what());
+        } catch (const FileManagerException& e) {
+            QMessageBox::warning(
+                this, "Error", QString("Failed to save: ") + e.what());
         }
     }
 }
 
 void MainWindow::editEmployee() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
     int employeeId = getSelectedEmployeeId();
     if (employeeId < 0) {
@@ -1047,7 +650,7 @@ void MainWindow::editEmployee() {
         return;
     }
 
-    auto employee = currentCompany->getEmployee(employeeId);
+    auto employee = dataFields.currentCompany->getEmployee(employeeId);
     if (employee == nullptr) {
         QMessageBox::warning(this, "Error", "Employee not found!");
         return;
@@ -1061,7 +664,7 @@ void MainWindow::editEmployee() {
     auto* form = new QFormLayout(&dialog);
     QString currentType = employee->getEmployeeType();
     EmployeeFormWidgets widgets =
-        createEditEmployeeDialog(dialog, form, employee);
+        EmployeeDialogHelper::createEditEmployeeDialog(dialog, form, employee);
 
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
@@ -1073,22 +676,24 @@ void MainWindow::editEmployee() {
             double salary = widgets.salaryEdit->text().toDouble();
             QString department = widgets.deptEdit->text().trimmed();
 
-            if (!validateEmployeeInput(name, salary, department)) {
+            if (!EmployeeDialogHelper::validateEmployeeInput(name, salary, department)) {
+                QMessageBox::warning(this, "Validation Error",
+                                     "Invalid input! Please check all fields.");
                 return;
             }
 
-            if (!checkDuplicateEmployeeOnEdit(name, employeeId)) {
+            if (!EmployeeDialogHelper::checkDuplicateEmployeeOnEdit(name, employeeId, dataFields.currentCompany)) {
                 return;
             }
 
-            auto updatedEmployee = createEmployeeFromType(
+            auto updatedEmployee = EmployeeDialogHelper::createEmployeeFromType(
                 currentType, employeeId, name, salary, department, widgets);
             if (updatedEmployee == nullptr) {
                 return;
             }
 
-            currentCompany->removeEmployee(employeeId);
-            currentCompany->addEmployee(updatedEmployee);
+            dataFields.currentCompany->removeEmployee(employeeId);
+            dataFields.currentCompany->addEmployee(updatedEmployee);
 
             displayEmployees();
             showCompanyInfo();
@@ -1096,16 +701,18 @@ void MainWindow::editEmployee() {
             autoSave();
             QMessageBox::information(this, "Success",
                                      "Employee updated successfully!");
-        } catch (const std::exception& e) {
+        } catch (const CompanyException& e) {
             QMessageBox::warning(
-                this, "Error",
-                QString("Failed to update employee: ") + e.what());
+                this, "Error", QString("Failed to edit employee: ") + e.what());
+        } catch (const FileManagerException& e) {
+            QMessageBox::warning(
+                this, "Error", QString("Failed to save: ") + e.what());
         }
     }
 }
 
 void MainWindow::deleteEmployee() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
     int employeeId = getSelectedEmployeeId();
     if (employeeId < 0) {
@@ -1120,52 +727,54 @@ void MainWindow::deleteEmployee() {
                               QMessageBox::Yes | QMessageBox::No);
     if (userChoice == QMessageBox::Yes) {
         try {
-            currentCompany->removeEmployee(employeeId);
+            dataFields.currentCompany->removeEmployee(employeeId);
             displayEmployees();
             showCompanyInfo();
             showStatistics();
             autoSave();  // Automatically save after deletion
             QMessageBox::information(this, "Success",
                                      "Employee deleted successfully!");
-        } catch (const std::exception& e) {
+        } catch (const CompanyException& e) {
             QMessageBox::warning(
-                this, "Error",
-                QString("Failed to delete employee: ") + e.what());
+                this, "Error", QString("Failed to delete employee: ") + e.what());
+        } catch (const FileManagerException& e) {
+            QMessageBox::warning(
+                this, "Error", QString("Failed to save: ") + e.what());
         }
     }
 }
 
 void MainWindow::searchEmployee() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
-    QString searchTerm = searchEmployeeEdit->text().toLower();
+    QString searchTerm = employeeTabUI.searchEdit->text().toLower();
     if (searchTerm.isEmpty()) {
         displayEmployees();
         return;
     }
 
-    auto employees = currentCompany->getAllEmployees();
-    employeeTable->setRowCount(0);
+    auto employees = dataFields.currentCompany->getAllEmployees();
+    employeeTabUI.table->setRowCount(0);
     int rowIndex = 0;
 
     for (const auto& employee : employees) {
         if (employee->getName().toLower().contains(searchTerm) ||
             employee->getDepartment().toLower().contains(searchTerm) ||
             employee->getPosition().toLower().contains(searchTerm)) {
-            employeeTable->insertRow(rowIndex);
-            employeeTable->setItem(
+            employeeTabUI.table->insertRow(rowIndex);
+            employeeTabUI.table->setItem(
                 rowIndex, 0,
                 new QTableWidgetItem(QString::number(employee->getId())));
-            employeeTable->setItem(rowIndex, 1,
+            employeeTabUI.table->setItem(rowIndex, 1,
                                    new QTableWidgetItem(employee->getName()));
-            employeeTable->setItem(
+            employeeTabUI.table->setItem(
                 rowIndex, 2, new QTableWidgetItem(employee->getPosition()));
-            employeeTable->setItem(
+            employeeTabUI.table->setItem(
                 rowIndex, 3, new QTableWidgetItem(employee->getDepartment()));
-            employeeTable->setItem(rowIndex, 4,
+            employeeTabUI.table->setItem(rowIndex, 4,
                                    new QTableWidgetItem(QString::number(
                                        employee->getSalary(), 'f', 2)));
-            employeeTable->setItem(
+            employeeTabUI.table->setItem(
                 rowIndex, 5, new QTableWidgetItem(employee->getEmployeeType()));
             rowIndex++;
         }
@@ -1173,7 +782,7 @@ void MainWindow::searchEmployee() {
 }
 
 void MainWindow::addProject() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
     QDialog dialog(this);
     dialog.setWindowTitle("Add Project");
@@ -1288,7 +897,7 @@ void MainWindow::addProject() {
 
             // Check for duplicate project by name
             QString projectName = nameEdit->text().trimmed();
-            auto existingProjects = currentCompany->getAllProjects();
+            auto existingProjects = dataFields.currentCompany->getAllProjects();
             for (const auto& project : existingProjects) {
                 if (project.getName().toLower() == projectName.toLower()) {
                     QMessageBox::warning(
@@ -1299,29 +908,32 @@ void MainWindow::addProject() {
             }
 
             // Generate ID only after all validation passes
-            int projectId = nextProjectId++;
+            int projectId = dataFields.nextProjectId++;
             Project project(projectId, nameEdit->text().trimmed(),
                             descEdit->toPlainText().trimmed(),
                             statusCombo->currentText(), startDate->date(),
                             endDate->date(), projectBudget,
                             clientNameEdit->text().trimmed());
 
-            currentCompany->addProject(project);
+            dataFields.currentCompany->addProject(project);
             displayProjects();
             showCompanyInfo();
             showStatistics();
             autoSave();  // Automatically save after adding
             QMessageBox::information(this, "Success",
                                      "Project added successfully!");
-        } catch (const std::exception& e) {
+        } catch (const CompanyException& e) {
             QMessageBox::warning(this, "Error",
                                  QString("Failed to add project: ") + e.what());
+        } catch (const FileManagerException& e) {
+            QMessageBox::warning(this, "Error",
+                                 QString("Failed to save: ") + e.what());
         }
     }
 }
 
 void MainWindow::editProject() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
     int projectId = getSelectedProjectId();
     if (projectId < 0) {
@@ -1329,7 +941,7 @@ void MainWindow::editProject() {
         return;
     }
 
-    auto* project = currentCompany->getProject(projectId);
+    auto* project = dataFields.currentCompany->getProject(projectId);
     if (project == nullptr) {
         QMessageBox::warning(this, "Error", "Project not found!");
         return;
@@ -1418,7 +1030,7 @@ void MainWindow::editProject() {
 
             // Check for duplicate name (excluding current project)
             QString projectName = nameEdit->text().trimmed();
-            auto existingProjects = currentCompany->getAllProjects();
+            auto existingProjects = dataFields.currentCompany->getAllProjects();
             for (const auto& existingProject : existingProjects) {
                 if (existingProject.getId() != projectId &&
                     existingProject.getName().toLower() ==
@@ -1438,8 +1050,8 @@ void MainWindow::editProject() {
                 clientNameEdit->text().trimmed());
 
             // Remove old project and add updated one
-            currentCompany->removeProject(projectId);
-            currentCompany->addProject(updatedProject);
+            dataFields.currentCompany->removeProject(projectId);
+            dataFields.currentCompany->addProject(updatedProject);
 
             displayProjects();
             showCompanyInfo();
@@ -1447,16 +1059,18 @@ void MainWindow::editProject() {
             autoSave();  // Automatically save after editing
             QMessageBox::information(this, "Success",
                                      "Project updated successfully!");
-        } catch (const std::exception& e) {
+        } catch (const CompanyException& e) {
             QMessageBox::warning(
-                this, "Error",
-                QString("Failed to update project: ") + e.what());
+                this, "Error", QString("Failed to edit project: ") + e.what());
+        } catch (const FileManagerException& e) {
+            QMessageBox::warning(
+                this, "Error", QString("Failed to save: ") + e.what());
         }
     }
 }
 
 void MainWindow::deleteProject() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
     int projectId = getSelectedProjectId();
     if (projectId < 0) {
@@ -1470,50 +1084,52 @@ void MainWindow::deleteProject() {
         QMessageBox::Yes | QMessageBox::No);
     if (userChoice == QMessageBox::Yes) {
         try {
-            currentCompany->removeProject(projectId);
+            dataFields.currentCompany->removeProject(projectId);
             displayProjects();
             showCompanyInfo();
             showStatistics();
             autoSave();  // Automatically save after deletion
             QMessageBox::information(this, "Success",
                                      "Project deleted successfully!");
-        } catch (const std::exception& e) {
+        } catch (const CompanyException& e) {
             QMessageBox::warning(
-                this, "Error",
-                QString("Failed to delete project: ") + e.what());
+                this, "Error", QString("Failed to delete project: ") + e.what());
+        } catch (const FileManagerException& e) {
+            QMessageBox::warning(
+                this, "Error", QString("Failed to save: ") + e.what());
         }
     }
 }
 
 void MainWindow::searchProject() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
-    QString searchTerm = searchProjectEdit->text().toLower();
+    QString searchTerm = projectTabUI.searchEdit->text().toLower();
     if (searchTerm.isEmpty()) {
         displayProjects();
         return;
     }
 
-    auto projects = currentCompany->getAllProjects();
-    projectTable->setRowCount(0);
+    auto projects = dataFields.currentCompany->getAllProjects();
+    projectTabUI.table->setRowCount(0);
     int rowIndex = 0;
 
     for (const auto& project : projects) {
         if (project.getName().toLower().contains(searchTerm) ||
             project.getStatus().toLower().contains(searchTerm) ||
             project.getClientName().toLower().contains(searchTerm)) {
-            projectTable->insertRow(rowIndex);
-            projectTable->setItem(
+            projectTabUI.table->insertRow(rowIndex);
+            projectTabUI.table->setItem(
                 rowIndex, 0,
                 new QTableWidgetItem(QString::number(project.getId())));
-            projectTable->setItem(rowIndex, 1,
+            projectTabUI.table->setItem(rowIndex, 1,
                                   new QTableWidgetItem(project.getName()));
-            projectTable->setItem(rowIndex, 2,
+            projectTabUI.table->setItem(rowIndex, 2,
                                   new QTableWidgetItem(project.getStatus()));
-            projectTable->setItem(rowIndex, 3,
+            projectTabUI.table->setItem(rowIndex, 3,
                                   new QTableWidgetItem(QString::number(
                                       project.getBudget(), 'f', 2)));
-            projectTable->setItem(
+            projectTabUI.table->setItem(
                 rowIndex, 4, new QTableWidgetItem(project.getClientName()));
             rowIndex++;
         }
@@ -1521,7 +1137,7 @@ void MainWindow::searchProject() {
 }
 
 void MainWindow::saveData() {
-    if (companies.empty()) return;
+        if (dataFields.companies.empty()) return;
 
     try {
         // Save to build directory
@@ -1541,19 +1157,19 @@ void MainWindow::saveData() {
 
         QString filepath = buildDir.absoluteFilePath("companies.txt");
         // Save all companies
-        FileManager::saveCompanies(companies, filepath);
+        FileManager::saveCompanies(dataFields.companies, filepath);
         QMessageBox::information(
             this, "Success",
             QString("Data saved successfully to:\n") + filepath +
-                QString("\n\nCompanies saved: %1").arg(companies.size()));
-    } catch (const std::exception& e) {
+                QString("\n\nCompanies saved: %1").arg(dataFields.companies.size()));
+    } catch (const FileManagerException& e) {
         QMessageBox::warning(this, "Error",
                              QString("Failed to save: ") + e.what());
     }
 }
 
-void MainWindow::autoSave() {
-    if (companies.empty()) return;
+void MainWindow::autoSave() const {
+        if (dataFields.companies.empty()) return;
 
     try {
         // Save to build directory
@@ -1573,12 +1189,11 @@ void MainWindow::autoSave() {
 
         QString filepath = buildDir.absoluteFilePath("companies.txt");
         // Save all companies
-        FileManager::saveCompanies(companies, filepath);
+        FileManager::saveCompanies(dataFields.companies, filepath);
         // Silent save - no message box
-    } catch (const std::exception& e) {
+    } catch (const FileManagerException& /* e */) {
         // Silently fail - don't interrupt user workflow
         // Could optionally log to console in debug mode
-        (void)e;  // Suppress unused variable warning
     }
 }
 
@@ -1606,27 +1221,27 @@ void MainWindow::loadData() {
             FileManager::loadCompanies(filepath);
 
         // Clear old companies
-        for (auto* company : companies) {
+        for (auto* company : dataFields.companies) {
             delete company;
         }
-        companies.clear();
+        dataFields.companies.clear();
 
         // Set loaded companies
-        companies = loadedCompanies;
+        dataFields.companies = loadedCompanies;
 
         // Set first company as current if available
-        if (!companies.empty()) {
-            currentCompanyIndex = 0;
-            currentCompany = companies[0];
+        if (!dataFields.companies.empty()) {
+            dataFields.currentCompanyIndex = 0;
+            dataFields.currentCompany = dataFields.companies[0];
         } else {
-            currentCompany = nullptr;
-            currentCompanyIndex = -1;
+            dataFields.currentCompany = nullptr;
+            dataFields.currentCompanyIndex = -1;
         }
 
         // Update company selector
         refreshCompanyList();
 
-        if (currentCompany != nullptr) {
+        if (dataFields.currentCompany != nullptr) {
             displayEmployees();
             displayProjects();
             showCompanyInfo();
@@ -1636,25 +1251,25 @@ void MainWindow::loadData() {
         QMessageBox::information(
             this, "Success",
             QString("Data loaded successfully!\nCompanies loaded: %1")
-                .arg(companies.size()));
-    } catch (const std::exception& e) {
+                .arg(dataFields.companies.size()));
+    } catch (const FileManagerException& e) {
         QMessageBox::warning(this, "Error",
                              QString("Failed to load: ") + e.what());
     }
 }
 
 void MainWindow::showCompanyInfo() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
-    companyInfoText->setPlainText(currentCompany->getCompanyInfo());
+    tabWidgets.companyInfoText->setPlainText(dataFields.currentCompany->getCompanyInfo());
 }
 
 void MainWindow::showStatistics() {
-    if (currentCompany == nullptr) return;
+    if (dataFields.currentCompany == nullptr) return;
 
-    auto employees = currentCompany->getAllEmployees();
-    double totalSalaries = currentCompany->getTotalSalaries();
-    double totalBudget = currentCompany->getTotalBudget();
+    auto employees = dataFields.currentCompany->getAllEmployees();
+    double totalSalaries = dataFields.currentCompany->getTotalSalaries();
+    double totalBudget = dataFields.currentCompany->getTotalBudget();
     double avgSalary =
         !employees.empty() ? totalSalaries / employees.size() : 0;
 
@@ -1665,10 +1280,10 @@ void MainWindow::showStatistics() {
                         .append("╚═══════════════════════════════════╝\n\n")
                         .append(QString("%1: %2\n")
                                     .arg("Total Employees", -18)
-                                    .arg(currentCompany->getEmployeeCount()))
+                                    .arg(dataFields.currentCompany->getEmployeeCount()))
                         .append(QString("%1: %2\n")
                                     .arg("Total Projects", -18)
-                                    .arg(currentCompany->getProjectCount()))
+                                    .arg(dataFields.currentCompany->getProjectCount()))
                         .append(QString("%1: $%2\n")
                                     .arg("Total Salaries", -18)
                                     .arg(totalSalaries, 0, 'f', 2))
@@ -1693,7 +1308,7 @@ void MainWindow::showStatistics() {
                          .arg(typeCountPair.second));
     }
 
-    statisticsText->setPlainText(stats);
+    tabWidgets.statisticsText->setPlainText(stats);
 }
 
 void MainWindow::refreshEmployeeTable() { displayEmployees(); }
@@ -1701,16 +1316,16 @@ void MainWindow::refreshEmployeeTable() { displayEmployees(); }
 void MainWindow::refreshProjectTable() { displayProjects(); }
 
 void MainWindow::refreshCompanyList() {
-    if (companySelector != nullptr) {
-        companySelector->clear();
-        for (auto* company : companies) {
+    if (companyManagementUI.selector != nullptr) {
+        companyManagementUI.selector->clear();
+        for (auto* company : dataFields.companies) {
             if (company != nullptr) {
-                companySelector->addItem(company->getName());
+                companyManagementUI.selector->addItem(company->getName());
             }
         }
-        if (currentCompanyIndex >= 0 &&
-            currentCompanyIndex < (int)companies.size()) {
-            companySelector->setCurrentIndex(currentCompanyIndex);
+        if (dataFields.currentCompanyIndex >= 0 &&
+            dataFields.currentCompanyIndex < (int)dataFields.companies.size()) {
+            companyManagementUI.selector->setCurrentIndex(dataFields.currentCompanyIndex);
         }
     }
 }
@@ -1774,10 +1389,10 @@ void MainWindow::addCompany() {
             return;
         }
 
-        currentCompany = new Company(companyName, companyIndustry,
+        dataFields.currentCompany = new Company(companyName, companyIndustry,
                                      companyLocation, foundedYear);
-        companies.push_back(currentCompany);
-        currentCompanyIndex = companies.size() - 1;
+        dataFields.companies.push_back(dataFields.currentCompany);
+        dataFields.currentCompanyIndex = dataFields.companies.size() - 1;
 
         refreshCompanyList();
         displayEmployees();
@@ -1793,16 +1408,16 @@ void MainWindow::addCompany() {
 }
 
 void MainWindow::switchCompany() {
-    if (companySelector != nullptr && currentCompanyIndex >= 0) {
+    if (companyManagementUI.selector != nullptr && dataFields.currentCompanyIndex >= 0) {
         // Save previous company before switching
-        if (currentCompany != nullptr) {
+        if (dataFields.currentCompany != nullptr) {
             autoSave();
         }
 
-        int newIndex = companySelector->currentIndex();
-        if (newIndex >= 0 && newIndex < (int)companies.size()) {
-            currentCompany = companies[newIndex];
-            currentCompanyIndex = newIndex;
+        int newIndex = companyManagementUI.selector->currentIndex();
+        if (newIndex >= 0 && newIndex < (int)dataFields.companies.size()) {
+            dataFields.currentCompany = dataFields.companies[newIndex];
+            dataFields.currentCompanyIndex = newIndex;
             displayEmployees();
             displayProjects();
             showCompanyInfo();
@@ -1812,7 +1427,7 @@ void MainWindow::switchCompany() {
 }
 
 void MainWindow::deleteCompany() {
-    if (companies.size() <= 1) {
+    if (dataFields.companies.size() <= 1) {
         QMessageBox::warning(this, "Error",
                              "Cannot delete the only remaining company!");
         return;
@@ -1822,16 +1437,16 @@ void MainWindow::deleteCompany() {
         this, "Confirm Delete", "Are you sure you want to delete this company?",
         QMessageBox::Yes | QMessageBox::No);
     if (ret == QMessageBox::Yes) {
-        delete currentCompany;
-        companies.erase(companies.begin() + currentCompanyIndex);
+        delete dataFields.currentCompany;
+        dataFields.companies.erase(dataFields.companies.begin() + dataFields.currentCompanyIndex);
 
         // Switch to first company if available
-        if (!companies.empty()) {
-            currentCompanyIndex = 0;
-            currentCompany = companies[0];
+        if (!dataFields.companies.empty()) {
+            dataFields.currentCompanyIndex = 0;
+            dataFields.currentCompany = dataFields.companies[0];
         } else {
-            currentCompany = nullptr;
-            currentCompanyIndex = -1;
+            dataFields.currentCompany = nullptr;
+            dataFields.currentCompanyIndex = -1;
         }
 
         refreshCompanyList();
@@ -1841,7 +1456,7 @@ void MainWindow::deleteCompany() {
         showStatistics();
 
         // Save remaining company after deletion
-        if (currentCompany != nullptr) {
+        if (dataFields.currentCompany != nullptr) {
             autoSave();
         }
 

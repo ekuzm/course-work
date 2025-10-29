@@ -20,6 +20,7 @@ set(SOURCES
     src/derived_employees.cpp
     src/project.cpp
     src/file_manager.cpp
+    src/employee_dialog_helper.cpp
 )
 
 set(HEADERS
