@@ -142,8 +142,7 @@ void Company::addProject(const Project& project) {
 void Company::removeProject(int projectId) { projects.remove(projectId); }
 
 const Project* Company::getProject(int projectId) const {
-    auto result = projects.find(projectId);
-    if (result) {
+    if (auto result = projects.find(projectId); result) {
         // WARNING: Returning raw pointer from shared_ptr - caller should not
         // delete this This is necessary for backward compatibility with
         // existing code

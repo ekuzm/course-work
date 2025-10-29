@@ -508,7 +508,7 @@ void MainWindow::addEmployee() {
 
             if (!EmployeeDialogHelper::checkDuplicateEmployee(
                     name, companyData.currentCompany)) {
-                return;
+                    return;
             }
 
             int employeeId = companyData.nextEmployeeId;
@@ -588,7 +588,7 @@ void MainWindow::editEmployee() {
             }
 
             if (!EmployeeDialogHelper::checkDuplicateEmployeeOnEdit(name, employeeId, companyData.currentCompany)) {
-                return;
+                    return;
             }
 
             auto updatedEmployee = EmployeeDialogHelper::createEmployeeFromType(
@@ -827,7 +827,7 @@ void MainWindow::addProject() {
             int projectId = companyData.nextProjectId;
             companyData.nextProjectId++;
             ProjectParams params{nameEdit->text().trimmed(),
-                                 descEdit->toPlainText().trimmed(),
+                            descEdit->toPlainText().trimmed(),
                                  statusCombo->currentText(),
                                  startDate->date(),
                                  endDate->date(),
@@ -957,16 +957,16 @@ void MainWindow::editProject() {
             QString projectName = nameEdit->text().trimmed();
             if (!checkDuplicateProjectOnEdit(projectName, projectId,
                                                companyData.currentCompany)) {
-                QMessageBox::warning(
-                    this, "Duplicate Error",
-                    "A project with this name already exists!");
-                return;
+                    QMessageBox::warning(
+                        this, "Duplicate Error",
+                        "A project with this name already exists!");
+                    return;
             }
 
             // Create updated project
             ProjectParams params{nameEdit->text().trimmed(),
-                                 descEdit->toPlainText().trimmed(),
-                                 statusCombo->currentText(),
+                                   descEdit->toPlainText().trimmed(),
+                                   statusCombo->currentText(),
                                  startDate->date(),
                                  endDate->date(),
                                  projectBudget,
@@ -1230,14 +1230,14 @@ void MainWindow::refreshCompanyList() {
 
 void MainWindow::addCompany() {
     CompanyManager::addCompany(companyData, companyManagementUI.selector, this);
-    refreshCompanyList();
+        refreshCompanyList();
     DisplayHelper::displayEmployees(employeeTabUI.table,
                                      companyData.currentCompany);
     DisplayHelper::displayProjects(projectTabUI.table,
                                     companyData.currentCompany);
-    showCompanyInfo();
-    showStatistics();
-    autoSave();  // Save new company to file
+        showCompanyInfo();
+        showStatistics();
+        autoSave();  // Save new company to file
 }
 
 void MainWindow::switchCompany() {
@@ -1254,8 +1254,8 @@ void MainWindow::switchCompany() {
                                         companyData.currentCompany);
         DisplayHelper::displayProjects(projectTabUI.table,
                                        companyData.currentCompany);
-        showCompanyInfo();
-        showStatistics();
+            showCompanyInfo();
+            showStatistics();
         
         // Update next IDs
         auto employees = companyData.currentCompany->getAllEmployees();
@@ -1271,14 +1271,14 @@ void MainWindow::switchCompany() {
 
 void MainWindow::deleteCompany() {
     CompanyManager::deleteCompany(companyData, companyManagementUI.selector, this);
-    refreshCompanyList();
+        refreshCompanyList();
     DisplayHelper::displayEmployees(employeeTabUI.table,
                                      companyData.currentCompany);
     DisplayHelper::displayProjects(projectTabUI.table,
                                     companyData.currentCompany);
-    showCompanyInfo();
-    showStatistics();
+        showCompanyInfo();
+        showStatistics();
     if (companyData.currentCompany != nullptr) {
-        autoSave();
+            autoSave();
     }
 }

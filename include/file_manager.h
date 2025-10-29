@@ -29,12 +29,12 @@ class FileManager {
     static std::vector<Company*> loadCompanies(const QString& fileName);
 
    private:
-    static void saveEmployees(Company& company, std::ofstream& file);
-    static void saveProjects(Company& company, std::ofstream& file);
+    static void saveEmployees(const Company& company, std::ofstream& file);
+    static void saveProjects(const Company& company, std::ofstream& file);
     static void loadEmployees(Company& company, std::ifstream& file);
     static void loadProjects(Company& company, std::ifstream& file);
 
-    static void saveSingleCompany(Company& company, std::ofstream& file);
+    static void saveSingleCompany(const Company& company, std::ofstream& file);
     static Company loadSingleCompany(std::ifstream& file);
 };
 

@@ -23,7 +23,7 @@ void FileManager::saveToFile(Company& company, const QString& fileName) {
     fileStream.close();
 }
 
-void FileManager::saveSingleCompany(Company& company,
+void FileManager::saveSingleCompany(const Company& company,
                                     std::ofstream& fileStream) {
     // Save company info
     fileStream << "[COMPANY]\n";
@@ -96,7 +96,8 @@ Company FileManager::loadSingleCompany(std::ifstream& fileStream) {
     return company;
 }
 
-void FileManager::saveEmployees(Company& company, std::ofstream& fileStream) {
+void FileManager::saveEmployees(const Company& company,
+                                std::ofstream& fileStream) {
     auto employees = company.getAllEmployees();
     for (const auto& employee : employees) {
         if (auto manager = std::dynamic_pointer_cast<Manager>(employee)) {
@@ -229,7 +230,8 @@ void FileManager::loadEmployees(Company& company, std::ifstream& fileStream) {
     }
 }
 
-void FileManager::saveProjects(Company& company, std::ofstream& fileStream) {
+void FileManager::saveProjects(const Company& company,
+                               std::ofstream& fileStream) {
     auto projects = company.getAllProjects();
     for (const auto& project : projects) {
         fileStream << "[PROJECT]\n";
@@ -307,7 +309,7 @@ void FileManager::saveCompanies(const std::vector<Company*>& companies,
     fileStream << "[COMPANIES]\n";
     fileStream << companies.size() << "\n";
 
-    for (Company* company : companies) {
+    for (const Company* company : companies) {
         if (company) {
             saveSingleCompany(*company, fileStream);
         }

@@ -224,11 +224,11 @@ void CompanyManager::deleteCompany(CompanyManager::CompanyData& companyData,
     }
 }
 
-void CompanyManager::refreshCompanyList(CompanyManager::CompanyData& companyData,
-                                         QComboBox* selector) {
+void CompanyManager::refreshCompanyList(
+    const CompanyManager::CompanyData& companyData, QComboBox* selector) {
     if (selector != nullptr) {
         selector->clear();
-        for (auto* company : companyData.companies) {
+        for (const auto* company : companyData.companies) {
             if (company != nullptr) {
                 selector->addItem(company->getName());
             }

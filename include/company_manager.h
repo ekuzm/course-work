@@ -29,7 +29,7 @@ class CompanyManager {
                               int newIndex);
     static void deleteCompany(CompanyData& companyData, QComboBox* selector,
                               QWidget* parent);
-    static void refreshCompanyList(CompanyData& companyData,
+    static void refreshCompanyList(const CompanyData& companyData,
                                     QComboBox* selector);
 };
 
