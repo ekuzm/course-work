@@ -572,125 +572,415 @@ int MainWindow::getSelectedProjectId() {
     return -1;
 }
 
+MainWindow::EmployeeFormWidgets MainWindow::createEmployeeDialog(
+    QDialog& dialog, QFormLayout* form) {
+    EmployeeFormWidgets widgets;
+
+    widgets.typeCombo = new QComboBox();
+    widgets.typeCombo->addItems({"Manager", "Developer", "Designer", "QA"});
+    widgets.typeCombo->setStyleSheet("background-color: white;");
+    form->addRow("Type:", widgets.typeCombo);
+
+    widgets.nameEdit = new QLineEdit();
+    widgets.nameEdit->setPlaceholderText("e.g., John Doe");
+    form->addRow("Name:", widgets.nameEdit);
+
+    widgets.salaryEdit = new QLineEdit();
+    widgets.salaryEdit->setPlaceholderText("e.g., 5000");
+    form->addRow("Salary ($):", widgets.salaryEdit);
+
+    widgets.deptEdit = new QLineEdit();
+    widgets.deptEdit->setPlaceholderText("e.g., Development, Design");
+    form->addRow("Department:", widgets.deptEdit);
+
+    // Manager fields
+    widgets.managerProject = new QLineEdit();
+    widgets.managerProject->setPlaceholderText("e.g., Mobile App Project");
+    widgets.managerProjectLabel = new QLabel("Managed Project:");
+    form->addRow(widgets.managerProjectLabel, widgets.managerProject);
+    widgets.managerProjectLabel->setVisible(false);
+    widgets.managerProject->setVisible(false);
+
+    widgets.managerTeamSize = new QLineEdit();
+    widgets.managerTeamSize->setPlaceholderText("e.g., 5");
+    widgets.managerTeamSizeLabel = new QLabel("Team Size:");
+    form->addRow(widgets.managerTeamSizeLabel, widgets.managerTeamSize);
+    widgets.managerTeamSizeLabel->setVisible(false);
+    widgets.managerTeamSize->setVisible(false);
+
+    // Developer fields
+    widgets.devLanguage = new QLineEdit();
+    widgets.devLanguage->setPlaceholderText("e.g., C++, Java, Python");
+    widgets.devLanguageLabel = new QLabel("Programming Language:");
+    form->addRow(widgets.devLanguageLabel, widgets.devLanguage);
+    widgets.devLanguageLabel->setVisible(false);
+    widgets.devLanguage->setVisible(false);
+
+    widgets.devExperience = new QLineEdit();
+    widgets.devExperience->setPlaceholderText("e.g., 3");
+    widgets.devExperienceLabel = new QLabel("Years of Experience:");
+    form->addRow(widgets.devExperienceLabel, widgets.devExperience);
+    widgets.devExperienceLabel->setVisible(false);
+    widgets.devExperience->setVisible(false);
+
+    // Designer fields
+    widgets.designerTool = new QLineEdit();
+    widgets.designerTool->setPlaceholderText("e.g., Figma, Adobe XD");
+    widgets.designerToolLabel = new QLabel("Design Tool:");
+    form->addRow(widgets.designerToolLabel, widgets.designerTool);
+    widgets.designerToolLabel->setVisible(false);
+    widgets.designerTool->setVisible(false);
+
+    widgets.designerProjects = new QLineEdit();
+    widgets.designerProjects->setPlaceholderText("e.g., 10");
+    widgets.designerProjectsLabel = new QLabel("Number of Projects:");
+    form->addRow(widgets.designerProjectsLabel, widgets.designerProjects);
+    widgets.designerProjectsLabel->setVisible(false);
+    widgets.designerProjects->setVisible(false);
+
+    // QA fields
+    widgets.qaTestType = new QLineEdit();
+    widgets.qaTestType->setPlaceholderText("e.g., Manual, Automated");
+    widgets.qaTestTypeLabel = new QLabel("Testing Type:");
+    form->addRow(widgets.qaTestTypeLabel, widgets.qaTestType);
+    widgets.qaTestTypeLabel->setVisible(false);
+    widgets.qaTestType->setVisible(false);
+
+    widgets.qaBugs = new QLineEdit();
+    widgets.qaBugs->setPlaceholderText("e.g., 25");
+    widgets.qaBugsLabel = new QLabel("Bugs Found:");
+    form->addRow(widgets.qaBugsLabel, widgets.qaBugs);
+    widgets.qaBugsLabel->setVisible(false);
+    widgets.qaBugs->setVisible(false);
+
+    // Setup field visibility handler
+    auto updateFields = [=](int index) {
+        bool showManager = (index == 0);
+        widgets.managerProjectLabel->setVisible(showManager);
+        widgets.managerProject->setVisible(showManager);
+        widgets.managerTeamSizeLabel->setVisible(showManager);
+        widgets.managerTeamSize->setVisible(showManager);
+
+        bool showDev = (index == 1);
+        widgets.devLanguageLabel->setVisible(showDev);
+        widgets.devLanguage->setVisible(showDev);
+        widgets.devExperienceLabel->setVisible(showDev);
+        widgets.devExperience->setVisible(showDev);
+
+        bool showDesigner = (index == 2);
+        widgets.designerToolLabel->setVisible(showDesigner);
+        widgets.designerTool->setVisible(showDesigner);
+        widgets.designerProjectsLabel->setVisible(showDesigner);
+        widgets.designerProjects->setVisible(showDesigner);
+
+        bool showQA = (index == 3);
+        widgets.qaTestTypeLabel->setVisible(showQA);
+        widgets.qaTestType->setVisible(showQA);
+        widgets.qaBugsLabel->setVisible(showQA);
+        widgets.qaBugs->setVisible(showQA);
+    };
+
+    connect(widgets.typeCombo,
+            QOverload<int>::of(&QComboBox::currentIndexChanged), updateFields);
+    updateFields(0);
+
+    return widgets;
+}
+
+bool MainWindow::validateEmployeeInput(const QString& name, double salary,
+                                       const QString& department) {
+    if (name.isEmpty()) {
+        QMessageBox::warning(this, "Validation Error",
+                             "Name cannot be empty!");
+        return false;
+    }
+
+    if (salary < kMinSalary) {
+        QMessageBox::warning(this, "Validation Error",
+                             QString("Salary must be at least $%1!").arg(kMinSalary));
+        return false;
+    }
+
+    if (salary > kMaxSalary) {
+        QMessageBox::warning(this, "Validation Error",
+                             QString("Salary cannot exceed $%1!").arg(kMaxSalary));
+        return false;
+    }
+
+    if (department.isEmpty()) {
+        QMessageBox::warning(this, "Validation Error",
+                             "Department cannot be empty!");
+        return false;
+    }
+
+    return true;
+}
+
+bool MainWindow::checkDuplicateEmployee(const QString& name) {
+    auto existingEmployees = currentCompany->getAllEmployees();
+    for (const auto& employee : existingEmployees) {
+        if (employee != nullptr &&
+            employee->getName().toLower() == name.toLower()) {
+            QMessageBox::warning(this, "Duplicate Error",
+                                  "An employee with this name already exists!");
+            return false;
+        }
+    }
+    return true;
+}
+
+std::shared_ptr<Employee> MainWindow::createEmployeeFromType(
+    const QString& employeeType, int employeeId, const QString& name,
+    double salary, const QString& department,
+    const EmployeeFormWidgets& widgets) {
+    if (employeeType == "Manager") {
+        QString projectName = widgets.managerProject->text().trimmed();
+        if (projectName.isEmpty()) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Managed project cannot be empty!");
+            return nullptr;
+        }
+
+        bool conversionSuccess = false;
+        int teamSize = widgets.managerTeamSize->text().toInt(&conversionSuccess);
+        if (!conversionSuccess || teamSize < 0) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Please enter a valid team size!");
+            return nullptr;
+        }
+
+        return std::make_shared<Manager>(employeeId, name, salary, department,
+                                         teamSize, projectName);
+    }
+
+    if (employeeType == "Developer") {
+        QString language = widgets.devLanguage->text().trimmed();
+        if (language.isEmpty()) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Programming language cannot be empty!");
+            return nullptr;
+        }
+
+        bool conversionSuccess = false;
+        int years = widgets.devExperience->text().toInt(&conversionSuccess);
+        if (!conversionSuccess || years < 0) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Please enter valid years of experience!");
+            return nullptr;
+        }
+
+        return std::make_shared<Developer>(employeeId, name, salary, department,
+                                           language, years);
+    }
+
+    if (employeeType == "Designer") {
+        QString tool = widgets.designerTool->text().trimmed();
+        if (tool.isEmpty()) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Design tool cannot be empty!");
+            return nullptr;
+        }
+
+        bool conversionSuccess = false;
+        int projects = widgets.designerProjects->text().toInt(&conversionSuccess);
+        if (!conversionSuccess || projects < 0) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Please enter a valid number of projects!");
+            return nullptr;
+        }
+
+        return std::make_shared<Designer>(employeeId, name, salary, department,
+                                          tool, projects);
+    }
+
+    if (employeeType == "QA") {
+        QString testType = widgets.qaTestType->text().trimmed();
+        if (testType.isEmpty()) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Testing type cannot be empty!");
+            return nullptr;
+        }
+
+        bool conversionSuccess = false;
+        int bugs = widgets.qaBugs->text().toInt(&conversionSuccess);
+        if (!conversionSuccess || bugs < 0) {
+            QMessageBox::warning(this, "Validation Error",
+                                 "Please enter a valid number of bugs!");
+            return nullptr;
+        }
+
+        return std::make_shared<QA>(employeeId, name, salary, department,
+                                    testType, bugs);
+    }
+
+    return nullptr;
+}
+
+MainWindow::EmployeeFormWidgets MainWindow::createEditEmployeeDialog(
+    QDialog& dialog, QFormLayout* form, std::shared_ptr<Employee> employee) {
+    EmployeeFormWidgets widgets;
+
+    // Type is read-only
+    auto* typeLabel = new QLabel("Type:");
+    auto* typeDisplay = new QLineEdit();
+    typeDisplay->setText(employee->getEmployeeType());
+    typeDisplay->setReadOnly(true);
+    typeDisplay->setStyleSheet("QLineEdit { background-color: #f5f5f5; }");
+    form->addRow(typeLabel, typeDisplay);
+
+    widgets.nameEdit = new QLineEdit();
+    widgets.nameEdit->setPlaceholderText("e.g., John Doe");
+    widgets.nameEdit->setText(employee->getName());
+    form->addRow("Name:", widgets.nameEdit);
+
+    widgets.salaryEdit = new QLineEdit();
+    widgets.salaryEdit->setPlaceholderText("e.g., 5000");
+    widgets.salaryEdit->setText(QString::number(employee->getSalary(), 'f', 2));
+    form->addRow("Salary ($):", widgets.salaryEdit);
+
+    widgets.deptEdit = new QLineEdit();
+    widgets.deptEdit->setPlaceholderText("e.g., Development, Design");
+    widgets.deptEdit->setText(employee->getDepartment());
+    form->addRow("Department:", widgets.deptEdit);
+
+    // Create all type-specific fields (same as addEmployee)
+    widgets.managerProject = new QLineEdit();
+    widgets.managerProject->setPlaceholderText("e.g., Mobile App Project");
+    widgets.managerProjectLabel = new QLabel("Managed Project:");
+    form->addRow(widgets.managerProjectLabel, widgets.managerProject);
+
+    widgets.managerTeamSize = new QLineEdit();
+    widgets.managerTeamSize->setPlaceholderText("e.g., 5");
+    widgets.managerTeamSizeLabel = new QLabel("Team Size:");
+    form->addRow(widgets.managerTeamSizeLabel, widgets.managerTeamSize);
+
+    widgets.devLanguage = new QLineEdit();
+    widgets.devLanguage->setPlaceholderText("e.g., C++, Java, Python");
+    widgets.devLanguageLabel = new QLabel("Programming Language:");
+    form->addRow(widgets.devLanguageLabel, widgets.devLanguage);
+
+    widgets.devExperience = new QLineEdit();
+    widgets.devExperience->setPlaceholderText("e.g., 3");
+    widgets.devExperienceLabel = new QLabel("Years of Experience:");
+    form->addRow(widgets.devExperienceLabel, widgets.devExperience);
+
+    widgets.designerTool = new QLineEdit();
+    widgets.designerTool->setPlaceholderText("e.g., Figma, Adobe XD");
+    widgets.designerToolLabel = new QLabel("Design Tool:");
+    form->addRow(widgets.designerToolLabel, widgets.designerTool);
+
+    widgets.designerProjects = new QLineEdit();
+    widgets.designerProjects->setPlaceholderText("e.g., 10");
+    widgets.designerProjectsLabel = new QLabel("Number of Projects:");
+    form->addRow(widgets.designerProjectsLabel, widgets.designerProjects);
+
+    widgets.qaTestType = new QLineEdit();
+    widgets.qaTestType->setPlaceholderText("e.g., Manual, Automated");
+    widgets.qaTestTypeLabel = new QLabel("Testing Type:");
+    form->addRow(widgets.qaTestTypeLabel, widgets.qaTestType);
+
+    widgets.qaBugs = new QLineEdit();
+    widgets.qaBugs->setPlaceholderText("e.g., 25");
+    widgets.qaBugsLabel = new QLabel("Bugs Found:");
+    form->addRow(widgets.qaBugsLabel, widgets.qaBugs);
+
+    // Populate and show/hide fields based on employee type
+    populateEmployeeFields(widgets, employee);
+
+    return widgets;
+}
+
+void MainWindow::populateEmployeeFields(const EmployeeFormWidgets& widgets,
+                                        std::shared_ptr<Employee> employee) {
+    QString currentType = employee->getEmployeeType();
+
+    // Hide all fields first
+    widgets.managerProjectLabel->setVisible(false);
+    widgets.managerProject->setVisible(false);
+    widgets.managerTeamSizeLabel->setVisible(false);
+    widgets.managerTeamSize->setVisible(false);
+    widgets.devLanguageLabel->setVisible(false);
+    widgets.devLanguage->setVisible(false);
+    widgets.devExperienceLabel->setVisible(false);
+    widgets.devExperience->setVisible(false);
+    widgets.designerToolLabel->setVisible(false);
+    widgets.designerTool->setVisible(false);
+    widgets.designerProjectsLabel->setVisible(false);
+    widgets.designerProjects->setVisible(false);
+    widgets.qaTestTypeLabel->setVisible(false);
+    widgets.qaTestType->setVisible(false);
+    widgets.qaBugsLabel->setVisible(false);
+    widgets.qaBugs->setVisible(false);
+
+    // Show and populate fields based on type
+    if (currentType == "Manager") {
+        auto* manager = dynamic_cast<Manager*>(employee.get());
+        if (manager != nullptr) {
+            widgets.managerProject->setText(manager->getProjectManaged());
+            widgets.managerTeamSize->setText(QString::number(manager->getTeamSize()));
+        }
+        widgets.managerProjectLabel->setVisible(true);
+        widgets.managerProject->setVisible(true);
+        widgets.managerTeamSizeLabel->setVisible(true);
+        widgets.managerTeamSize->setVisible(true);
+    } else if (currentType == "Developer") {
+        auto* developer = dynamic_cast<Developer*>(employee.get());
+        if (developer != nullptr) {
+            widgets.devLanguage->setText(developer->getProgrammingLanguage());
+            widgets.devExperience->setText(
+                QString::number(developer->getYearsOfExperience()));
+        }
+        widgets.devLanguageLabel->setVisible(true);
+        widgets.devLanguage->setVisible(true);
+        widgets.devExperienceLabel->setVisible(true);
+        widgets.devExperience->setVisible(true);
+    } else if (currentType == "Designer") {
+        auto* designer = dynamic_cast<Designer*>(employee.get());
+        if (designer != nullptr) {
+            widgets.designerTool->setText(designer->getDesignTool());
+            widgets.designerProjects->setText(
+                QString::number(designer->getNumberOfProjects()));
+        }
+        widgets.designerToolLabel->setVisible(true);
+        widgets.designerTool->setVisible(true);
+        widgets.designerProjectsLabel->setVisible(true);
+        widgets.designerProjects->setVisible(true);
+    } else if (currentType == "QA") {
+        auto* qaEmployee = dynamic_cast<QA*>(employee.get());
+        if (qaEmployee != nullptr) {
+            widgets.qaTestType->setText(qaEmployee->getTestingType());
+            widgets.qaBugs->setText(QString::number(qaEmployee->getBugsFound()));
+        }
+        widgets.qaTestTypeLabel->setVisible(true);
+        widgets.qaTestType->setVisible(true);
+        widgets.qaBugsLabel->setVisible(true);
+        widgets.qaBugs->setVisible(true);
+    }
+}
+
+bool MainWindow::checkDuplicateEmployeeOnEdit(const QString& name, int excludeId) {
+    auto existingEmployees = currentCompany->getAllEmployees();
+    for (const auto& employee : existingEmployees) {
+        if (employee != nullptr && employee->getId() != excludeId &&
+            employee->getName().toLower() == name.toLower()) {
+            QMessageBox::warning(this, "Duplicate Error",
+                                  "An employee with this name already exists!");
+            return false;
+        }
+    }
+    return true;
+}
+
 void MainWindow::addEmployee() {
     if (currentCompany == nullptr) return;
 
     QDialog dialog(this);
     dialog.setWindowTitle("Add Employee");
+    dialog.setMinimumWidth(kDefaultDialogMinWidth);
     dialog.setStyleSheet("QDialog { background-color: white; }");
 
     auto* form = new QFormLayout(&dialog);
-
-    auto* typeCombo = new QComboBox();
-    typeCombo->addItems({"Manager", "Developer", "Designer", "QA"});
-    typeCombo->setStyleSheet("background-color: white;");
-    form->addRow("Type:", typeCombo);
-
-    auto* nameEdit = new QLineEdit();
-    nameEdit->setPlaceholderText("e.g., John Doe");
-    form->addRow("Name:", nameEdit);
-
-    auto* salaryEdit = new QLineEdit();
-    salaryEdit->setPlaceholderText("e.g., 5000");
-    form->addRow("Salary ($):", salaryEdit);
-
-    auto* deptEdit = new QLineEdit();
-    deptEdit->setPlaceholderText("e.g., Development, Design");
-    form->addRow("Department:", deptEdit);
-
-    // Type-specific fields with separate labels for proper visibility control
-    auto* managerProject = new QLineEdit();
-    managerProject->setPlaceholderText("e.g., Mobile App Project");
-    auto* managerProjectLabel = new QLabel("Managed Project:");
-    form->addRow(managerProjectLabel, managerProject);
-    managerProjectLabel->setVisible(false);
-    managerProject->setVisible(false);
-
-    auto* managerTeamSize = new QLineEdit();
-    managerTeamSize->setPlaceholderText("e.g., 5");
-    auto* managerTeamSizeLabel = new QLabel("Team Size:");
-    form->addRow(managerTeamSizeLabel, managerTeamSize);
-    managerTeamSizeLabel->setVisible(false);
-    managerTeamSize->setVisible(false);
-
-    auto* devLanguage = new QLineEdit();
-    devLanguage->setPlaceholderText("e.g., C++, Java, Python");
-    auto* devLanguageLabel = new QLabel("Programming Language:");
-    form->addRow(devLanguageLabel, devLanguage);
-    devLanguageLabel->setVisible(false);
-    devLanguage->setVisible(false);
-
-    auto* devExperience = new QLineEdit();
-    devExperience->setPlaceholderText("e.g., 3");
-    auto* devExperienceLabel = new QLabel("Years of Experience:");
-    form->addRow(devExperienceLabel, devExperience);
-    devExperienceLabel->setVisible(false);
-    devExperience->setVisible(false);
-
-    auto* designerTool = new QLineEdit();
-    designerTool->setPlaceholderText("e.g., Figma, Adobe XD");
-    auto* designerToolLabel = new QLabel("Design Tool:");
-    form->addRow(designerToolLabel, designerTool);
-    designerToolLabel->setVisible(false);
-    designerTool->setVisible(false);
-
-    auto* designerProjects = new QLineEdit();
-    designerProjects->setPlaceholderText("e.g., 10");
-    auto* designerProjectsLabel = new QLabel("Number of Projects:");
-    form->addRow(designerProjectsLabel, designerProjects);
-    designerProjectsLabel->setVisible(false);
-    designerProjects->setVisible(false);
-
-    auto* qaTestType = new QLineEdit();
-    qaTestType->setPlaceholderText("e.g., Manual, Automated");
-    auto* qaTestTypeLabel = new QLabel("Testing Type:");
-    form->addRow(qaTestTypeLabel, qaTestType);
-    qaTestTypeLabel->setVisible(false);
-    qaTestType->setVisible(false);
-
-    auto* qaBugs = new QLineEdit();
-    qaBugs->setPlaceholderText("e.g., 25");
-    auto* qaBugsLabel = new QLabel("Bugs Found:");
-    form->addRow(qaBugsLabel, qaBugs);
-    qaBugsLabel->setVisible(false);
-    qaBugs->setVisible(false);
-
-    // Show/hide fields and labels based on type
-    auto updateFields = [=](int index) {
-        // Manager fields
-        bool showManager = (index == 0);
-        managerProjectLabel->setVisible(showManager);
-        managerProject->setVisible(showManager);
-        managerTeamSizeLabel->setVisible(showManager);
-        managerTeamSize->setVisible(showManager);
-
-        // Developer fields
-        bool showDev = (index == 1);
-        devLanguageLabel->setVisible(showDev);
-        devLanguage->setVisible(showDev);
-        devExperienceLabel->setVisible(showDev);
-        devExperience->setVisible(showDev);
-
-        // Designer fields
-        bool showDesigner = (index == 2);
-        designerToolLabel->setVisible(showDesigner);
-        designerTool->setVisible(showDesigner);
-        designerProjectsLabel->setVisible(showDesigner);
-        designerProjects->setVisible(showDesigner);
-
-        // QA fields
-        bool showQA = (index == 3);
-        qaTestTypeLabel->setVisible(showQA);
-        qaTestType->setVisible(showQA);
-        qaBugsLabel->setVisible(showQA);
-        qaBugs->setVisible(showQA);
-    };
-
-    connect(typeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
-            updateFields);
-
-    // Initialize fields based on default selection (Manager = 0)
-    updateFields(0);
+    EmployeeFormWidgets widgets = createEmployeeDialog(dialog, form);
 
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
@@ -698,138 +988,37 @@ void MainWindow::addEmployee() {
 
     if (dialog.exec() == QDialog::Accepted) {
         try {
-            QString name = nameEdit->text().trimmed();
-            double salary = salaryEdit->text().toDouble();
-            QString department = deptEdit->text().trimmed();
+            QString name = widgets.nameEdit->text().trimmed();
+            double salary = widgets.salaryEdit->text().toDouble();
+            QString department = widgets.deptEdit->text().trimmed();
 
-            // Validation
-            if (name.isEmpty()) {
-                QMessageBox::warning(this, "Validation Error",
-                                     "Name cannot be empty!");
+            if (!validateEmployeeInput(name, salary, department)) {
                 return;
             }
 
-            // Check for duplicate employee by name
-            auto existingEmployees = currentCompany->getAllEmployees();
-            for (const auto& employee : existingEmployees) {
-                if (employee &&
-                    employee->getName().toLower() == name.toLower()) {
-                    QMessageBox::warning(
-                        this, "Duplicate Error",
-                        "An employee with this name already exists!");
-                    return;
-                }
-            }
-
-            // Validate salary range
-            if (salary < kMinSalary) {
-                QMessageBox::warning(
-                    this, "Validation Error",
-                    QString("Salary must be at least $%1!").arg(kMinSalary));
-                return;
-            }
-            if (salary > kMaxSalary) {
-                QMessageBox::warning(
-                    this, "Validation Error",
-                    QString("Salary cannot exceed $%1!").arg(kMaxSalary));
+            if (!checkDuplicateEmployee(name)) {
                 return;
             }
 
-            if (department.isEmpty()) {
-                QMessageBox::warning(this, "Validation Error",
-                                     "Department cannot be empty!");
-                return;
-            }
-
-            // Generate ID only after all validation passes
             int employeeId = nextEmployeeId++;
+            QString employeeType = widgets.typeCombo->currentText();
 
-            QString employeeType = typeCombo->currentText();
-            std::shared_ptr<Employee> employee;
-
-            if (employeeType == "Manager") {
-                if (managerProject->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Managed project cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int managerTeamSizeValue =
-                    managerTeamSize->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || managerTeamSizeValue < 0) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Please enter a valid team size!");
-                    return;
-                }
-                employee = std::make_shared<Manager>(
-                    employeeId, name, salary, department, managerTeamSizeValue,
-                    managerProject->text().trimmed());
-            } else if (employeeType == "Developer") {
-                if (devLanguage->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Programming language cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int developerYearsOfExperience =
-                    devExperience->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || developerYearsOfExperience < 0) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Please enter valid years of experience!");
-                    return;
-                }
-                employee = std::make_shared<Developer>(
-                    employeeId, name, salary, department,
-                    devLanguage->text().trimmed(), developerYearsOfExperience);
-            } else if (employeeType == "Designer") {
-                if (designerTool->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Design tool cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int designerNumberOfProjects =
-                    designerProjects->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || designerNumberOfProjects < 0) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Please enter a valid number of projects!");
-                    return;
-                }
-                employee = std::make_shared<Designer>(
-                    employeeId, name, salary, department,
-                    designerTool->text().trimmed(), designerNumberOfProjects);
-            } else if (employeeType == "QA") {
-                if (qaTestType->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Testing type cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int qaBugsFound = qaBugs->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || qaBugsFound < 0) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Please enter a valid number of bugs!");
-                    return;
-                }
-                employee = std::make_shared<QA>(
-                    employeeId, name, salary, department,
-                    qaTestType->text().trimmed(), qaBugsFound);
+            auto employee = createEmployeeFromType(employeeType, employeeId, name,
+                                                    salary, department, widgets);
+            if (employee == nullptr) {
+                return;
             }
 
             currentCompany->addEmployee(employee);
             displayEmployees();
             showCompanyInfo();
             showStatistics();
-            autoSave();  // Automatically save after adding
+            autoSave();
             QMessageBox::information(this, "Success",
                                      "Employee added successfully!");
         } catch (const std::exception& e) {
-            QMessageBox::warning(
-                this, "Error", QString("Failed to add employee: ") + e.what());
+            QMessageBox::warning(this, "Error",
+                                 QString("Failed to add employee: ") + e.what());
         }
     }
 }
@@ -845,179 +1034,19 @@ void MainWindow::editEmployee() {
     }
 
     auto employee = currentCompany->getEmployee(employeeId);
-    if (!employee) {
+    if (employee == nullptr) {
         QMessageBox::warning(this, "Error", "Employee not found!");
         return;
     }
 
     QDialog dialog(this);
     dialog.setWindowTitle("Edit Employee");
+    dialog.setMinimumWidth(kDefaultDialogMinWidth);
     dialog.setStyleSheet("QDialog { background-color: white; }");
-    dialog.setMinimumWidth(400);
 
     auto* form = new QFormLayout(&dialog);
-
-    // Type is read-only
-    auto* typeLabel = new QLabel("Type:");
-    auto* typeDisplay = new QLineEdit();
-    typeDisplay->setText(employee->getEmployeeType());
-    typeDisplay->setReadOnly(true);
-    typeDisplay->setStyleSheet("QLineEdit { background-color: #f5f5f5; }");
-    form->addRow(typeLabel, typeDisplay);
-
-    auto* nameEdit = new QLineEdit();
-    nameEdit->setPlaceholderText("e.g., John Doe");
-    nameEdit->setText(employee->getName());
-    form->addRow("Name:", nameEdit);
-
-    auto* salaryEdit = new QLineEdit();
-    salaryEdit->setPlaceholderText("e.g., 5000");
-    salaryEdit->setText(QString::number(employee->getSalary(), 'f', 2));
-    form->addRow("Salary ($):", salaryEdit);
-
-    auto* deptEdit = new QLineEdit();
-    deptEdit->setPlaceholderText("e.g., Development, Design");
-    deptEdit->setText(employee->getDepartment());
-    form->addRow("Department:", deptEdit);
-
-    // Type-specific fields
-    auto* managerProject = new QLineEdit();
-    managerProject->setPlaceholderText("e.g., Mobile App Project");
-    auto* managerProjectLabel = new QLabel("Managed Project:");
-    form->addRow(managerProjectLabel, managerProject);
-
-    auto* managerTeamSize = new QLineEdit();
-    managerTeamSize->setPlaceholderText("e.g., 5");
-    auto* managerTeamSizeLabel = new QLabel("Team Size:");
-    form->addRow(managerTeamSizeLabel, managerTeamSize);
-
-    auto* devLanguage = new QLineEdit();
-    devLanguage->setPlaceholderText("e.g., C++, Java, Python");
-    auto* devLanguageLabel = new QLabel("Programming Language:");
-    form->addRow(devLanguageLabel, devLanguage);
-
-    auto* devExperience = new QLineEdit();
-    devExperience->setPlaceholderText("e.g., 3");
-    auto* devExperienceLabel = new QLabel("Years of Experience:");
-    form->addRow(devExperienceLabel, devExperience);
-
-    auto* designerTool = new QLineEdit();
-    designerTool->setPlaceholderText("e.g., Figma, Adobe XD");
-    auto* designerToolLabel = new QLabel("Design Tool:");
-    form->addRow(designerToolLabel, designerTool);
-
-    auto* designerProjects = new QLineEdit();
-    designerProjects->setPlaceholderText("e.g., 10");
-    auto* designerProjectsLabel = new QLabel("Number of Projects:");
-    form->addRow(designerProjectsLabel, designerProjects);
-
-    auto* qaTestType = new QLineEdit();
-    qaTestType->setPlaceholderText("e.g., Manual, Automated");
-    auto* qaTestTypeLabel = new QLabel("Testing Type:");
-    form->addRow(qaTestTypeLabel, qaTestType);
-
-    auto* qaBugs = new QLineEdit();
-    qaBugs->setPlaceholderText("e.g., 25");
-    auto* qaBugsLabel = new QLabel("Bugs Found:");
-    form->addRow(qaBugsLabel, qaBugs);
-
-    // Populate and show/hide fields based on employee type
     QString currentType = employee->getEmployeeType();
-    if (currentType == "Manager") {
-        auto* manager = dynamic_cast<Manager*>(employee.get());
-        if (manager != nullptr) {
-            managerProject->setText(manager->getProjectManaged());
-            managerTeamSize->setText(QString::number(manager->getTeamSize()));
-        }
-        managerProjectLabel->setVisible(true);
-        managerProject->setVisible(true);
-        managerTeamSizeLabel->setVisible(true);
-        managerTeamSize->setVisible(true);
-
-        devLanguageLabel->setVisible(false);
-        devLanguage->setVisible(false);
-        devExperienceLabel->setVisible(false);
-        devExperience->setVisible(false);
-        designerToolLabel->setVisible(false);
-        designerTool->setVisible(false);
-        designerProjectsLabel->setVisible(false);
-        designerProjects->setVisible(false);
-        qaTestTypeLabel->setVisible(false);
-        qaTestType->setVisible(false);
-        qaBugsLabel->setVisible(false);
-        qaBugs->setVisible(false);
-    } else if (currentType == "Developer") {
-        auto* developer = dynamic_cast<Developer*>(employee.get());
-        if (developer != nullptr) {
-            devLanguage->setText(developer->getProgrammingLanguage());
-            devExperience->setText(
-                QString::number(developer->getYearsOfExperience()));
-        }
-        devLanguageLabel->setVisible(true);
-        devLanguage->setVisible(true);
-        devExperienceLabel->setVisible(true);
-        devExperience->setVisible(true);
-
-        managerProjectLabel->setVisible(false);
-        managerProject->setVisible(false);
-        managerTeamSizeLabel->setVisible(false);
-        managerTeamSize->setVisible(false);
-        designerToolLabel->setVisible(false);
-        designerTool->setVisible(false);
-        designerProjectsLabel->setVisible(false);
-        designerProjects->setVisible(false);
-        qaTestTypeLabel->setVisible(false);
-        qaTestType->setVisible(false);
-        qaBugsLabel->setVisible(false);
-        qaBugs->setVisible(false);
-    } else if (currentType == "Designer") {
-        auto* designer = dynamic_cast<Designer*>(employee.get());
-        if (designer != nullptr) {
-            designerTool->setText(designer->getDesignTool());
-            designerProjects->setText(
-                QString::number(designer->getNumberOfProjects()));
-        }
-        designerToolLabel->setVisible(true);
-        designerTool->setVisible(true);
-        designerProjectsLabel->setVisible(true);
-        designerProjects->setVisible(true);
-
-        managerProjectLabel->setVisible(false);
-        managerProject->setVisible(false);
-        managerTeamSizeLabel->setVisible(false);
-        managerTeamSize->setVisible(false);
-        devLanguageLabel->setVisible(false);
-        devLanguage->setVisible(false);
-        devExperienceLabel->setVisible(false);
-        devExperience->setVisible(false);
-        qaTestTypeLabel->setVisible(false);
-        qaTestType->setVisible(false);
-        qaBugsLabel->setVisible(false);
-        qaBugs->setVisible(false);
-    } else if (currentType == "QA") {
-        auto* qaEmployee = dynamic_cast<QA*>(employee.get());
-        if (qaEmployee != nullptr) {
-            qaTestType->setText(qaEmployee->getTestingType());
-            qaBugs->setText(QString::number(qaEmployee->getBugsFound()));
-        }
-        qaTestTypeLabel->setVisible(true);
-        qaTestType->setVisible(true);
-        qaBugsLabel->setVisible(true);
-        qaBugs->setVisible(true);
-
-        managerProjectLabel->setVisible(false);
-        managerProject->setVisible(false);
-        managerTeamSizeLabel->setVisible(false);
-        managerTeamSize->setVisible(false);
-        devLanguageLabel->setVisible(false);
-        devLanguage->setVisible(false);
-        devExperienceLabel->setVisible(false);
-        devExperience->setVisible(false);
-        designerToolLabel->setVisible(false);
-        designerTool->setVisible(false);
-        designerProjectsLabel->setVisible(false);
-        designerProjects->setVisible(false);
-    }
+    EmployeeFormWidgets widgets = createEditEmployeeDialog(dialog, form, employee);
 
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
@@ -1025,138 +1054,36 @@ void MainWindow::editEmployee() {
 
     if (dialog.exec() == QDialog::Accepted) {
         try {
-            QString name = nameEdit->text().trimmed();
-            double salary = salaryEdit->text().toDouble();
-            QString department = deptEdit->text().trimmed();
+            QString name = widgets.nameEdit->text().trimmed();
+            double salary = widgets.salaryEdit->text().toDouble();
+            QString department = widgets.deptEdit->text().trimmed();
 
-            // Validation
-            if (name.isEmpty()) {
-                QMessageBox::warning(this, "Validation Error",
-                                     "Name cannot be empty!");
+            if (!validateEmployeeInput(name, salary, department)) {
                 return;
             }
 
-            // Check for duplicate name (excluding current employee)
-            auto existingEmployees = currentCompany->getAllEmployees();
-            for (const auto& employee : existingEmployees) {
-                if (employee && employee->getId() != employeeId &&
-                    employee->getName().toLower() == name.toLower()) {
-                    QMessageBox::warning(
-                        this, "Duplicate Error",
-                        "An employee with this name already exists!");
-                    return;
-                }
-            }
-
-            // Validate salary range
-            if (salary < kMinSalary) {
-                QMessageBox::warning(
-                    this, "Validation Error",
-                    QString("Salary must be at least $%1!").arg(kMinSalary));
-                return;
-            }
-            if (salary > kMaxSalary) {
-                QMessageBox::warning(
-                    this, "Validation Error",
-                    QString("Salary cannot exceed $%1!").arg(kMaxSalary));
+            if (!checkDuplicateEmployeeOnEdit(name, employeeId)) {
                 return;
             }
 
-            if (department.isEmpty()) {
-                QMessageBox::warning(this, "Validation Error",
-                                     "Department cannot be empty!");
+            auto updatedEmployee = createEmployeeFromType(
+                currentType, employeeId, name, salary, department, widgets);
+            if (updatedEmployee == nullptr) {
                 return;
             }
 
-            std::shared_ptr<Employee> updatedEmployee;
-
-            if (currentType == "Manager") {
-                if (managerProject->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Managed project cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int managerTeamSizeValue =
-                    managerTeamSize->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || managerTeamSizeValue < 0) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Please enter a valid team size!");
-                    return;
-                }
-                updatedEmployee = std::make_shared<Manager>(
-                    employeeId, name, salary, department, managerTeamSizeValue,
-                    managerProject->text().trimmed());
-            } else if (currentType == "Developer") {
-                if (devLanguage->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Programming language cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int developerYearsOfExperience =
-                    devExperience->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || developerYearsOfExperience < 0) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Please enter valid years of experience!");
-                    return;
-                }
-                updatedEmployee = std::make_shared<Developer>(
-                    employeeId, name, salary, department,
-                    devLanguage->text().trimmed(), developerYearsOfExperience);
-            } else if (currentType == "Designer") {
-                if (designerTool->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Design tool cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int designerNumberOfProjects =
-                    designerProjects->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || designerNumberOfProjects < 0) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Please enter a valid number of projects!");
-                    return;
-                }
-                updatedEmployee = std::make_shared<Designer>(
-                    employeeId, name, salary, department,
-                    designerTool->text().trimmed(), designerNumberOfProjects);
-            } else if (currentType == "QA") {
-                if (qaTestType->text().trimmed().isEmpty()) {
-                    QMessageBox::warning(this, "Validation Error",
-                                         "Testing type cannot be empty!");
-                    return;
-                }
-                bool conversionSuccess = false;
-                int qaBugsFound = qaBugs->text().toInt(&conversionSuccess);
-                if (!conversionSuccess || qaBugsFound < 0) {
-                    QMessageBox::warning(
-                        this, "Validation Error",
-                        "Please enter a valid number of bugs!");
-                    return;
-                }
-                updatedEmployee = std::make_shared<QA>(
-                    employeeId, name, salary, department,
-                    qaTestType->text().trimmed(), qaBugsFound);
-            }
-
-            // Remove old employee and add updated one
             currentCompany->removeEmployee(employeeId);
             currentCompany->addEmployee(updatedEmployee);
 
             displayEmployees();
             showCompanyInfo();
             showStatistics();
-            autoSave();  // Automatically save after editing
+            autoSave();
             QMessageBox::information(this, "Success",
                                      "Employee updated successfully!");
         } catch (const std::exception& e) {
-            QMessageBox::warning(
-                this, "Error",
-                QString("Failed to update employee: ") + e.what());
+            QMessageBox::warning(this, "Error",
+                                 QString("Failed to update employee: ") + e.what());
         }
     }
 }

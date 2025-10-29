@@ -11,7 +11,7 @@ class ProjectException : public std::exception {
     QString message;
 
    public:
-    ProjectException(QString msg);
+    explicit ProjectException(QString msg);
     const char* what() const noexcept override;
 };
 

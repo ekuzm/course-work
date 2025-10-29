@@ -1,5 +1,6 @@
 #include "../include/employee.h"
 
+#include <compare>
 #include <ostream>
 #include <stdexcept>
 #include <utility>
@@ -66,11 +67,11 @@ bool Employee::operator==(const Employee &otherEmployee) const {
     return id == otherEmployee.id && name == otherEmployee.name;
 }
 
-bool Employee::operator<(const Employee &otherEmployee) const {
-    if (salary != otherEmployee.salary) {
-        return salary < otherEmployee.salary;
+std::partial_ordering Employee::operator<=>(const Employee &otherEmployee) const {
+    if (auto cmp = salary <=> otherEmployee.salary; cmp != 0) {
+        return cmp;
     }
-    return id < otherEmployee.id;
+    return id <=> otherEmployee.id;
 }
 
 std::ostream &operator<<(std::ostream &outputStream, const Employee &employee) {

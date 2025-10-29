@@ -1,6 +1,7 @@
 #ifndef EMPLOYEE_H
 #define EMPLOYEE_H
 
+#include <compare>
 #include <QString>
 #include <memory>
 
@@ -9,7 +10,7 @@ class EmployeeException : public std::exception {
     QString message;
 
    public:
-    EmployeeException(QString msg);
+    explicit EmployeeException(QString msg);
     const char* what() const noexcept override;
 };
 
@@ -43,7 +44,7 @@ class Employee {
 
     // Operator overloading (for friend function demonstration)
     bool operator==(const Employee& otherEmployee) const;
-    bool operator<(const Employee& otherEmployee) const;
+    std::partial_ordering operator<=>(const Employee& otherEmployee) const;
     friend std::ostream& operator<<(std::ostream& outputStream,
                                     const Employee& employee);
 };

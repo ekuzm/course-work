@@ -5,6 +5,7 @@
 #include <QComboBox>
 #include <QDateEdit>
 #include <QDialog>
+#include <QFormLayout>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
@@ -30,7 +31,7 @@ class MainWindow : public QMainWindow {
    private:
 
    public:
-    MainWindow(QWidget* parent = nullptr);
+    explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
    private slots:
@@ -78,6 +79,45 @@ class MainWindow : public QMainWindow {
     int getSelectedEmployeeId();
     int getSelectedProjectId();
     void autoSave();  // Automatic save without dialog
+
+    // Employee dialog helper methods
+    struct EmployeeFormWidgets {
+        QComboBox* typeCombo = nullptr;
+        QLineEdit* nameEdit = nullptr;
+        QLineEdit* salaryEdit = nullptr;
+        QLineEdit* deptEdit = nullptr;
+        QLineEdit* managerProject = nullptr;
+        QLineEdit* managerTeamSize = nullptr;
+        QLineEdit* devLanguage = nullptr;
+        QLineEdit* devExperience = nullptr;
+        QLineEdit* designerTool = nullptr;
+        QLineEdit* designerProjects = nullptr;
+        QLineEdit* qaTestType = nullptr;
+        QLineEdit* qaBugs = nullptr;
+        QLabel* managerProjectLabel = nullptr;
+        QLabel* managerTeamSizeLabel = nullptr;
+        QLabel* devLanguageLabel = nullptr;
+        QLabel* devExperienceLabel = nullptr;
+        QLabel* designerToolLabel = nullptr;
+        QLabel* designerProjectsLabel = nullptr;
+        QLabel* qaTestTypeLabel = nullptr;
+        QLabel* qaBugsLabel = nullptr;
+    };
+
+    EmployeeFormWidgets createEmployeeDialog(QDialog& dialog, QFormLayout* form);
+    EmployeeFormWidgets createEditEmployeeDialog(
+        QDialog& dialog, QFormLayout* form,
+        std::shared_ptr<Employee> employee);
+    void populateEmployeeFields(const EmployeeFormWidgets& widgets,
+                                std::shared_ptr<Employee> employee);
+    bool validateEmployeeInput(const QString& name, double salary,
+                               const QString& department);
+    bool checkDuplicateEmployee(const QString& name);
+    bool checkDuplicateEmployeeOnEdit(const QString& name, int excludeId);
+    std::shared_ptr<Employee> createEmployeeFromType(
+        const QString& employeeType, int employeeId, const QString& name,
+        double salary, const QString& department,
+        const EmployeeFormWidgets& widgets);
 
     // UI components
     QTabWidget* tabWidget = nullptr;
