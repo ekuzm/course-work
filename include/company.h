@@ -82,7 +82,7 @@ class Company {
 
     void addProject(const Project& project);
     void removeProject(int projectId);
-    Project* getProject(int projectId) const;
+    const Project* getProject(int projectId) const;
     std::vector<Project> getAllProjects() const;
 
     int getEmployeeCount() const;

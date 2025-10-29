@@ -1,5 +1,6 @@
 #include "../include/project.h"
 
+#include <compare>
 #include <ostream>
 #include <utility>
 
@@ -63,11 +64,12 @@ bool Project::operator==(const Project& otherProject) const {
     return id == otherProject.id && name == otherProject.name;
 }
 
-bool Project::operator<(const Project& otherProject) const {
-    if (budget != otherProject.budget) {
-        return budget < otherProject.budget;
+std::partial_ordering Project::operator<=>(
+    const Project& otherProject) const {
+    if (auto cmp = budget <=> otherProject.budget; cmp != 0) {
+        return cmp;
     }
-    return id < otherProject.id;
+    return id <=> otherProject.id;
 }
 
 int Project::getDaysDuration() const { return startDate.daysTo(endDate); }

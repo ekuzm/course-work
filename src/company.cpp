@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <ostream>
+#include <ranges>
 #include <utility>
 
 CompanyException::CompanyException(QString msg) : message(std::move(msg)) {}
@@ -16,12 +17,12 @@ void EmployeeContainer::add(std::shared_ptr<Employee> employee) {
 }
 
 void EmployeeContainer::remove(int employeeId) {
-    employees.erase(
-        std::remove_if(employees.begin(), employees.end(),
-                       [employeeId](const std::shared_ptr<Employee>& employee) {
-                           return employee && employee->getId() == employeeId;
-                       }),
-        employees.end());
+    auto removed = std::ranges::remove_if(
+        employees,
+        [employeeId](const std::shared_ptr<Employee>& employee) {
+            return employee && employee->getId() == employeeId;
+        });
+    employees.erase(removed.begin(), removed.end());
 }
 
 std::shared_ptr<Employee> EmployeeContainer::find(int employeeId) const {
@@ -59,12 +60,12 @@ void ProjectContainer::add(std::shared_ptr<Project> project) {
 }
 
 void ProjectContainer::remove(int projectId) {
-    projects.erase(
-        std::remove_if(projects.begin(), projects.end(),
-                       [projectId](const std::shared_ptr<Project>& project) {
-                           return project && project->getId() == projectId;
-                       }),
-        projects.end());
+    auto removed = std::ranges::remove_if(
+        projects,
+        [projectId](const std::shared_ptr<Project>& project) {
+            return project && project->getId() == projectId;
+        });
+    projects.erase(removed.begin(), removed.end());
 }
 
 std::shared_ptr<Project> ProjectContainer::find(int projectId) const {
@@ -114,8 +115,7 @@ Company::Company(QString companyName, QString companyIndustry,
 
 void Company::addEmployee(std::shared_ptr<Employee> employee) {
     // Check if employee already exists
-    auto existing = getEmployee(employee->getId());
-    if (existing) {
+    if (auto existing = getEmployee(employee->getId()); existing) {
         throw CompanyException("Employee with this ID already exists");
     }
     employees.add(employee);
@@ -132,8 +132,8 @@ std::vector<std::shared_ptr<Employee>> Company::getAllEmployees() const {
 }
 
 void Company::addProject(const Project& project) {
-    auto* existing = getProject(project.getId());
-    if (existing != nullptr) {
+    if (const auto* existing = getProject(project.getId());
+        existing != nullptr) {
         throw CompanyException("Project with this ID already exists");
     }
     projects.add(std::make_shared<Project>(project));
@@ -141,7 +141,7 @@ void Company::addProject(const Project& project) {
 
 void Company::removeProject(int projectId) { projects.remove(projectId); }
 
-Project* Company::getProject(int projectId) const {
+const Project* Company::getProject(int projectId) const {
     auto result = projects.find(projectId);
     if (result) {
         // WARNING: Returning raw pointer from shared_ptr - caller should not

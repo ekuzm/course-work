@@ -866,7 +866,7 @@ void MainWindow::editProject() {
         return;
     }
 
-    auto* project = companyData.currentCompany->getProject(projectId);
+    const auto* project = companyData.currentCompany->getProject(projectId);
     if (project == nullptr) {
         QMessageBox::warning(this, "Error", "Project not found!");
         return;

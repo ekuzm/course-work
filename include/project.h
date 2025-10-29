@@ -3,6 +3,7 @@
 
 #include <QDate>
 #include <QString>
+#include <compare>
 #include <memory>
 #include <ostream>
 
@@ -56,7 +57,7 @@ class Project {
 
     // Operator overloading
     bool operator==(const Project& otherProject) const;
-    bool operator<(const Project& otherProject) const;
+    std::partial_ordering operator<=>(const Project& otherProject) const;
 
     // Hidden friend
     friend std::ostream& operator<<(std::ostream& outputStream,
