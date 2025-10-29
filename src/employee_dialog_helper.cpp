@@ -2,6 +2,7 @@
 
 #include <QMessageBox>
 #include <algorithm>
+#include <ranges>
 
 #include "../include/consts.h"
 #include "../include/derived_employees.h"
@@ -276,8 +277,8 @@ bool EmployeeDialogHelper::checkDuplicateEmployee(const QString& name,
         return true;
     }
     auto existingEmployees = currentCompany->getAllEmployees();
-    auto duplicateFound = std::any_of(
-        existingEmployees.begin(), existingEmployees.end(),
+    auto duplicateFound = std::ranges::any_of(
+        existingEmployees,
         [&name](const auto& employee) {
             return employee != nullptr &&
                    employee->getName().toLower() == name.toLower();
@@ -292,8 +293,8 @@ bool EmployeeDialogHelper::checkDuplicateEmployeeOnEdit(const QString& name,
         return true;
     }
     auto existingEmployees = currentCompany->getAllEmployees();
-    auto duplicateFound = std::any_of(
-        existingEmployees.begin(), existingEmployees.end(),
+    auto duplicateFound = std::ranges::any_of(
+        existingEmployees,
         [&name, excludeId](const auto& employee) {
             return employee != nullptr && employee->getId() != excludeId &&
                    employee->getName().toLower() == name.toLower();

@@ -20,7 +20,7 @@ class FileManagerException : public std::exception {
 // File manager for saving/loading company data
 class FileManager {
    public:
-    static void saveToFile(Company& company, const QString& fileName);
+    static void saveToFile(const Company& company, const QString& fileName);
     static Company loadFromFile(const QString& fileName);
 
     // Multi-company support

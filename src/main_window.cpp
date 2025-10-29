@@ -9,6 +9,7 @@
 #include <QStandardPaths>
 #include <algorithm>
 #include <map>
+#include <ranges>
 
 #include "../include/display_helper.h"
 
@@ -435,10 +436,10 @@ void MainWindow::setupStatisticsTab() {
 
 
 int MainWindow::getSelectedEmployeeId() const {
-    int rowIndex = employeeTabUI.table->currentRow();
-    if (rowIndex >= 0) {
-        QTableWidgetItem* tableItem = employeeTabUI.table->item(rowIndex, 0);
-        if (tableItem != nullptr) {
+    if (int rowIndex = employeeTabUI.table->currentRow(); rowIndex >= 0) {
+        if (const QTableWidgetItem* tableItem =
+                employeeTabUI.table->item(rowIndex, 0);
+            tableItem != nullptr) {
             bool conversionSuccess = false;
             int employeeId = tableItem->text().toInt(&conversionSuccess);
             return conversionSuccess ? employeeId : -1;
@@ -448,10 +449,10 @@ int MainWindow::getSelectedEmployeeId() const {
 }
 
 int MainWindow::getSelectedProjectId() const {
-    int rowIndex = projectTabUI.table->currentRow();
-    if (rowIndex >= 0) {
-        QTableWidgetItem* tableItem = projectTabUI.table->item(rowIndex, 0);
-        if (tableItem != nullptr) {
+    if (int rowIndex = projectTabUI.table->currentRow(); rowIndex >= 0) {
+        if (const QTableWidgetItem* tableItem =
+                projectTabUI.table->item(rowIndex, 0);
+            tableItem != nullptr) {
             bool conversionSuccess = false;
             int projectId = tableItem->text().toInt(&conversionSuccess);
             return conversionSuccess ? projectId : -1;
@@ -467,8 +468,8 @@ bool MainWindow::checkDuplicateProjectOnEdit(const QString& projectName,
         return true;
     }
     auto existingProjects = currentCompany->getAllProjects();
-    auto duplicateFound = std::any_of(
-        existingProjects.begin(), existingProjects.end(),
+    auto duplicateFound = std::ranges::any_of(
+        existingProjects,
         [&projectName, excludeId](const auto& project) {
             return project.getId() != excludeId &&
                    project.getName().toLower() == projectName.toLower();

@@ -13,7 +13,7 @@ const char* FileManagerException::what() const noexcept {
     return message.toLocal8Bit().constData();
 }
 
-void FileManager::saveToFile(Company& company, const QString& fileName) {
+void FileManager::saveToFile(const Company& company, const QString& fileName) {
     std::ofstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for writing: " + fileName);
@@ -56,7 +56,9 @@ Company FileManager::loadFromFile(const QString& fileName) {
 
 Company FileManager::loadSingleCompany(std::ifstream& fileStream) {
     std::string lineContent;
-    QString companyName, companyIndustry, companyLocation;
+    QString companyName;
+    QString companyIndustry;
+    QString companyLocation;
     int companyFoundedYear = 0;
 
     // Load company info
