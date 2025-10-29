@@ -86,10 +86,10 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
         employeeTypeCount[employee->getEmployeeType()]++;
     }
 
-    for (const auto& typeCountPair : employeeTypeCount) {
+    for (const auto& [employeeType, count] : employeeTypeCount) {
         stats.append(QString("\n%1: %2")
-                         .arg(typeCountPair.first, -18)
-                         .arg(typeCountPair.second));
+                         .arg(employeeType, -18)
+                         .arg(count));
     }
 
     statisticsText->setPlainText(stats);

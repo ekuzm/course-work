@@ -175,13 +175,12 @@ void CompanyManager::addCompany(CompanyManager::CompanyData& companyData,
 
 void CompanyManager::switchCompany(CompanyManager::CompanyData& companyData,
                                     QComboBox* selector, int newIndex) {
-    if (selector != nullptr && companyData.currentCompanyIndex >= 0) {
-        if (newIndex >= 0 && newIndex < (int)companyData.companies.size()) {
-            companyData.currentCompany = companyData.companies[newIndex];
-            companyData.currentCompanyIndex = newIndex;
-            if (selector->currentIndex() != newIndex) {
-                selector->setCurrentIndex(newIndex);
-            }
+    if (selector != nullptr && companyData.currentCompanyIndex >= 0 &&
+        newIndex >= 0 && newIndex < (int)companyData.companies.size()) {
+        companyData.currentCompany = companyData.companies[newIndex];
+        companyData.currentCompanyIndex = newIndex;
+        if (selector->currentIndex() != newIndex) {
+            selector->setCurrentIndex(newIndex);
         }
     }
 }

@@ -4,6 +4,7 @@
 #include <QDate>
 #include <QString>
 #include <memory>
+#include <ostream>
 
 // Exception class for projects
 class ProjectException : public std::exception {
@@ -13,6 +14,16 @@ class ProjectException : public std::exception {
    public:
     explicit ProjectException(QString msg);
     const char* what() const noexcept override;
+};
+
+struct ProjectParams {
+    QString name;
+    QString description;
+    QString status;
+    QDate startDate;
+    QDate endDate;
+    double budget;
+    QString clientName;
 };
 
 class Project {
@@ -27,8 +38,7 @@ class Project {
     QString clientName;
 
    public:
-    Project(int projectId, QString name, QString description, QString status,
-            QDate startDate, QDate endDate, double budget, QString clientName);
+    Project(int projectId, const ProjectParams& params);
 
     // Getters
     int getId() const;
@@ -47,8 +57,14 @@ class Project {
     // Operator overloading
     bool operator==(const Project& otherProject) const;
     bool operator<(const Project& otherProject) const;
+
+    // Hidden friend
     friend std::ostream& operator<<(std::ostream& outputStream,
-                                    const Project& project);
+                                    const Project& project) {
+        outputStream << project.id << " - " << project.name.toStdString() << " ("
+                     << project.status.toStdString() << ")";
+        return outputStream;
+    }
 
     // Calculate days left/duration
     int getDaysDuration() const;

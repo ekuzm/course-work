@@ -81,6 +81,9 @@ class MainWindow : public QMainWindow {
     int getSelectedEmployeeId() const;
     int getSelectedProjectId() const;
     void autoSave() const;  // Automatic save without dialog
+    static bool checkDuplicateProjectOnEdit(const QString& projectName,
+                                             int excludeId,
+                                             Company* currentCompany);
 
     using EmployeeFormWidgets = EmployeeDialogHelper::EmployeeFormWidgets;
     // UI component groups

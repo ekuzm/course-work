@@ -25,18 +25,15 @@ double Project::getBudget() const { return budget; }
 
 QString Project::getClientName() const { return clientName; }
 
-Project::Project(int projectId, QString projectName, QString projectDescription,
-                 QString projectStatus, QDate projectStartDate,
-                 QDate projectEndDate, double projectBudget,
-                 QString projectClientName)
+Project::Project(int projectId, const ProjectParams& params)
     : id(projectId),
-      name(std::move(projectName)),
-      description(std::move(projectDescription)),
-      status(std::move(projectStatus)),
-      startDate(std::move(projectStartDate)),
-      endDate(std::move(projectEndDate)),
-      budget(projectBudget),
-      clientName(std::move(projectClientName)) {
+      name(params.name),
+      description(params.description),
+      status(params.status),
+      startDate(params.startDate),
+      endDate(params.endDate),
+      budget(params.budget),
+      clientName(params.clientName) {
     if (name.isEmpty()) {
         throw ProjectException("Project name cannot be empty");
     }
@@ -71,12 +68,6 @@ bool Project::operator<(const Project& otherProject) const {
         return budget < otherProject.budget;
     }
     return id < otherProject.id;
-}
-
-std::ostream& operator<<(std::ostream& outputStream, const Project& project) {
-    outputStream << project.id << " - " << project.name.toStdString() << " ("
-                 << project.status.toStdString() << ")";
-    return outputStream;
 }
 
 int Project::getDaysDuration() const { return startDate.daysTo(endDate); }

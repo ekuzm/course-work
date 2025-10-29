@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <map>
 
+#include "../include/display_helper.h"
+
 #include "../include/derived_employees.h"
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
@@ -458,6 +460,22 @@ int MainWindow::getSelectedProjectId() const {
     return -1;
 }
 
+bool MainWindow::checkDuplicateProjectOnEdit(const QString& projectName,
+                                              int excludeId,
+                                              Company* currentCompany) {
+    if (currentCompany == nullptr) {
+        return true;
+    }
+    auto existingProjects = currentCompany->getAllProjects();
+    auto duplicateFound = std::any_of(
+        existingProjects.begin(), existingProjects.end(),
+        [&projectName, excludeId](const auto& project) {
+            return project.getId() != excludeId &&
+                   project.getName().toLower() == projectName.toLower();
+        });
+    return !duplicateFound;
+}
+
 
 void MainWindow::addEmployee() {
     if (companyData.currentCompany == nullptr) return;
@@ -806,12 +824,16 @@ void MainWindow::addProject() {
             }
 
             // Generate ID only after all validation passes
-            int projectId = companyData.nextProjectId++;
-            Project project(projectId, nameEdit->text().trimmed(),
-                            descEdit->toPlainText().trimmed(),
-                            statusCombo->currentText(), startDate->date(),
-                            endDate->date(), projectBudget,
-                            clientNameEdit->text().trimmed());
+            int projectId = companyData.nextProjectId;
+            companyData.nextProjectId++;
+            ProjectParams params{nameEdit->text().trimmed(),
+                                 descEdit->toPlainText().trimmed(),
+                                 statusCombo->currentText(),
+                                 startDate->date(),
+                                 endDate->date(),
+                                 projectBudget,
+                                 clientNameEdit->text().trimmed()};
+            Project project(projectId, params);
 
             companyData.currentCompany->addProject(project);
             DisplayHelper::displayProjects(projectTabUI.table,
@@ -933,24 +955,23 @@ void MainWindow::editProject() {
 
             // Check for duplicate name (excluding current project)
             QString projectName = nameEdit->text().trimmed();
-            auto existingProjects = companyData.currentCompany->getAllProjects();
-            for (const auto& existingProject : existingProjects) {
-                if (existingProject.getId() != projectId &&
-                    existingProject.getName().toLower() ==
-                        projectName.toLower()) {
-                    QMessageBox::warning(
-                        this, "Duplicate Error",
-                        "A project with this name already exists!");
-                    return;
-                }
+            if (!checkDuplicateProjectOnEdit(projectName, projectId,
+                                               companyData.currentCompany)) {
+                QMessageBox::warning(
+                    this, "Duplicate Error",
+                    "A project with this name already exists!");
+                return;
             }
 
             // Create updated project
-            Project updatedProject(
-                projectId, nameEdit->text().trimmed(),
-                descEdit->toPlainText().trimmed(), statusCombo->currentText(),
-                startDate->date(), endDate->date(), projectBudget,
-                clientNameEdit->text().trimmed());
+            ProjectParams params{nameEdit->text().trimmed(),
+                                 descEdit->toPlainText().trimmed(),
+                                 statusCombo->currentText(),
+                                 startDate->date(),
+                                 endDate->date(),
+                                 projectBudget,
+                                 clientNameEdit->text().trimmed()};
+            Project updatedProject(projectId, params);
 
             // Remove old project and add updated one
             companyData.currentCompany->removeProject(projectId);

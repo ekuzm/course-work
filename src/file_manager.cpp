@@ -289,9 +289,10 @@ void FileManager::loadProjects(Company& company, std::ifstream& fileStream) {
         std::getline(fileStream, lineContent);
         QString clientName = QString::fromStdString(lineContent);
 
-        Project project(projectId, projectName, projectDescription,
-                        projectStatus, projectStartDate, projectEndDate,
-                        projectBudget, clientName);
+        ProjectParams params{projectName, projectDescription, projectStatus,
+                             projectStartDate, projectEndDate, projectBudget,
+                             clientName};
+        Project project(projectId, params);
         company.addProject(project);
     }
 }
