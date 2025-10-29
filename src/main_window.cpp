@@ -31,12 +31,12 @@ void MainWindow::initializeCompanySetup() {
     
     // Update next IDs
     if (companyData.currentCompany != nullptr) {
-        auto employees = companyData.currentCompany->getAllEmployees();
-        if (!employees.empty()) {
+        if (auto employees = companyData.currentCompany->getAllEmployees();
+            !employees.empty()) {
             companyData.nextEmployeeId = employees.back()->getId() + 1;
         }
-        auto projects = companyData.currentCompany->getAllProjects();
-        if (!projects.empty()) {
+        if (auto projects = companyData.currentCompany->getAllProjects();
+            !projects.empty()) {
             companyData.nextProjectId = projects.back().getId() + 1;
         }
     }
@@ -527,8 +527,8 @@ void MainWindow::addEmployee() {
             companyData.currentCompany->addEmployee(employee);
             DisplayHelper::displayEmployees(employeeTabUI.table,
                                             companyData.currentCompany);
-            auto employees = companyData.currentCompany->getAllEmployees();
-            if (!employees.empty()) {
+            if (auto employees = companyData.currentCompany->getAllEmployees();
+                !employees.empty()) {
                 companyData.nextEmployeeId = employees.back()->getId() + 1;
             }
             showCompanyInfo();
@@ -603,8 +603,8 @@ void MainWindow::editEmployee() {
 
             DisplayHelper::displayEmployees(employeeTabUI.table,
                                             companyData.currentCompany);
-            auto employees = companyData.currentCompany->getAllEmployees();
-            if (!employees.empty()) {
+            if (auto employees = companyData.currentCompany->getAllEmployees();
+                !employees.empty()) {
                 companyData.nextEmployeeId = employees.back()->getId() + 1;
             }
             showCompanyInfo();
@@ -641,8 +641,8 @@ void MainWindow::deleteEmployee() {
             companyData.currentCompany->removeEmployee(employeeId);
             DisplayHelper::displayEmployees(employeeTabUI.table,
                                             companyData.currentCompany);
-            auto employees = companyData.currentCompany->getAllEmployees();
-            if (!employees.empty()) {
+            if (auto employees = companyData.currentCompany->getAllEmployees();
+                !employees.empty()) {
                 companyData.nextEmployeeId = employees.back()->getId() + 1;
             }
             showCompanyInfo();
@@ -839,8 +839,8 @@ void MainWindow::addProject() {
             companyData.currentCompany->addProject(project);
             DisplayHelper::displayProjects(projectTabUI.table,
                                            companyData.currentCompany);
-            auto projects = companyData.currentCompany->getAllProjects();
-            if (!projects.empty()) {
+            if (auto projects = companyData.currentCompany->getAllProjects();
+                !projects.empty()) {
                 companyData.nextProjectId = projects.back().getId() + 1;
             }
             showCompanyInfo();
@@ -980,8 +980,8 @@ void MainWindow::editProject() {
 
             DisplayHelper::displayProjects(projectTabUI.table,
                                            companyData.currentCompany);
-            auto projects = companyData.currentCompany->getAllProjects();
-            if (!projects.empty()) {
+            if (auto projects = companyData.currentCompany->getAllProjects();
+                !projects.empty()) {
                 companyData.nextProjectId = projects.back().getId() + 1;
             }
             showCompanyInfo();
@@ -1017,8 +1017,8 @@ void MainWindow::deleteProject() {
             companyData.currentCompany->removeProject(projectId);
             DisplayHelper::displayProjects(projectTabUI.table,
                                            companyData.currentCompany);
-            auto projects = companyData.currentCompany->getAllProjects();
-            if (!projects.empty()) {
+            if (auto projects = companyData.currentCompany->getAllProjects();
+                !projects.empty()) {
                 companyData.nextProjectId = projects.back().getId() + 1;
             }
             showCompanyInfo();
@@ -1127,9 +1127,10 @@ void MainWindow::autoSave() const {
         // Save all companies
         FileManager::saveCompanies(companyData.companies, filepath);
         // Silent save - no message box
-    } catch (const FileManagerException& /* e */) {
+    } catch (const FileManagerException& e) {
         // Silently fail - don't interrupt user workflow
         // Could optionally log to console in debug mode
+        Q_UNUSED(e);  // Suppress unused parameter warning
     }
 }
 
@@ -1180,14 +1181,14 @@ void MainWindow::loadData() {
         if (companyData.currentCompany != nullptr) {
             DisplayHelper::displayEmployees(employeeTabUI.table,
                                             companyData.currentCompany);
-            auto employees = companyData.currentCompany->getAllEmployees();
-            if (!employees.empty()) {
+            if (auto employees = companyData.currentCompany->getAllEmployees();
+                !employees.empty()) {
                 companyData.nextEmployeeId = employees.back()->getId() + 1;
             }
             DisplayHelper::displayProjects(projectTabUI.table,
                                            companyData.currentCompany);
-            auto projects = companyData.currentCompany->getAllProjects();
-            if (!projects.empty()) {
+            if (auto projects = companyData.currentCompany->getAllProjects();
+                !projects.empty()) {
                 companyData.nextProjectId = projects.back().getId() + 1;
             }
             showCompanyInfo();
@@ -1259,12 +1260,12 @@ void MainWindow::switchCompany() {
             showStatistics();
         
         // Update next IDs
-        auto employees = companyData.currentCompany->getAllEmployees();
-        if (!employees.empty()) {
+        if (auto employees = companyData.currentCompany->getAllEmployees();
+            !employees.empty()) {
             companyData.nextEmployeeId = employees.back()->getId() + 1;
         }
-        auto projects = companyData.currentCompany->getAllProjects();
-        if (!projects.empty()) {
+        if (auto projects = companyData.currentCompany->getAllProjects();
+            !projects.empty()) {
             companyData.nextProjectId = projects.back().getId() + 1;
         }
     }
