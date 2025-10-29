@@ -11,13 +11,13 @@
 class DisplayHelper {
    public:
     static void displayEmployees(QTableWidget* employeeTable,
-                                 Company* currentCompany);
+                                 const Company* currentCompany);
     static void displayProjects(QTableWidget* projectTable,
-                                Company* currentCompany);
+                                const Company* currentCompany);
     static void showCompanyInfo(QTextEdit* companyInfoText,
-                                Company* currentCompany);
+                                const Company* currentCompany);
     static void showStatistics(QTextEdit* statisticsText,
-                               Company* currentCompany);
+                               const Company* currentCompany);
 };
 
 #endif  // DISPLAY_HELPER_H

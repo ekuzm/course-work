@@ -5,7 +5,7 @@
 #include <map>
 
 void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
-                                      Company* currentCompany) {
+                                      const Company* currentCompany) {
     if (currentCompany == nullptr || employeeTable == nullptr) return;
 
     auto employees = currentCompany->getAllEmployees();
@@ -30,7 +30,7 @@ void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
 }
 
 void DisplayHelper::displayProjects(QTableWidget* projectTable,
-                                    Company* currentCompany) {
+                                    const Company* currentCompany) {
     if (currentCompany == nullptr || projectTable == nullptr) return;
 
     auto projects = currentCompany->getAllProjects();
@@ -53,13 +53,13 @@ void DisplayHelper::displayProjects(QTableWidget* projectTable,
 }
 
 void DisplayHelper::showCompanyInfo(QTextEdit* companyInfoText,
-                                    Company* currentCompany) {
+                                    const Company* currentCompany) {
     if (currentCompany == nullptr || companyInfoText == nullptr) return;
     companyInfoText->setPlainText(currentCompany->getCompanyInfo());
 }
 
 void DisplayHelper::showStatistics(QTextEdit* statisticsText,
-                                   Company* currentCompany) {
+                                   const Company* currentCompany) {
     if (currentCompany == nullptr || statisticsText == nullptr) return;
 
     auto employees = currentCompany->getAllEmployees();

@@ -45,9 +45,9 @@ class EmployeeDialogHelper {
     static bool validateEmployeeInput(const QString& name, double salary,
                                       const QString& department);
     static bool checkDuplicateEmployee(const QString& name,
-                                       Company* currentCompany);
+                                       const Company* currentCompany);
     static bool checkDuplicateEmployeeOnEdit(const QString& name, int excludeId,
-                                             Company* currentCompany);
+                                             const Company* currentCompany);
     static std::shared_ptr<Employee> createEmployeeFromType(
         const QString& employeeType, int employeeId, const QString& name,
         double salary, const QString& department,

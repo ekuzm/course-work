@@ -462,7 +462,7 @@ int MainWindow::getSelectedProjectId() const {
 
 bool MainWindow::checkDuplicateProjectOnEdit(const QString& projectName,
                                               int excludeId,
-                                              Company* currentCompany) {
+                                              const Company* currentCompany) {
     if (currentCompany == nullptr) {
         return true;
     }
@@ -493,7 +493,7 @@ void MainWindow::addEmployee() {
     form->addRow(okButton);
     connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 
-    if (dialog.exec() == QDialog::Accepted) {
+    if (int result = dialog.exec(); result == QDialog::Accepted) {
         try {
             QString name = widgets.nameEdit->text().trimmed();
             double salary = widgets.salaryEdit->text().toDouble();
@@ -575,7 +575,7 @@ void MainWindow::editEmployee() {
     form->addRow(okButton);
     connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 
-    if (dialog.exec() == QDialog::Accepted) {
+    if (int result = dialog.exec(); result == QDialog::Accepted) {
         try {
             QString name = widgets.nameEdit->text().trimmed();
             double salary = widgets.salaryEdit->text().toDouble();
@@ -784,7 +784,7 @@ void MainWindow::addProject() {
     form->addRow(okButton);
     connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 
-    if (dialog.exec() == QDialog::Accepted) {
+    if (int result = dialog.exec(); result == QDialog::Accepted) {
         try {
             // Validation
             if (nameEdit->text().trimmed().isEmpty()) {
@@ -926,7 +926,7 @@ void MainWindow::editProject() {
     form->addRow(okButton);
     connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 
-    if (dialog.exec() == QDialog::Accepted) {
+    if (int result = dialog.exec(); result == QDialog::Accepted) {
         try {
             // Validation
             if (nameEdit->text().trimmed().isEmpty()) {

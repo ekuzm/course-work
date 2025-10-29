@@ -43,10 +43,8 @@ void CompanyManager::initializeCompany(CompanyManager::CompanyData& companyData,
         QObject::connect(okButton, &QPushButton::clicked, &dialog,
                          &QDialog::accept);
 
-        int result = dialog.exec();
-
         // If user closed the dialog without creating company
-        if (result != QDialog::Accepted) {
+        if (int result = dialog.exec(); result != QDialog::Accepted) {
             QCoreApplication::quit();
             return;
         }
@@ -129,7 +127,7 @@ void CompanyManager::addCompany(CompanyManager::CompanyData& companyData,
     form->addRow(okButton);
     QObject::connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 
-    if (dialog.exec() == QDialog::Accepted) {
+    if (int result = dialog.exec(); result == QDialog::Accepted) {
         QString companyName = nameEdit->text().trimmed();
         QString companyIndustry = industryEdit->text().trimmed();
         QString companyLocation = locationEdit->text().trimmed();

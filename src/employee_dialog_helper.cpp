@@ -220,31 +220,31 @@ void EmployeeDialogHelper::populateEmployeeFields(
 
     // Show and populate fields based on type
     if (currentType == "Manager") {
-        auto* manager = dynamic_cast<Manager*>(employee.get());
-        if (manager != nullptr) {
+        if (const auto* manager = dynamic_cast<const Manager*>(employee.get());
+            manager != nullptr) {
             widgets.managerProject->setText(manager->getProjectManaged());
             widgets.managerTeamSize->setText(QString::number(manager->getTeamSize()));
         }
         showManagerFields(widgets, true);
     } else if (currentType == "Developer") {
-        auto* developer = dynamic_cast<Developer*>(employee.get());
-        if (developer != nullptr) {
+        if (const auto* developer = dynamic_cast<const Developer*>(employee.get());
+            developer != nullptr) {
             widgets.devLanguage->setText(developer->getProgrammingLanguage());
             widgets.devExperience->setText(
                 QString::number(developer->getYearsOfExperience()));
         }
         showDeveloperFields(widgets, true);
     } else if (currentType == "Designer") {
-        auto* designer = dynamic_cast<Designer*>(employee.get());
-        if (designer != nullptr) {
+        if (const auto* designer = dynamic_cast<const Designer*>(employee.get());
+            designer != nullptr) {
             widgets.designerTool->setText(designer->getDesignTool());
             widgets.designerProjects->setText(
                 QString::number(designer->getNumberOfProjects()));
         }
         showDesignerFields(widgets, true);
     } else if (currentType == "QA") {
-        auto* qaEmployee = dynamic_cast<QA*>(employee.get());
-        if (qaEmployee != nullptr) {
+        if (const auto* qaEmployee = dynamic_cast<const QA*>(employee.get());
+            qaEmployee != nullptr) {
             widgets.qaTestType->setText(qaEmployee->getTestingType());
             widgets.qaBugs->setText(QString::number(qaEmployee->getBugsFound()));
         }
@@ -271,7 +271,7 @@ bool EmployeeDialogHelper::validateEmployeeInput(const QString& name,
 }
 
 bool EmployeeDialogHelper::checkDuplicateEmployee(const QString& name,
-                                                   Company* currentCompany) {
+                                                   const Company* currentCompany) {
     if (currentCompany == nullptr) {
         return true;
     }
@@ -287,7 +287,7 @@ bool EmployeeDialogHelper::checkDuplicateEmployee(const QString& name,
 
 bool EmployeeDialogHelper::checkDuplicateEmployeeOnEdit(const QString& name,
                                                          int excludeId,
-                                                         Company* currentCompany) {
+                                                         const Company* currentCompany) {
     if (currentCompany == nullptr) {
         return true;
     }
