@@ -1,4 +1,4 @@
-#include "../include/company_manager.h"
+#include "company_manager.h"
 
 #include <QCoreApplication>
 #include <QDate>
@@ -6,10 +6,13 @@
 #include <QObject>
 #include <QPushButton>
 
-#include "../include/consts.h"
+#include "consts.h"
 
-void CompanyManager::initializeCompany(CompanyManager::CompanyData& companyData,
-                                        QComboBox* selector) {
+void CompanyManager::initializeCompany(std::vector<Company*>& companies,
+                                       Company*& currentCompany,
+                                       int& currentCompanyIndex,
+                                       int& nextEmployeeId, int& nextProjectId,
+                                       QComboBox* selector) {
     while (true) {
         QDialog dialog(selector);
         dialog.setWindowTitle("Setup Your IT Company");
@@ -43,59 +46,55 @@ void CompanyManager::initializeCompany(CompanyManager::CompanyData& companyData,
         QObject::connect(okButton, &QPushButton::clicked, &dialog,
                          &QDialog::accept);
 
-        // If user closed the dialog without creating company
         if (int result = dialog.exec(); result != QDialog::Accepted) {
             QCoreApplication::quit();
             return;
         }
 
-        // If dialog was accepted, validate input
         QString companyName = nameEdit->text().trimmed();
         QString companyIndustry = industryEdit->text().trimmed();
         QString companyLocation = locationEdit->text().trimmed();
         bool conversionSuccess = false;
         int foundedYear = yearEdit->text().trimmed().toInt(&conversionSuccess);
 
-        // Validation
         if (companyName.isEmpty()) {
             QMessageBox::warning(&dialog, "Error",
                                  "Company name cannot be empty!");
-            continue;  // Restart dialog
+            continue;
         }
         if (companyIndustry.isEmpty()) {
             QMessageBox::warning(&dialog, "Error", "Industry cannot be empty!");
-            continue;  // Restart dialog
+            continue;
         }
         if (companyLocation.isEmpty()) {
             QMessageBox::warning(&dialog, "Error", "Location cannot be empty!");
-            continue;  // Restart dialog
+            continue;
         }
         if (!conversionSuccess || foundedYear < kMinYear ||
             foundedYear > QDate::currentDate().year()) {
             QMessageBox::warning(&dialog, "Error",
                                  "Please enter a valid year!");
-            continue;  // Restart dialog
+            continue;
         }
 
-        // All validation passed, create company
-        companyData.currentCompany =
-            new Company(companyName, companyIndustry, companyLocation, foundedYear);
-        companyData.companies.push_back(companyData.currentCompany);
-        companyData.currentCompanyIndex = companyData.companies.size() - 1;
+        currentCompany = new Company(companyName, companyIndustry,
+                                     companyLocation, foundedYear);
+        companies.push_back(currentCompany);
+        currentCompanyIndex = companies.size() - 1;
 
-        // Update company selector
         if (selector != nullptr) {
             selector->addItem(companyName);
-            selector->setCurrentIndex(companyData.currentCompanyIndex);
+            selector->setCurrentIndex(currentCompanyIndex);
         }
 
-        // Successfully created company, exit the loop
         return;
     }
 }
 
-void CompanyManager::addCompany(CompanyManager::CompanyData& companyData,
-                                 QComboBox* selector, QWidget* parent) {
+void CompanyManager::addCompany(std::vector<Company*>& companies,
+                                Company*& currentCompany,
+                                int& currentCompanyIndex, QComboBox* selector,
+                                QWidget* parent) {
     QDialog dialog(parent);
     dialog.setWindowTitle("Add New Company");
     dialog.setMinimumWidth(400);
@@ -125,71 +124,120 @@ void CompanyManager::addCompany(CompanyManager::CompanyData& companyData,
 
     auto* okButton = new QPushButton("Create");
     form->addRow(okButton);
-    QObject::connect(okButton, &QPushButton::clicked, &dialog, &QDialog::accept);
 
-    if (int result = dialog.exec(); result == QDialog::Accepted) {
+    QObject::connect(okButton, &QPushButton::clicked, [&]() {
         QString companyName = nameEdit->text().trimmed();
         QString companyIndustry = industryEdit->text().trimmed();
         QString companyLocation = locationEdit->text().trimmed();
         bool conversionSuccess = false;
         int foundedYear = yearEdit->text().trimmed().toInt(&conversionSuccess);
 
-        // Validation
         if (companyName.isEmpty()) {
-            QMessageBox::warning(parent, "Error",
-                                 "Company name cannot be empty!");
+            QMessageBox::warning(&dialog, "Validation Error",
+                                 "Company name cannot be empty!\n\n"
+                                 "Please enter a name for the company.");
             return;
         }
         if (companyIndustry.isEmpty()) {
-            QMessageBox::warning(parent, "Error", "Industry cannot be empty!");
+            QMessageBox::warning(&dialog, "Validation Error",
+                                 "Industry cannot be empty!\n\n"
+                                 "Please enter the industry of the company.");
             return;
         }
         if (companyLocation.isEmpty()) {
-            QMessageBox::warning(parent, "Error", "Location cannot be empty!");
+            QMessageBox::warning(&dialog, "Validation Error",
+                                 "Location cannot be empty!\n\n"
+                                 "Please enter the location of the company.");
             return;
         }
-        if (!conversionSuccess || foundedYear < kMinYear ||
+        if (!conversionSuccess) {
+            QMessageBox::warning(&dialog, "Validation Error",
+                                 "Invalid year format!\n\n"
+                                 "Please enter a valid number.\n"
+                                 "Current value: \"" +
+                                     yearEdit->text() + "\"");
+            return;
+        }
+        if (foundedYear < kMinYear ||
             foundedYear > QDate::currentDate().year()) {
-            QMessageBox::warning(parent, "Error", "Please enter a valid year!");
+            QMessageBox::warning(
+                &dialog, "Validation Error",
+                "Year out of valid range!\n\n"
+                "Current value: " +
+                    QString::number(foundedYear) +
+                    "\n"
+                    "Valid range: " +
+                    QString::number(kMinYear) + " to " +
+                    QString::number(QDate::currentDate().year()));
             return;
         }
 
-        // Create new company
-        companyData.currentCompany =
-            new Company(companyName, companyIndustry, companyLocation, foundedYear);
-        companyData.companies.push_back(companyData.currentCompany);
-        companyData.currentCompanyIndex = companyData.companies.size() - 1;
+        for (Company* existingCompany : companies) {
+            if (existingCompany != nullptr &&
+                existingCompany->getName().toLower() == companyName.toLower()) {
+                QMessageBox::warning(
+                    &dialog, "Duplicate Error",
+                    "A company with this name already exists!\n\n"
+                    "Company name: \"" +
+                        companyName +
+                        "\"\n"
+                        "Please choose a different name.");
+                return;
+            }
+        }
 
-        // Update selector
+        currentCompany = new Company(companyName, companyIndustry,
+                                     companyLocation, foundedYear);
+        companies.push_back(currentCompany);
+        currentCompanyIndex = companies.size() - 1;
+
         if (selector != nullptr) {
             selector->addItem(companyName);
-            selector->setCurrentIndex(companyData.currentCompanyIndex);
+            selector->setCurrentIndex(currentCompanyIndex);
         }
 
-        QMessageBox::information(parent, "Success",
-                                 "Company added successfully!");
-    }
+        QMessageBox::information(&dialog, "Success",
+                                 "Company added successfully!\n\n"
+                                 "Name: " +
+                                     companyName +
+                                     "\n"
+                                     "Industry: " +
+                                     companyIndustry +
+                                     "\n"
+                                     "Location: " +
+                                     companyLocation +
+                                     "\n"
+                                     "Founded: " +
+                                     QString::number(foundedYear));
+        dialog.accept();
+    });
+
+    dialog.exec();
 }
 
-void CompanyManager::switchCompany(CompanyManager::CompanyData& companyData,
-                                    QComboBox* selector, int newIndex) {
-    if (selector != nullptr && companyData.currentCompanyIndex >= 0 &&
-        newIndex >= 0 && newIndex < (int)companyData.companies.size()) {
-        companyData.currentCompany = companyData.companies[newIndex];
-        companyData.currentCompanyIndex = newIndex;
+void CompanyManager::switchCompany(std::vector<Company*>& companies,
+                                   Company*& currentCompany,
+                                   int& currentCompanyIndex,
+                                   QComboBox* selector, int newIndex) {
+    if (selector != nullptr && currentCompanyIndex >= 0 && newIndex >= 0 &&
+        static_cast<size_t>(newIndex) < companies.size()) {
+        currentCompany = companies[newIndex];
+        currentCompanyIndex = newIndex;
         if (selector->currentIndex() != newIndex) {
             selector->setCurrentIndex(newIndex);
         }
     }
 }
 
-void CompanyManager::deleteCompany(CompanyManager::CompanyData& companyData,
-                                    QComboBox* selector, QWidget* parent) {
-    if (companyData.companies.empty()) {
+void CompanyManager::deleteCompany(std::vector<Company*>& companies,
+                                   Company*& currentCompany,
+                                   int& currentCompanyIndex,
+                                   QComboBox* selector, QWidget* parent) {
+    if (companies.empty()) {
         QMessageBox::warning(parent, "Error", "No companies to delete!");
         return;
     }
-    if (companyData.companies.size() <= 1) {
+    if (companies.size() <= 1) {
         QMessageBox::warning(parent, "Error",
                              "Cannot delete the last remaining company!");
         return;
@@ -201,20 +249,18 @@ void CompanyManager::deleteCompany(CompanyManager::CompanyData& companyData,
         QMessageBox::Yes | QMessageBox::No);
 
     if (ret == QMessageBox::Yes) {
-        delete companyData.currentCompany;
-        companyData.companies.erase(companyData.companies.begin() +
-                                    companyData.currentCompanyIndex);
+        delete currentCompany;
+        companies.erase(companies.begin() + currentCompanyIndex);
 
-        // Switch to first company if available
-        if (!companyData.companies.empty()) {
-            companyData.currentCompanyIndex = 0;
-            companyData.currentCompany = companyData.companies[0];
+        if (!companies.empty()) {
+            currentCompanyIndex = 0;
+            currentCompany = companies[0];
             if (selector != nullptr) {
                 selector->setCurrentIndex(0);
             }
         } else {
-            companyData.currentCompany = nullptr;
-            companyData.currentCompanyIndex = -1;
+            currentCompany = nullptr;
+            currentCompanyIndex = -1;
             if (selector != nullptr) {
                 selector->clear();
             }
@@ -222,19 +268,14 @@ void CompanyManager::deleteCompany(CompanyManager::CompanyData& companyData,
     }
 }
 
-void CompanyManager::refreshCompanyList(
-    const CompanyManager::CompanyData& companyData, QComboBox* selector) {
+void CompanyManager::refreshCompanyList(const std::vector<Company*>& companies,
+                                        QComboBox* selector) {
     if (selector != nullptr) {
         selector->clear();
-        for (const auto* company : companyData.companies) {
+        for (const auto* company : companies) {
             if (company != nullptr) {
                 selector->addItem(company->getName());
             }
         }
-        if (companyData.currentCompanyIndex >= 0 &&
-            companyData.currentCompanyIndex < (int)companyData.companies.size()) {
-            selector->setCurrentIndex(companyData.currentCompanyIndex);
-        }
     }
 }
-

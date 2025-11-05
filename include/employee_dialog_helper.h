@@ -1,5 +1,4 @@
-#ifndef EMPLOYEE_DIALOG_HELPER_H
-#define EMPLOYEE_DIALOG_HELPER_H
+#pragma once
 
 #include <QComboBox>
 #include <QDialog>
@@ -13,37 +12,37 @@
 
 class EmployeeDialogHelper {
    public:
-    struct EmployeeFormWidgets {
-        QComboBox* typeCombo = nullptr;
-        QLineEdit* nameEdit = nullptr;
-        QLineEdit* salaryEdit = nullptr;
-        QLineEdit* deptEdit = nullptr;
-        QLineEdit* managerProject = nullptr;
-        QLineEdit* managerTeamSize = nullptr;
-        QLineEdit* devLanguage = nullptr;
-        QLineEdit* devExperience = nullptr;
-        QLineEdit* designerTool = nullptr;
-        QLineEdit* designerProjects = nullptr;
-        QLineEdit* qaTestType = nullptr;
-        QLineEdit* qaBugs = nullptr;
-        QLabel* managerProjectLabel = nullptr;
-        QLabel* managerTeamSizeLabel = nullptr;
-        QLabel* devLanguageLabel = nullptr;
-        QLabel* devExperienceLabel = nullptr;
-        QLabel* designerToolLabel = nullptr;
-        QLabel* designerProjectsLabel = nullptr;
-        QLabel* qaTestTypeLabel = nullptr;
-        QLabel* qaBugsLabel = nullptr;
-    };
-
-    static EmployeeFormWidgets createEmployeeDialog(QDialog& /* dialog */,
-                                                      QFormLayout* form);
-    static EmployeeFormWidgets createEditEmployeeDialog(
-        QDialog& /* dialog */, QFormLayout* form, std::shared_ptr<Employee> employee);
-    static void populateEmployeeFields(const EmployeeFormWidgets& widgets,
-                                       std::shared_ptr<Employee> employee);
-    static bool validateEmployeeInput(const QString& name, double salary,
-                                      const QString& department);
+    static void createEmployeeDialog(
+        QDialog& dialog, QFormLayout* form, QComboBox*& typeCombo,
+        QLineEdit*& nameEdit, QLineEdit*& salaryEdit, QLineEdit*& deptEdit,
+        QComboBox*& employmentRateCombo, QComboBox*& managerProject,
+        QLineEdit*& devLanguage, QLineEdit*& devExperience,
+        QLineEdit*& designerTool, QLineEdit*& designerProjects,
+        QLineEdit*& qaTestType, QLineEdit*& qaBugs,
+        QLabel*& managerProjectLabel, QLabel*& devLanguageLabel,
+        QLabel*& devExperienceLabel, QLabel*& designerToolLabel,
+        QLabel*& designerProjectsLabel, QLabel*& qaTestTypeLabel,
+        QLabel*& qaBugsLabel);
+    static void createEditEmployeeDialog(
+        QDialog& dialog, QFormLayout* form, std::shared_ptr<Employee> employee,
+        QLineEdit*& nameEdit, QLineEdit*& salaryEdit, QLineEdit*& deptEdit,
+        QComboBox*& employmentRateCombo, QComboBox*& managerProject,
+        QLineEdit*& devLanguage, QLineEdit*& devExperience,
+        QLineEdit*& designerTool, QLineEdit*& designerProjects,
+        QLineEdit*& qaTestType, QLineEdit*& qaBugs,
+        QLabel*& managerProjectLabel, QLabel*& devLanguageLabel,
+        QLabel*& devExperienceLabel, QLabel*& designerToolLabel,
+        QLabel*& designerProjectsLabel, QLabel*& qaTestTypeLabel,
+        QLabel*& qaBugsLabel);
+    static void populateEmployeeFields(
+        QComboBox* employmentRateCombo, QComboBox* managerProject,
+        QLineEdit* devLanguage, QLineEdit* devExperience,
+        QLineEdit* designerTool, QLineEdit* designerProjects,
+        QLineEdit* qaTestType, QLineEdit* qaBugs, QLabel* managerProjectLabel,
+        QLabel* devLanguageLabel, QLabel* devExperienceLabel,
+        QLabel* designerToolLabel, QLabel* designerProjectsLabel,
+        QLabel* qaTestTypeLabel, QLabel* qaBugsLabel,
+        std::shared_ptr<Employee> employee);
     static bool checkDuplicateEmployee(const QString& name,
                                        const Company* currentCompany);
     static bool checkDuplicateEmployeeOnEdit(const QString& name, int excludeId,
@@ -51,14 +50,22 @@ class EmployeeDialogHelper {
     static std::shared_ptr<Employee> createEmployeeFromType(
         const QString& employeeType, int employeeId, const QString& name,
         double salary, const QString& department,
-        const EmployeeFormWidgets& widgets);
+        QComboBox* employmentRateCombo, QComboBox* managerProject,
+        QLineEdit* devLanguage, QLineEdit* devExperience,
+        QLineEdit* designerTool, QLineEdit* designerProjects,
+        QLineEdit* qaTestType, QLineEdit* qaBugs);
 
    private:
-    static void showManagerFields(const EmployeeFormWidgets& widgets, bool show);
-    static void showDeveloperFields(const EmployeeFormWidgets& widgets, bool show);
-    static void showDesignerFields(const EmployeeFormWidgets& widgets, bool show);
-    static void showQaFields(const EmployeeFormWidgets& widgets, bool show);
+    static void showManagerFields(QLabel* managerProjectLabel,
+                                  QComboBox* managerProject, bool show);
+    static void showDeveloperFields(QLabel* devLanguageLabel,
+                                    QLineEdit* devLanguage,
+                                    QLabel* devExperienceLabel,
+                                    QLineEdit* devExperience, bool show);
+    static void showDesignerFields(QLabel* designerToolLabel,
+                                   QLineEdit* designerTool,
+                                   QLabel* designerProjectsLabel,
+                                   QLineEdit* designerProjects, bool show);
+    static void showQaFields(QLabel* qaTestTypeLabel, QLineEdit* qaTestType,
+                             QLabel* qaBugsLabel, QLineEdit* qaBugs, bool show);
 };
-
-#endif  // EMPLOYEE_DIALOG_HELPER_H
-

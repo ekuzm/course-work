@@ -1,5 +1,4 @@
-#ifndef DISPLAY_HELPER_H
-#define DISPLAY_HELPER_H
+#pragma once
 
 #include <QTableWidget>
 #include <QTextEdit>
@@ -18,7 +17,8 @@ class DisplayHelper {
                                 const Company* currentCompany);
     static void showStatistics(QTextEdit* statisticsText,
                                const Company* currentCompany);
+
+    static QString formatProjectInfo(
+        const std::shared_ptr<const Employee>& employee,
+        const Company* currentCompany);
 };
-
-#endif  // DISPLAY_HELPER_H
-

@@ -1,7 +1,7 @@
-#ifndef MAINWINDOW_H
-#define MAINWINDOW_H
+#pragma once
 
 #include <QAction>
+#include <QCloseEvent>
 #include <QComboBox>
 #include <QDateEdit>
 #include <QDialog>
@@ -37,33 +37,36 @@ class MainWindow : public QMainWindow {
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
+   protected:
+    void closeEvent(QCloseEvent* event) override;
+
    private slots:
-    // Company setup
     void initializeCompanySetup();
 
-    // Employee slots
     void addEmployee();
     void editEmployee();
     void deleteEmployee();
-    void searchEmployee();
-    void refreshEmployeeTable();
+    void searchEmployee() const;
+    void refreshEmployeeTable() const;
 
-    // Project slots
     void addProject();
     void editProject();
     void deleteProject();
-    void searchProject();
-    void refreshProjectTable();
+    void searchProject() const;
+    void refreshProjectTable() const;
 
-    // File operations
+    void addProjectTask();
+    void assignEmployeeToTask();
+    void autoAssignToProject();
+    void viewProjectAssignments();
+    void viewEmployeeHistory();
+
+    static QString getDataDirectory();
     void saveData();
-    void loadData();
 
-    // View tabs
-    void showCompanyInfo();
-    void showStatistics();
+    void showCompanyInfo() const;
+    void showStatistics() const;
 
-    // Company management
     void addCompany();
     void switchCompany();
     void deleteCompany();
@@ -76,66 +79,54 @@ class MainWindow : public QMainWindow {
     void setupCompanyInfoTab();
     void setupStatisticsTab();
 
-    // Helper methods
     int getSelectedEmployeeId() const;
     int getSelectedProjectId() const;
-    void autoSave() const;  // Automatic save without dialog
+    void autoSave() const;
+    void autoLoad();
     static bool checkDuplicateProjectOnEdit(const QString& projectName,
-                                             int excludeId,
-                                             const Company* currentCompany);
+                                            int excludeId,
+                                            const Company* currentCompany);
 
-    using EmployeeFormWidgets = EmployeeDialogHelper::EmployeeFormWidgets;
-    // UI component groups
-    struct EmployeeTabUI {
-        QWidget* tab = nullptr;
-        QTableWidget* table = nullptr;
-        QPushButton* addBtn = nullptr;
-        QPushButton* editBtn = nullptr;
-        QPushButton* deleteBtn = nullptr;
-        QPushButton* searchBtn = nullptr;
-        QLineEdit* searchEdit = nullptr;
-    };
+    QWidget* employeeTab = nullptr;
+    QTableWidget* employeeTable = nullptr;
+    QPushButton* employeeAddBtn = nullptr;
+    QPushButton* employeeEditBtn = nullptr;
+    QPushButton* employeeDeleteBtn = nullptr;
+    QPushButton* employeeHistoryBtn = nullptr;
+    QPushButton* employeeRefreshBtn = nullptr;
+    QPushButton* employeeSearchBtn = nullptr;
+    QLineEdit* employeeSearchEdit = nullptr;
 
-    struct ProjectTabUI {
-        QWidget* tab = nullptr;
-        QTableWidget* table = nullptr;
-        QPushButton* addBtn = nullptr;
-        QPushButton* editBtn = nullptr;
-        QPushButton* deleteBtn = nullptr;
-        QPushButton* searchBtn = nullptr;
-        QLineEdit* searchEdit = nullptr;
-    };
+    QWidget* projectTab = nullptr;
+    QTableWidget* projectTable = nullptr;
+    QPushButton* projectAddBtn = nullptr;
+    QPushButton* projectEditBtn = nullptr;
+    QPushButton* projectDeleteBtn = nullptr;
+    QPushButton* projectAddTaskBtn = nullptr;
+    QPushButton* projectAssignBtn = nullptr;
+    QPushButton* projectAutoAssignBtn = nullptr;
+    QPushButton* projectViewAssignmentsBtn = nullptr;
+    QPushButton* projectSearchBtn = nullptr;
+    QLineEdit* projectSearchEdit = nullptr;
 
-    struct TabWidgets {
-        QTabWidget* mainTabWidget = nullptr;
-        QWidget* infoTab = nullptr;
-        QTextEdit* companyInfoText = nullptr;
-        QWidget* statsTab = nullptr;
-        QTextEdit* statisticsText = nullptr;
-        QPushButton* refreshStatsBtn = nullptr;
-    };
+    QTabWidget* mainTabWidget = nullptr;
+    QWidget* infoTab = nullptr;
+    QTextEdit* companyInfoText = nullptr;
+    QWidget* statsTab = nullptr;
+    QTextEdit* statisticsText = nullptr;
+    QPushButton* refreshStatsBtn = nullptr;
 
-    struct MenuBarUI {
-        QMenuBar* menuBar = nullptr;
-        QMenu* fileMenu = nullptr;
-        QAction* saveAction = nullptr;
-        QAction* loadAction = nullptr;
-    };
+    QMenuBar* menuBar = nullptr;
+    QMenu* fileMenu = nullptr;
+    QAction* saveAction = nullptr;
 
-    struct CompanyManagementUI {
-        QComboBox* selector = nullptr;
-        QPushButton* addBtn = nullptr;
-        QPushButton* deleteBtn = nullptr;
-    };
+    QComboBox* companySelector = nullptr;
+    QPushButton* companyAddBtn = nullptr;
+    QPushButton* companyDeleteBtn = nullptr;
 
-    using CompanyData = CompanyManager::CompanyData;
-
-    EmployeeTabUI employeeTabUI;
-    ProjectTabUI projectTabUI;
-    TabWidgets tabWidgets;
-    MenuBarUI menuBarUI;
-    CompanyManagementUI companyManagementUI;
-    CompanyData companyData;
+    std::vector<Company*> companies{};
+    Company* currentCompany = nullptr;
+    int currentCompanyIndex = -1;
+    int nextEmployeeId = 1;
+    int nextProjectId = 1;
 };
-
-#endif  // MAINWINDOW_H

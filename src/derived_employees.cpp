@@ -1,39 +1,37 @@
-#include "../include/derived_employees.h"
+#include "derived_employees.h"
 
 #include <utility>
 
-// Manager implementation
 Manager::Manager(int employeeId, QString employeeName, double employeeSalary,
-                 QString employeeDepartment, int managerTeamSize,
-                 QString managedProject)
+                 QString employeeDepartment, int managedProjectId,
+                 double employmentRate)
     : Employee(employeeId, std::move(employeeName), "Manager", employeeSalary,
-               std::move(employeeDepartment)),
-      teamSize(managerTeamSize),
-      projectManaged(std::move(managedProject)) {
-    if (managerTeamSize < 0) {
-        throw EmployeeException("Team size cannot be negative");
-    }
-}
+               std::move(employeeDepartment), employmentRate),
+      managedProjectId(managedProjectId) {}
 
 QString Manager::getEmployeeType() const { return "Manager"; }
 
 QString Manager::getDetails() const {
-    return Employee::getDetails() + QString(", Team Size: %1, Project: %2")
-                                        .arg(teamSize)
-                                        .arg(projectManaged);
+    return Employee::getDetails() +
+           QString(", Managed Project ID: %1").arg(managedProjectId);
 }
 
 double Manager::calculateBonus() const {
-    return getSalary() * kManagerSalaryMultiplier + teamSize * kManagerTeamBonus;
+    return getSalary() * kManagerSalaryMultiplier;
 }
 
-// Developer implementation
-Developer::Developer(int employeeId, QString employeeName, double employeeSalary,
-                     QString employeeDepartment,
+int Manager::getManagedProjectId() const { return managedProjectId; }
+
+void Manager::setManagedProjectId(int projectId) {
+    managedProjectId = projectId;
+}
+
+Developer::Developer(int employeeId, QString employeeName,
+                     double employeeSalary, QString employeeDepartment,
                      QString developerProgrammingLanguage,
-                     int developerYearsOfExperience)
+                     int developerYearsOfExperience, double employmentRate)
     : Employee(employeeId, std::move(employeeName), "Developer", employeeSalary,
-               std::move(employeeDepartment)),
+               std::move(employeeDepartment), employmentRate),
       programmingLanguage(std::move(developerProgrammingLanguage)),
       yearsOfExperience(developerYearsOfExperience) {
     if (developerYearsOfExperience < 0) {
@@ -51,16 +49,15 @@ QString Developer::getDetails() const {
 }
 
 double Developer::calculateBonus() const {
-    return getSalary() * kDeveloperSalaryMultiplier +
-           yearsOfExperience * kDeveloperExperienceBonus;
+    return (getSalary() * kDeveloperSalaryMultiplier) +
+           (yearsOfExperience * kDeveloperExperienceBonus);
 }
 
-// Designer implementation
 Designer::Designer(int employeeId, QString employeeName, double employeeSalary,
                    QString employeeDepartment, QString designerTool,
-                   int designerNumberOfProjects)
+                   int designerNumberOfProjects, double employmentRate)
     : Employee(employeeId, std::move(employeeName), "Designer", employeeSalary,
-               std::move(employeeDepartment)),
+               std::move(employeeDepartment), employmentRate),
       designTool(std::move(designerTool)),
       numberOfProjects(designerNumberOfProjects) {
     if (designerNumberOfProjects < 0) {
@@ -77,15 +74,15 @@ QString Designer::getDetails() const {
 }
 
 double Designer::calculateBonus() const {
-    return getSalary() * kDesignerSalaryMultiplier +
-           numberOfProjects * kDesignerProjectBonus;
+    return (getSalary() * kDesignerSalaryMultiplier) +
+           (numberOfProjects * kDesignerProjectBonus);
 }
 
-// QA implementation
 QA::QA(int employeeId, QString employeeName, double employeeSalary,
-       QString employeeDepartment, QString qaTestingType, int qaBugsFound)
+       QString employeeDepartment, QString qaTestingType, int qaBugsFound,
+       double employmentRate)
     : Employee(employeeId, std::move(employeeName), "QA", employeeSalary,
-               std::move(employeeDepartment)),
+               std::move(employeeDepartment), employmentRate),
       testingType(std::move(qaTestingType)),
       bugsFound(qaBugsFound) {
     if (qaBugsFound < 0) {
@@ -103,12 +100,8 @@ QString QA::getDetails() const {
 }
 
 double QA::calculateBonus() const {
-    return getSalary() * kQaSalaryMultiplier + bugsFound * kQaBugBonus;
+    return (getSalary() * kQaSalaryMultiplier) + (bugsFound * kQaBugBonus);
 }
-
-int Manager::getTeamSize() const { return teamSize; }
-
-QString Manager::getProjectManaged() const { return projectManaged; }
 
 QString Developer::getProgrammingLanguage() const {
     return programmingLanguage;

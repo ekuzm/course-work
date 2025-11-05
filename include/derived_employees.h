@@ -1,25 +1,23 @@
-#ifndef DERIVED_EMPLOYEES_H
-#define DERIVED_EMPLOYEES_H
+#pragma once
 
-#include "employee.h"
 #include "consts.h"
+#include "employee.h"
 
 class Manager : public Employee {
    private:
-    int teamSize;
-    QString projectManaged;
+    int managedProjectId;
 
    public:
     Manager(int employeeId, QString employeeName, double employeeSalary,
-            QString employeeDepartment, int managerTeamSize,
-            QString managedProject);
+            QString employeeDepartment, int managedProjectId = -1,
+            double employmentRate = 1.0);
 
     QString getEmployeeType() const override;
     QString getDetails() const override;
     double calculateBonus() const override;
 
-    int getTeamSize() const;
-    QString getProjectManaged() const;
+    int getManagedProjectId() const;
+    void setManagedProjectId(int projectId);
 };
 
 class Developer : public Employee {
@@ -30,7 +28,7 @@ class Developer : public Employee {
    public:
     Developer(int employeeId, QString employeeName, double employeeSalary,
               QString employeeDepartment, QString developerProgrammingLanguage,
-              int developerYearsOfExperience);
+              int developerYearsOfExperience, double employmentRate = 1.0);
 
     QString getEmployeeType() const override;
     QString getDetails() const override;
@@ -48,7 +46,7 @@ class Designer : public Employee {
    public:
     Designer(int employeeId, QString employeeName, double employeeSalary,
              QString employeeDepartment, QString designerTool,
-             int designerNumberOfProjects);
+             int designerNumberOfProjects, double employmentRate = 1.0);
 
     QString getEmployeeType() const override;
     QString getDetails() const override;
@@ -65,7 +63,8 @@ class QA : public Employee {
 
    public:
     QA(int employeeId, QString employeeName, double employeeSalary,
-       QString employeeDepartment, QString qaTestingType, int qaBugsFound);
+       QString employeeDepartment, QString qaTestingType, int qaBugsFound,
+       double employmentRate = 1.0);
 
     QString getEmployeeType() const override;
     QString getDetails() const override;
@@ -74,5 +73,3 @@ class QA : public Employee {
     QString getTestingType() const;
     int getBugsFound() const;
 };
-
-#endif  // DERIVED_EMPLOYEES_H

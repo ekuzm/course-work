@@ -1,5 +1,4 @@
-#ifndef COMPANY_MANAGER_H
-#define COMPANY_MANAGER_H
+#pragma once
 
 #include <QComboBox>
 #include <QDialog>
@@ -13,25 +12,21 @@
 
 class CompanyManager {
    public:
-    struct CompanyData {
-        std::vector<Company*> companies;
-        Company* currentCompany = nullptr;
-        int currentCompanyIndex = -1;
-        int nextEmployeeId = 1;
-        int nextProjectId = 1;
-    };
-
-    static void initializeCompany(CompanyData& companyData,
-                                   QComboBox* selector);
-    static void addCompany(CompanyData& companyData, QComboBox* selector,
-                           QWidget* parent);
-    static void switchCompany(CompanyData& companyData, QComboBox* selector,
+    static void initializeCompany(std::vector<Company*>& companies,
+                                  Company*& currentCompany,
+                                  int& currentCompanyIndex, int& nextEmployeeId,
+                                  int& nextProjectId, QComboBox* selector);
+    static void addCompany(std::vector<Company*>& companies,
+                           Company*& currentCompany, int& currentCompanyIndex,
+                           QComboBox* selector, QWidget* parent);
+    static void switchCompany(std::vector<Company*>& companies,
+                              Company*& currentCompany,
+                              int& currentCompanyIndex, QComboBox* selector,
                               int newIndex);
-    static void deleteCompany(CompanyData& companyData, QComboBox* selector,
+    static void deleteCompany(std::vector<Company*>& companies,
+                              Company*& currentCompany,
+                              int& currentCompanyIndex, QComboBox* selector,
                               QWidget* parent);
-    static void refreshCompanyList(const CompanyData& companyData,
-                                    QComboBox* selector);
+    static void refreshCompanyList(const std::vector<Company*>& companies,
+                                   QComboBox* selector);
 };
-
-#endif  // COMPANY_MANAGER_H
-

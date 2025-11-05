@@ -1,19 +1,10 @@
-#ifndef EMPLOYEE_H
-#define EMPLOYEE_H
+#pragma once
 
-#include <compare>
 #include <QString>
 #include <memory>
-#include <ostream>
+#include <vector>
 
-class EmployeeException : public std::exception {
-   private:
-    QString message;
-
-   public:
-    explicit EmployeeException(QString msg);
-    const char* what() const noexcept override;
-};
+#include "exceptions.h"
 
 class Employee {
    private:
@@ -22,38 +13,40 @@ class Employee {
     QString position;
     double salary;
     QString department;
+    bool isActive{true};
+    double employmentRate;
+    int weeklyHoursCapacity;
+    int currentWeeklyHours{0};
+    std::vector<int> assignedProjects;
 
    public:
     Employee(int employeeId, QString name, QString position, double salary,
-             QString department);
+             QString department, double employmentRate = 1.0,
+             int weeklyCapacity = 40);
     virtual ~Employee() = default;
 
     virtual QString getEmployeeType() const = 0;
     virtual QString getDetails() const;
     virtual double calculateBonus() const = 0;
 
-    // Getters
     int getId() const;
     QString getName() const;
     QString getPosition() const;
     double getSalary() const;
     QString getDepartment() const;
+    bool getIsActive() const;
+    double getEmploymentRate() const;
+    int getWeeklyHoursCapacity() const;
+    int getCurrentWeeklyHours() const;
 
-    // Setters with exception handling
-    void setSalary(double newSalary);
-    void setDepartment(const QString& newDepartment);
+    bool isAvailable(int requestedHours) const;
+    int getAvailableHours() const;
+    void addWeeklyHours(int hours);
+    void removeWeeklyHours(int hours);
 
-    // Operator overloading
-    bool operator==(const Employee& otherEmployee) const;
-    std::partial_ordering operator <=> (const Employee& otherEmployee) const;
+    const std::vector<int>& getAssignedProjects() const;
+    void addAssignedProject(int projectId);
+    bool isAssignedToProject(int projectId) const;
 
-    // Hidden friend
-    friend std::ostream& operator<<(std::ostream& outputStream,
-                                    const Employee& employee) {
-        outputStream << employee.id << " - " << employee.name.toStdString() << " ("
-                     << employee.position.toStdString() << ")";
-        return outputStream;
-    }
+    void setIsActive(bool active);
 };
-
-#endif  // EMPLOYEE_

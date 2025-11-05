@@ -1,31 +1,12 @@
-#ifndef PROJECT_H
-#define PROJECT_H
+#pragma once
 
 #include <QDate>
 #include <QString>
-#include <compare>
 #include <memory>
-#include <ostream>
+#include <vector>
 
-// Exception class for projects
-class ProjectException : public std::exception {
-   private:
-    QString message;
-
-   public:
-    explicit ProjectException(QString msg);
-    const char* what() const noexcept override;
-};
-
-struct ProjectParams {
-    QString name;
-    QString description;
-    QString status;
-    QDate startDate;
-    QDate endDate;
-    double budget;
-    QString clientName;
-};
+#include "exceptions.h"
+#include "task.h"
 
 class Project {
    private:
@@ -37,11 +18,16 @@ class Project {
     QDate endDate;
     double budget;
     QString clientName;
+    int initialEstimatedHours;
+    int allocatedHours{0};
+    double employeeCosts{0.0};
+    std::vector<Task> tasks;
 
    public:
-    Project(int projectId, const ProjectParams& params);
+    Project(int projectId, const QString& name, const QString& description,
+            const QString& status, const QDate& startDate, const QDate& endDate,
+            double budget, const QString& clientName, int estimatedHours = 0);
 
-    // Getters
     int getId() const;
     QString getName() const;
     QString getDescription() const;
@@ -50,26 +36,25 @@ class Project {
     QDate getEndDate() const;
     double getBudget() const;
     QString getClientName() const;
+    int getEstimatedHours() const;
+    int getInitialEstimatedHours() const;
+    int getAllocatedHours() const;
+    double getEmployeeCosts() const;
+    const std::vector<Task>& getTasks() const;
+    std::vector<Task>& getTasks();
+    void addTask(const Task& task);
+    void clearTasks();
+    int getTasksEstimatedTotal() const;
+    int getTasksAllocatedTotal() const;
+    int getNextTaskId() const;
 
-    // Setters
     void setStatus(const QString& newStatus);
     void setBudget(double newBudget);
+    void setEstimatedHours(int hours);
+    void setAllocatedHours(int hours);
+    void addEmployeeCost(double cost);
+    void removeEmployeeCost(double cost);
+    void recomputeTotalsFromTasks();
 
-    // Operator overloading
-    bool operator==(const Project& otherProject) const;
-    std::partial_ordering operator<=>(const Project& otherProject) const;
-
-    // Hidden friend
-    friend std::ostream& operator<<(std::ostream& outputStream,
-                                    const Project& project) {
-        outputStream << project.id << " - " << project.name.toStdString() << " ("
-                     << project.status.toStdString() << ")";
-        return outputStream;
-    }
-
-    // Calculate days left/duration
-    int getDaysDuration() const;
     bool isActive() const;
 };
-
-#endif  // PROJECT_H

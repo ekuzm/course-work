@@ -1,5 +1,4 @@
-#ifndef FILEMANAGER_H
-#define FILEMANAGER_H
+#pragma once
 
 #include <QString>
 #include <exception>
@@ -7,35 +6,40 @@
 #include <vector>
 
 #include "company.h"
+#include "exceptions.h"
 
-class FileManagerException : public std::exception {
-   private:
-    QString message;
-
-   public:
-    explicit FileManagerException(QString msg);
-    const char* what() const noexcept override;
-};
-
-// File manager for saving/loading company data
 class FileManager {
    public:
-    static void saveToFile(const Company& company, const QString& fileName);
+    static void saveCompany(const Company& company, const QString& fileName);
+
+    static void saveEmployees(const Company& company, const QString& fileName);
+
+    static void saveProjects(const Company& company, const QString& fileName);
+
+    static Company loadCompany(const QString& fileName);
+
+    static void loadEmployees(Company& company, const QString& fileName);
+
+    static void loadProjects(Company& company, const QString& fileName);
+
     static Company loadFromFile(const QString& fileName);
 
-    // Multi-company support
-    static void saveCompanies(const std::vector<Company*>& companies,
-                              const QString& fileName);
-    static std::vector<Company*> loadCompanies(const QString& fileName);
-
    private:
-    static void saveEmployees(const Company& company, std::ofstream& file);
-    static void saveProjects(const Company& company, std::ofstream& file);
-    static void loadEmployees(Company& company, std::ifstream& file);
-    static void loadProjects(Company& company, std::ifstream& file);
+    static void saveEmployeeToStream(std::shared_ptr<Employee> employee,
+                                     std::ofstream& file);
+    static std::shared_ptr<Employee> loadEmployeeFromStream(
+        std::ifstream& file);
 
+    static void saveProjectToStream(const Project& project,
+                                    std::ofstream& file);
+    static Project loadProjectFromStream(std::ifstream& file);
+
+    static void saveEmployeesToStream(const Company& company,
+                                      std::ofstream& file);
+    static void saveProjectsToStream(const Company& company,
+                                     std::ofstream& file);
+    static void loadEmployeesFromStream(Company& company, std::ifstream& file);
+    static void loadProjectsFromStream(Company& company, std::ifstream& file);
     static void saveSingleCompany(const Company& company, std::ofstream& file);
     static Company loadSingleCompany(std::ifstream& file);
 };
-
-#endif  // FILEMANAGER_H
