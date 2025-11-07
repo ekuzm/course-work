@@ -46,6 +46,7 @@ class Employee {
 
     const std::vector<int>& getAssignedProjects() const;
     void addAssignedProject(int projectId);
+    void removeAssignedProject(int projectId);
     bool isAssignedToProject(int projectId) const;
 
     void setIsActive(bool active);

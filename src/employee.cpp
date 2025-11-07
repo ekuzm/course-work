@@ -111,3 +111,10 @@ bool Employee::isAssignedToProject(int projectId) const {
     return std::ranges::find(assignedProjects, projectId) !=
            assignedProjects.end();
 }
+
+void Employee::removeAssignedProject(int projectId) {
+    auto it = std::ranges::find(assignedProjects, projectId);
+    if (it != assignedProjects.end()) {
+        assignedProjects.erase(it);
+    }
+}

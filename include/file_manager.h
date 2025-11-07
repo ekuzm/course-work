@@ -16,15 +16,43 @@ class FileManager {
 
     static void saveProjects(const Company& company, const QString& fileName);
 
+    static void saveTasks(const Company& company, const QString& fileName);
+
+    static void saveTaskAssignments(const Company& company, const QString& fileName);
+
     static Company loadCompany(const QString& fileName);
 
     static void loadEmployees(Company& company, const QString& fileName);
 
     static void loadProjects(Company& company, const QString& fileName);
 
+    static void loadTasks(Company& company, const QString& fileName);
+
+    static void loadTaskAssignments(Company& company, const QString& fileName);
+
     static Company loadFromFile(const QString& fileName);
 
    private:
+    // Helper functions for parsing
+    static int parseIntFromStream(std::ifstream& fileStream, const QString& fieldName);
+    static double parseDoubleFromStream(std::ifstream& fileStream, const QString& fieldName);
+    static QString parseStringFromStream(std::ifstream& fileStream);
+    static double parseEmploymentRate(std::ifstream& fileStream);
+    
+    // Helper functions for saving employee base data
+    static void saveEmployeeBaseData(std::shared_ptr<Employee> employee, std::ofstream& fileStream);
+    static void saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employee, std::ofstream& fileStream);
+    
+    // Helper functions for loading employee base data
+    struct EmployeeBaseData {
+        int id;
+        QString name;
+        double salary;
+        QString department;
+        double employmentRate;
+    };
+    static EmployeeBaseData loadEmployeeBaseData(std::ifstream& fileStream);
+    
     static void saveEmployeeToStream(std::shared_ptr<Employee> employee,
                                      std::ofstream& file);
     static std::shared_ptr<Employee> loadEmployeeFromStream(

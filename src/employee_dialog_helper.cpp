@@ -1,11 +1,25 @@
 #include "employee_dialog_helper.h"
 
+#include <QFormLayout>
 #include <QMessageBox>
 #include <algorithm>
 #include <ranges>
 
 #include "consts.h"
 #include "derived_employees.h"
+
+QComboBox* EmployeeDialogHelper::createEmploymentRateCombo() {
+    auto* combo = new QComboBox();
+    combo->addItem("Full Time (1.0)", 1.0);
+    combo->addItem("Three Quarters (0.75)", 0.75);
+    combo->addItem("Half Time (0.5)", 0.5);
+    combo->addItem("Quarter Time (0.25)", 0.25);
+    combo->setStyleSheet(
+        "QComboBox { background-color: white; color: black; } "
+        "QComboBox QAbstractItemView { background-color: white; color: black; "
+        "selection-background-color: #0078d4; }");
+    return combo;
+}
 
 void EmployeeDialogHelper::showManagerFields(QLabel* managerProjectLabel,
                                              QComboBox* managerProject,
@@ -78,15 +92,7 @@ void EmployeeDialogHelper::createEmployeeDialog(
     deptEdit->setPlaceholderText("e.g., Development, Design");
     form->addRow("Department:", deptEdit);
 
-    employmentRateCombo = new QComboBox();
-    employmentRateCombo->addItem("Full Time (1.0)", 1.0);
-    employmentRateCombo->addItem("Three Quarters (0.75)", 0.75);
-    employmentRateCombo->addItem("Half Time (0.5)", 0.5);
-    employmentRateCombo->addItem("Quarter Time (0.25)", 0.25);
-    employmentRateCombo->setStyleSheet(
-        "QComboBox { background-color: white; color: black; } "
-        "QComboBox QAbstractItemView { background-color: white; color: black; "
-        "selection-background-color: #0078d4; }");
+    employmentRateCombo = createEmploymentRateCombo();
     form->addRow("Employment Rate:", employmentRateCombo);
 
     managerProject = new QComboBox();
@@ -191,15 +197,7 @@ void EmployeeDialogHelper::createEditEmployeeDialog(
     deptEdit->setText(employee->getDepartment());
     form->addRow("Department:", deptEdit);
 
-    employmentRateCombo = new QComboBox();
-    employmentRateCombo->addItem("Full Time (1.0)", 1.0);
-    employmentRateCombo->addItem("Three Quarters (0.75)", 0.75);
-    employmentRateCombo->addItem("Half Time (0.5)", 0.5);
-    employmentRateCombo->addItem("Quarter Time (0.25)", 0.25);
-    employmentRateCombo->setStyleSheet(
-        "QComboBox { background-color: white; color: black; } "
-        "QComboBox QAbstractItemView { background-color: white; color: black; "
-        "selection-background-color: #0078d4; }");
+    employmentRateCombo = createEmploymentRateCombo();
     form->addRow("Employment Rate:", employmentRateCombo);
 
     managerProject = new QComboBox();

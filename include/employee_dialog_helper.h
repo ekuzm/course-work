@@ -56,6 +56,7 @@ class EmployeeDialogHelper {
         QLineEdit* qaTestType, QLineEdit* qaBugs);
 
    private:
+    static QComboBox* createEmploymentRateCombo();
     static void showManagerFields(QLabel* managerProjectLabel,
                                   QComboBox* managerProject, bool show);
     static void showDeveloperFields(QLabel* devLanguageLabel,

@@ -463,10 +463,18 @@ static bool employeeTaskTypeMatches(const std::shared_ptr<Employee>& employee,
 static int compareEmployeesForSorting(const std::shared_ptr<Employee>& a,
                                       const std::shared_ptr<Employee>& b,
                                       const std::map<int, int>& employeeUsage) {
+    if (!a || !b) return 0;
+    
     double hourlyRateA = calculateHourlyRate(a->getSalary());
     double hourlyRateB = calculateHourlyRate(b->getSalary());
-    int availA = a->getAvailableHours() - employeeUsage.at(a->getId());
-    int availB = b->getAvailableHours() - employeeUsage.at(b->getId());
+    
+    auto itA = employeeUsage.find(a->getId());
+    auto itB = employeeUsage.find(b->getId());
+    int usedA = (itA != employeeUsage.end()) ? itA->second : 0;
+    int usedB = (itB != employeeUsage.end()) ? itB->second : 0;
+    
+    int availA = a->getAvailableHours() - usedA;
+    int availB = b->getAvailableHours() - usedB;
 
     double rateDiff = hourlyRateA - hourlyRateB;
     if (rateDiff < -0.01) {
@@ -498,22 +506,18 @@ void Company::autoAssignEmployeesToProject(int projectId) {
     std::vector<Task>& tasks = projPtr->getTasks();
     if (tasks.empty()) throw CompanyException("No tasks in project");
 
+    // Создаем индексы задач и сортируем их по приоритету (высокий приоритет = выше число = обрабатывается первым)
     std::vector<size_t> taskIndices;
     for (size_t i = 0; i < tasks.size(); ++i) {
         taskIndices.push_back(i);
     }
 
-    for (size_t i = 0; i < taskIndices.size() - 1; ++i) {
-        for (size_t j = i + 1; j < taskIndices.size(); ++j) {
-            const Task& taskA = tasks[taskIndices[i]];
-            const Task& taskB = tasks[taskIndices[j]];
-            if (compareTaskPriority(taskA, taskB) > 0) {
-                size_t temp = taskIndices[i];
-                taskIndices[i] = taskIndices[j];
-                taskIndices[j] = temp;
-            }
-        }
-    }
+    // Используем std::sort для эффективной сортировки задач по приоритету
+    // Задачи с более высоким приоритетом обрабатываются первыми
+    std::sort(taskIndices.begin(), taskIndices.end(), 
+        [&tasks](size_t a, size_t b) {
+            return compareTaskPriority(tasks[a], tasks[b]) < 0;
+        });
 
     std::vector<std::shared_ptr<Employee>> allEmployees = getAllEmployees();
     std::vector<std::shared_ptr<Employee>> employeesList;
@@ -528,12 +532,17 @@ void Company::autoAssignEmployeesToProject(int projectId) {
     double currentEmployeeCosts = projPtr->getEmployeeCosts();
     double remainingBudget = projPtr->getBudget() - currentEmployeeCosts;
 
+    // Обрабатываем задачи в порядке приоритета (высокоприоритетные первыми)
+    // Для высокоприоритетных задач выбираются лучшие доступные сотрудники
     for (size_t idx = 0; idx < taskIndices.size(); ++idx) {
         size_t taskIndex = taskIndices[idx];
         Task& task = tasks[taskIndex];
         int remaining = task.getEstimatedHours() - task.getAllocatedHours();
+        
+        // Пропускаем задачи, которые уже полностью распределены
         if (remaining <= 0) continue;
 
+        // Формируем пул подходящих сотрудников для данной задачи
         std::vector<std::shared_ptr<Employee>> pool;
         double projectBudget = projPtr->getBudget();
         double projectEstimatedHours = projPtr->getEstimatedHours();
@@ -545,6 +554,11 @@ void Company::autoAssignEmployeesToProject(int projectId) {
 
         QString taskType = task.getType();
 
+        // Фильтруем сотрудников по критериям:
+        // 1. Активность
+        // 2. Соответствие роли стадии SDLC проекта
+        // 3. Соответствие типу задачи
+        // 4. Соответствие бюджету проекта
         for (size_t i = 0; i < employeesList.size(); ++i) {
             std::shared_ptr<Employee> employee = employeesList[i];
             if (!employee) continue;
@@ -578,28 +592,29 @@ void Company::autoAssignEmployeesToProject(int projectId) {
             }
         }
 
-        for (size_t i = 0; i < pool.size() - 1; ++i) {
-            for (size_t j = i + 1; j < pool.size(); ++j) {
-                if (compareEmployeesForSorting(pool[i], pool[j],
-                                               employeeUsage) > 0) {
-                    std::shared_ptr<Employee> temp = pool[i];
-                    pool[i] = pool[j];
-                    pool[j] = temp;
-                }
-            }
-        }
+        // Сортируем пул сотрудников: лучшие (дешевле и доступнее) первыми
+        // Это гарантирует, что высокоприоритетные задачи получат лучших сотрудников
+        std::sort(pool.begin(), pool.end(),
+            [&employeeUsage](const std::shared_ptr<Employee>& a, const std::shared_ptr<Employee>& b) {
+                return compareEmployeesForSorting(a, b, employeeUsage) < 0;
+            });
 
+        // Назначаем сотрудников из отсортированного пула (лучшие первыми)
+        // Это гарантирует, что высокоприоритетные задачи получат лучших доступных сотрудников
         for (size_t i = 0; i < pool.size(); ++i) {
-            if (remaining <= 0) break;
+            if (remaining <= 0) break; // Задача полностью распределена
 
             std::shared_ptr<Employee> poolEmployee = pool[i];
             int employeeId = poolEmployee->getId();
+            
+            // Рассчитываем реально доступные часы с учетом уже назначенных часов в этом проекте
             int trulyAvailable = poolEmployee->getAvailableHours();
             if (employeeUsage.find(employeeId) != employeeUsage.end()) {
                 trulyAvailable -= employeeUsage[employeeId];
             }
             if (trulyAvailable <= 0) continue;
 
+            // Проверяем бюджетные ограничения
             double hourlyRate = calculateHourlyRate(poolEmployee->getSalary());
             int maxAffordableHours = 0;
             if (hourlyRate > 0 && remainingBudget > 0) {
@@ -607,6 +622,7 @@ void Company::autoAssignEmployeesToProject(int projectId) {
                     static_cast<int>(remainingBudget / hourlyRate);
             }
 
+            // Определяем, сколько часов назначить (минимум из: оставшихся, доступных, по бюджету)
             int toAssign = remaining;
             if (trulyAvailable < toAssign) {
                 toAssign = trulyAvailable;
@@ -616,12 +632,14 @@ void Company::autoAssignEmployeesToProject(int projectId) {
             }
             if (toAssign <= 0) continue;
 
+            // Проверяем, не превысит ли назначение бюджет проекта
             double assignmentCost =
                 calculateEmployeeCost(poolEmployee->getSalary(), toAssign);
             if (currentEmployeeCosts + assignmentCost > projPtr->getBudget()) {
                 continue;
             }
 
+            // Назначаем сотрудника на задачу
             poolEmployee->addWeeklyHours(toAssign);
             poolEmployee->addAssignedProject(projectId);
             task.addAllocatedHours(toAssign);
@@ -632,6 +650,7 @@ void Company::autoAssignEmployeesToProject(int projectId) {
         }
     }
 
+    // Рассчитываем итоговые расходы на назначенных сотрудников и обновляем проект
     double totalNewCosts = 0.0;
     for (std::map<int, int>::const_iterator it = employeeUsage.begin();
          it != employeeUsage.end(); ++it) {
@@ -644,5 +663,6 @@ void Company::autoAssignEmployeesToProject(int projectId) {
     }
     projPtr->addEmployeeCost(totalNewCosts);
 
+    // Пересчитываем итоговые значения проекта на основе задач
     projPtr->recomputeTotalsFromTasks();
 }

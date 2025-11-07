@@ -1,11 +1,19 @@
 #include "display_helper.h"
 
+#include <QHBoxLayout>
+#include <QMenu>
+#include <QMetaObject>
+#include <QObject>
+#include <QPushButton>
 #include <QStringList>
 #include <QTableWidgetItem>
+#include <QWidget>
 #include <algorithm>
 #include <map>
 
+#include "action_button_helper.h"
 #include "derived_employees.h"
+#include "main_window.h"
 
 QString DisplayHelper::formatProjectInfo(
     const std::shared_ptr<const Employee>& employee,
@@ -35,8 +43,54 @@ QString DisplayHelper::formatProjectInfo(
     return projectNames.isEmpty() ? "-" : projectNames.join(", ");
 }
 
+QString DisplayHelper::formatTaskInfo(
+    const std::shared_ptr<const Employee>& employee,
+    const Company* currentCompany) {
+    QStringList taskInfoList;
+
+    // Получаем все проекты работника
+    std::vector<int> projectIds = employee->getAssignedProjects();
+    
+    if (auto manager = std::dynamic_pointer_cast<const Manager>(employee)) {
+        int managedProjectId = manager->getManagedProjectId();
+        if (managedProjectId >= 0) {
+            bool found = false;
+            for (int pid : projectIds) {
+                if (pid == managedProjectId) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                projectIds.push_back(managedProjectId);
+            }
+        }
+    }
+
+    // Для каждого проекта получаем задачи
+    for (int projectId : projectIds) {
+        const auto* project = currentCompany->getProject(projectId);
+        if (project) {
+            auto tasks = currentCompany->getProjectTasks(projectId);
+            
+            for (const auto& task : tasks) {
+                // Показываем задачи, на которые выделены часы (работник может быть назначен)
+                if (task.getAllocatedHours() > 0) {
+                    QString taskName = task.getName();
+                    if (!taskInfoList.contains(taskName)) {
+                        taskInfoList.append(taskName);
+                    }
+                }
+            }
+        }
+    }
+
+    return taskInfoList.isEmpty() ? "-" : taskInfoList.join(", ");
+}
+
 void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
-                                     const Company* currentCompany) {
+                                     const Company* currentCompany,
+                                     MainWindow* mainWindow) {
     if (currentCompany == nullptr || employeeTable == nullptr) return;
 
     auto employees = currentCompany->getAllEmployees();
@@ -53,29 +107,25 @@ void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
         employeeTable->setItem(index, 3,
                                new QTableWidgetItem(QString::number(
                                    employee->getSalary(), 'f', 2)));
-        double rate = employee->getEmploymentRate();
-        QString rateStr = QString::number(rate, 'f', 2);
-        if (rate == 1.0) {
-            rateStr = "1.0 (Full)";
-        } else if (rate == 0.75) {
-            rateStr = "0.75 (3/4)";
-        } else if (rate == 0.5) {
-            rateStr = "0.5 (Half)";
-        } else if (rate == 0.25) {
-            rateStr = "0.25 (1/4)";
-        }
-        employeeTable->setItem(index, 4, new QTableWidgetItem(rateStr));
+        employeeTable->setItem(index, 4, new QTableWidgetItem(
+                                   formatEmploymentRate(employee->getEmploymentRate())));
         employeeTable->setItem(
             index, 5, new QTableWidgetItem(employee->getEmployeeType()));
 
         QString projectInfo =
             DisplayHelper::formatProjectInfo(employee, currentCompany);
         employeeTable->setItem(index, 6, new QTableWidgetItem(projectInfo));
+
+        if (QWidget* actionWidget = ActionButtonHelper::createEmployeeActionButtons(
+                employeeTable, static_cast<int>(index), mainWindow)) {
+            employeeTable->setCellWidget(index, 7, actionWidget);
+                             }
     }
 }
 
 void DisplayHelper::displayProjects(QTableWidget* projectTable,
-                                    const Company* currentCompany) {
+                                    const Company* currentCompany,
+                                    MainWindow* mainWindow) {
     if (currentCompany == nullptr || projectTable == nullptr) return;
 
     auto projects = currentCompany->getAllProjects();
@@ -100,6 +150,11 @@ void DisplayHelper::displayProjects(QTableWidget* projectTable,
             new QTableWidgetItem(QString::number(project.getAllocatedHours())));
         projectTable->setItem(index, 6,
                               new QTableWidgetItem(project.getClientName()));
+
+        if (QWidget* actionWidget = ActionButtonHelper::createProjectActionButtons(
+                projectTable, static_cast<int>(index), mainWindow)) {
+            projectTable->setCellWidget(index, 7, actionWidget);
+                             }
     }
 }
 
@@ -621,4 +676,17 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
     )";
 
     statisticsText->setHtml(html);
+}
+
+QString DisplayHelper::formatEmploymentRate(double rate) {
+    if (rate == 1.0) {
+        return "1.0 (Full)";
+    } else if (rate == 0.75) {
+        return "0.75 (3/4)";
+    } else if (rate == 0.5) {
+        return "0.5 (Half)";
+    } else if (rate == 0.25) {
+        return "0.25 (1/4)";
+    }
+    return QString::number(rate, 'f', 2);
 }
