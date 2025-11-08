@@ -1,19 +1,34 @@
-@startuml corse-work
-skinparam linetype ortho
+@startuml course-work
+' === Общие параметры ===
 left to right direction
-skinparam monochrome true          
-skinparam shadowing false          
-skinparam backgroundColor white    
-skinparam defaultFontColor black   
-skinparam class {
-    AttributeFontSize 13
-}
-skinparam nodesep 3
-skinparam ranksep 3
-hide stereotype
+skinparam monochrome true
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontColor black
+skinparam dpi 120
+scale 0.7
+
+' --- Уменьшаем расстояния ---
+skinparam ranksep 0.3
+skinparam nodesep 0.3
+skinparam linetype ortho
+
+' --- Минимализм и сжатие ---
+hide empty members
 hide circle
+hide stereotype
 skinparam classAttributeIconSize 0
 skinparam classVisibilityIconSize 0
+skinparam class {
+    AttributeFontSize 11
+    FontSize 12
+    Padding 2
+    BackgroundColor white
+    BorderColor black
+}
+
+' === Core Domain - Основные классы домена ===
+together {
     class Employee {
         - id : int
         - name : QString
@@ -226,7 +241,10 @@ skinparam classVisibilityIconSize 0
     ProjectContainer o-- Project
     Project *-- Task
     Manager --> Project
+}
 
+' === Exceptions - Исключения ===
+together {
     class BaseException {
         # message : QString
         --
@@ -259,7 +277,10 @@ skinparam classVisibilityIconSize 0
     BaseException <|-- ProjectException
     BaseException <|-- TaskException
     BaseException <|-- FileManagerException
+}
 
+' === UI Layer - Пользовательский интерфейс ===
+together {
     class MainWindow {
         - companyWidget : QWidget
         - employeeTab : QWidget
@@ -342,7 +363,10 @@ skinparam classVisibilityIconSize 0
     MainWindow --> StatisticsChartWidget
     StatisticsChartWidget --> Company
     StatisticsChartWidget --> Employee
+}
 
+' === Helpers - Validation - Валидация ===
+together {
     class ValidationHelper {
         +  validateNonEmpty(QString, QString, QDialog) : bool
         +  validateDouble(QString, double, double, double, QString, QDialog) : bool
@@ -362,7 +386,10 @@ skinparam classVisibilityIconSize 0
 
     ExceptionHandler ..> CompanyException
     ExceptionHandler ..> FileManagerException
+}
 
+' === Helpers - Dialogs - Диалоги ===
+together {
     class EmployeeDialogHelper {
         +  void createEmployeeDialog(...)
         +  void createEditEmployeeDialog(...)
@@ -399,7 +426,10 @@ skinparam classVisibilityIconSize 0
     ProjectDialogHelper --> Project
     TaskDialogHelper --> Company
     TaskDialogHelper --> Task
+}
 
+' === Helpers - Display and UI - Отображение ===
+together {
     class DisplayHelper {
         +  displayEmployees(QTableWidget, Company, MainWindow) : void
         +  displayProjects(QTableWidget, Company, MainWindow) : void
@@ -437,7 +467,10 @@ skinparam classVisibilityIconSize 0
     HtmlGenerator --> Company
     MainWindowUIBuilder --> MainWindow
     ActionButtonHelper --> MainWindow
+}
 
+' === Helpers - Business Logic - Бизнес-логика ===
+together {
     class ProjectHelper {
         +  populateProjectTasksTable(QTableWidget, Project, MainWindow) : void
         +  clearProjectAllocatedHoursIfNoEmployees(Company, int) : void
@@ -468,7 +501,10 @@ skinparam classVisibilityIconSize 0
     TaskAssignmentHelper --> Project
     TaskAssignmentHelper --> Task
     CompanyManager --> Company
+}
 
+' === Data Management - Управление данными ===
+together {
     class FileManager {
         +  saveCompany(Company, QString) : void
         +  saveEmployees(Company, QString) : void
@@ -501,7 +537,10 @@ skinparam classVisibilityIconSize 0
     AutoSaveLoader --> Company
     AutoSaveLoader --> MainWindow
     FileHelper --> MainWindow
+}
 
+' === Utilities - Утилиты ===
+together {
     class SafeValue<T> {
         + SafeValue(T, T, T)
         + bool isValidValue()
@@ -509,7 +548,9 @@ skinparam classVisibilityIconSize 0
         + T getClampedValue()
         + void setValue(T)
     }
+}
 
+' === Связи между группами классов ===
 MainWindow --> CompanyManager
 MainWindow --> DisplayHelper
 MainWindow --> HtmlGenerator
