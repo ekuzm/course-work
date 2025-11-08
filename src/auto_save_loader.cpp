@@ -90,7 +90,7 @@ void AutoSaveLoader::autoSave(const std::vector<Company*>& companies, MainWindow
             FileManager::saveTasks(*companies[i], tasksFilePath);
         }
     } catch (const FileManagerException&) {
-        // Ignore save errors
+
     }
 }
 
@@ -158,7 +158,7 @@ void AutoSaveLoader::autoLoad(std::vector<Company*>& companies, Company*& curren
             currentCompanyIndex = 0;
         }
     } catch (const FileManagerException&) {
-        // Ignore load errors
+
     }
 }
 

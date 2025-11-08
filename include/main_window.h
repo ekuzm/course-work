@@ -77,7 +77,7 @@ class MainWindow : public QMainWindow {
 
     static QString getDataDirectory();
 
-    // Friend classes for helper operations
+
     friend class MainWindowUIBuilder;
     friend class FileHelper;
 
@@ -107,7 +107,7 @@ private:
     void populateProjectTasksTable(const Project& project);
     void selectProjectRowById(int projectId);
 
-    // Table setup helper functions
+
     static void setupTableWidget(QTableWidget* table, const QStringList& headers, 
                                 const QList<int>& columnWidths, bool stretchLast = true);
     QWidget* createEmployeeActionButtons(int rowIndex);

@@ -9,7 +9,7 @@
 
 #include "derived_employees.h"
 
-// Helper functions for parsing
+
 int FileManager::parseIntFromStream(std::ifstream& fileStream, const QString& fieldName) {
     std::string lineContent;
     std::getline(fileStream, lineContent);
@@ -54,7 +54,7 @@ double FileManager::parseEmploymentRate(std::ifstream& fileStream) {
     return employmentRate;
 }
 
-// Helper function to save base employee data
+
 void FileManager::saveEmployeeBaseData(std::shared_ptr<Employee> employee, std::ofstream& fileStream) {
     fileStream << employee->getId() << "\n";
     fileStream << employee->getName().toStdString() << "\n";
@@ -63,7 +63,7 @@ void FileManager::saveEmployeeBaseData(std::shared_ptr<Employee> employee, std::
     fileStream << employee->getEmploymentRate() << "\n";
 }
 
-// Helper function to save type-specific employee data
+
 void FileManager::saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employee, std::ofstream& fileStream) {
     if (auto manager = std::dynamic_pointer_cast<Manager>(employee)) {
         fileStream << manager->getManagedProjectId() << "\n";
@@ -79,7 +79,7 @@ void FileManager::saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employe
     }
 }
 
-// Helper function to load base employee data
+
 FileManager::EmployeeBaseData FileManager::loadEmployeeBaseData(std::ifstream& fileStream) {
     EmployeeBaseData data;
     data.id = parseIntFromStream(fileStream, "employee ID");
@@ -120,7 +120,7 @@ Company FileManager::loadFromFile(const QString& fileName) {
 
 Company FileManager::loadSingleCompany(std::ifstream& fileStream) {
     std::string lineContent{};
-    std::getline(fileStream, lineContent); // Skip [COMPANY]
+    std::getline(fileStream, lineContent);
     
     QString companyName = parseStringFromStream(fileStream);
     QString companyIndustry = parseStringFromStream(fileStream);
@@ -273,7 +273,7 @@ Company FileManager::loadCompany(const QString& fileName) {
     }
 
     std::string lineContent{};
-    std::getline(fileStream, lineContent); // Skip [COMPANY]
+    std::getline(fileStream, lineContent);
 
     QString companyName = parseStringFromStream(fileStream);
     QString companyIndustry = parseStringFromStream(fileStream);
@@ -406,7 +406,7 @@ void FileManager::saveProjectToStream(const Project& project,
     fileStream << project.getBudget() << "\n";
     fileStream << project.getClientName().toStdString() << "\n";
     fileStream << project.getInitialEstimatedHours() << "\n";
-    // Задачи больше не сохраняются здесь - они сохраняются в отдельном файле
+
 }
 
 void FileManager::loadProjects(Company& company, const QString& fileName) {
@@ -471,21 +471,21 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
     auto projects = company.getAllProjects();
     auto employees = company.getAllEmployees();
     
-    // Собираем все задачи с назначениями: projectId, taskId, name, type, estimatedHours, allocatedHours, priority, status, assignments (employeeId, hours)
+
     std::vector<std::tuple<int, int, QString, QString, int, int, int, QString, std::vector<std::pair<int, int>>>> allTasks;
     
     for (const auto& project : projects) {
         auto tasks = company.getProjectTasks(project.getId());
         for (const auto& task : tasks) {
-            // Находим работников, назначенных на эту задачу, и их часы
-            // Используем пропорциональное распределение часов работника между задачами проекта
-            std::vector<std::pair<int, int>> assignments; // (employeeId, hours)
+
+
+            std::vector<std::pair<int, int>> assignments;
             
             for (const auto& emp : employees) {
                 if (!emp || !emp->getIsActive()) continue;
                 if (!emp->isAssignedToProject(project.getId())) continue;
                 
-                // Если у задачи есть выделенные часы, вычисляем часы работника для этой задачи
+
                 if (task.getAllocatedHours() > 0) {
                     auto projectTasks = company.getProjectTasks(project.getId());
                     int totalAllocatedHours = 0;
@@ -495,7 +495,7 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
                     
                     if (totalAllocatedHours > 0) {
                         int totalWeeklyHours = emp->getCurrentWeeklyHours();
-                        // Пропорционально распределяем часы работника между задачами
+
                         int taskHours = (task.getAllocatedHours() * totalWeeklyHours) / totalAllocatedHours;
                         if (taskHours > 0) {
                             assignments.push_back(std::make_pair(emp->getId(), taskHours));
@@ -520,21 +520,21 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
     
     fileStream << allTasks.size() << "\n";
     for (const auto& taskData : allTasks) {
-        fileStream << std::get<0>(taskData) << "\n";  // projectId
-        fileStream << std::get<1>(taskData) << "\n";  // taskId
-        fileStream << std::get<2>(taskData).toStdString() << "\n";  // name
-        fileStream << std::get<3>(taskData).toStdString() << "\n";  // type
-        fileStream << std::get<4>(taskData) << "\n";  // estimatedHours
-        fileStream << std::get<5>(taskData) << "\n";  // allocatedHours
-        fileStream << std::get<6>(taskData) << "\n";  // priority
-        fileStream << std::get<7>(taskData).toStdString() << "\n";  // status
+        fileStream << std::get<0>(taskData) << "\n";
+        fileStream << std::get<1>(taskData) << "\n";
+        fileStream << std::get<2>(taskData).toStdString() << "\n";
+        fileStream << std::get<3>(taskData).toStdString() << "\n";
+        fileStream << std::get<4>(taskData) << "\n";
+        fileStream << std::get<5>(taskData) << "\n";
+        fileStream << std::get<6>(taskData) << "\n";
+        fileStream << std::get<7>(taskData).toStdString() << "\n";
         
-        // Сохраняем назначения (employeeId, hours)
+
         const std::vector<std::pair<int, int>>& assignments = std::get<8>(taskData);
         fileStream << assignments.size() << "\n";
         for (const auto& assignment : assignments) {
-            fileStream << assignment.first << "\n";  // employeeId
-            fileStream << assignment.second << "\n";  // hours
+            fileStream << assignment.first << "\n";
+            fileStream << assignment.second << "\n";
         }
     }
     
@@ -543,7 +543,7 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
 
 void FileManager::loadTasks(Company& company, const QString& fileName) {
     if (!QFile::exists(fileName)) {
-        return;  // Файл не существует, нет задач для загрузки
+        return;
     }
     
     std::ifstream fileStream(fileName.toStdString());
@@ -558,7 +558,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
         taskCount = std::stoi(lineContent);
     } catch (const std::exception&) {
         fileStream.close();
-        return;  // Неверный формат, пропускаем
+        return;
     }
 
     for (int i = 0; i < taskCount; ++i) {
@@ -611,7 +611,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
         std::getline(fileStream, lineContent);
         QString status = QString::fromStdString(lineContent);
 
-        // Читаем назначения работников на задачу (employeeId, hours)
+
         std::vector<std::pair<int, int>> assignments;
         if (!fileStream.eof()) {
             std::getline(fileStream, lineContent);
@@ -625,7 +625,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
             for (int j = 0; j < assignmentCount; ++j) {
                 if (fileStream.eof()) break;
                 
-                // Читаем employeeId
+
                 std::getline(fileStream, lineContent);
                 int empId = 0;
                 try {
@@ -634,7 +634,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                     continue;
                 }
                 
-                // Читаем hours
+
                 if (fileStream.eof()) break;
                 std::getline(fileStream, lineContent);
                 int hours = 0;
@@ -650,34 +650,34 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
             }
         }
 
-        // Добавляем задачу в проект
+
         try {
             Task task(taskId, taskName, taskType, estimatedHours, priority);
             task.setStatus(status);
             
             if (assignments.empty()) {
-                // Старый формат файла - используем сохраненные allocatedHours
+
                 task.setAllocatedHours(allocatedHours);
             } else {
-                // Новый формат - сначала добавляем задачу с нулевыми allocatedHours
-                // allocatedHours будут установлены при восстановлении назначений
+
+
                 task.setAllocatedHours(0);
             }
             
             company.addTaskToProject(projectId, task);
             
-            // Восстанавливаем назначения работников на задачу
-            // assignEmployeeToTask правильно установит allocatedHours
+
+
             for (const auto& assignment : assignments) {
                 try {
                     company.assignEmployeeToTask(assignment.first, projectId, taskId, assignment.second);
                 } catch (const std::exception&) {
-                    // Игнорируем ошибки при восстановлении назначений
+
                     continue;
                 }
             }
         } catch (const std::exception&) {
-            // Игнорируем ошибки при добавлении задач
+
             continue;
         }
     }
@@ -695,7 +695,7 @@ void FileManager::saveTaskAssignments(const Company& company,
     auto employees = company.getAllEmployees();
     auto projects = company.getAllProjects();
     
-    // Собираем все назначения: employeeId, projectId, taskId, hours
+
     std::vector<std::tuple<int, int, int, int>> assignments;
     
     for (const auto& emp : employees) {
@@ -709,7 +709,7 @@ void FileManager::saveTaskAssignments(const Company& company,
             int projectTasksWithAllocation = 0;
             int totalAllocatedHours = 0;
             
-            // Подсчитываем задачи с выделенными часами
+
             for (const auto& task : tasks) {
                 if (task.getAllocatedHours() > 0) {
                     projectTasksWithAllocation++;
@@ -717,12 +717,12 @@ void FileManager::saveTaskAssignments(const Company& company,
                 }
             }
             
-            // Распределяем часы работника между задачами проекта
+
             if (projectTasksWithAllocation > 0 && totalAllocatedHours > 0) {
                 int remainingHours = totalWeeklyHours;
                 for (const auto& task : tasks) {
                     if (task.getAllocatedHours() > 0 && remainingHours > 0) {
-                        // Пропорционально распределяем часы
+
                         int taskHours = (task.getAllocatedHours() * totalWeeklyHours) / totalAllocatedHours;
                         if (taskHours > remainingHours) {
                             taskHours = remainingHours;
@@ -740,10 +740,10 @@ void FileManager::saveTaskAssignments(const Company& company,
     
     fileStream << assignments.size() << "\n";
     for (const auto& assignment : assignments) {
-        fileStream << std::get<0>(assignment) << "\n";  // employeeId
-        fileStream << std::get<1>(assignment) << "\n";  // projectId
-        fileStream << std::get<2>(assignment) << "\n";  // taskId
-        fileStream << std::get<3>(assignment) << "\n";  // hours
+        fileStream << std::get<0>(assignment) << "\n";
+        fileStream << std::get<1>(assignment) << "\n";
+        fileStream << std::get<2>(assignment) << "\n";
+        fileStream << std::get<3>(assignment) << "\n";
     }
     
     fileStream.close();
@@ -752,7 +752,7 @@ void FileManager::saveTaskAssignments(const Company& company,
 void FileManager::loadTaskAssignments(Company& company,
                                      const QString& fileName) {
     if (!QFile::exists(fileName)) {
-        return;  // Файл не существует, нет назначений для загрузки
+        return;
     }
     
     std::ifstream fileStream(fileName.toStdString());
@@ -767,7 +767,7 @@ void FileManager::loadTaskAssignments(Company& company,
         assignmentCount = std::stoi(lineContent);
     } catch (const std::exception&) {
         fileStream.close();
-        return;  // Неверный формат, пропускаем
+        return;
     }
 
     for (int i = 0; i < assignmentCount; ++i) {
@@ -803,11 +803,11 @@ void FileManager::loadTaskAssignments(Company& company,
             continue;
         }
 
-        // Восстанавливаем назначение
+
         try {
             company.assignEmployeeToTask(employeeId, projectId, taskId, hours);
         } catch (const std::exception&) {
-            // Игнорируем ошибки при восстановлении назначений
+
             continue;
         }
     }

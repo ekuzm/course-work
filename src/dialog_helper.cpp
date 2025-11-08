@@ -39,3 +39,6 @@ void DialogHelper::createHtmlDialog(QDialog* dialog, const QString& title, const
 }
 
 
+
+
+

@@ -26,3 +26,6 @@ void ExceptionHandler::handleGenericException(const std::exception& e, QDialog* 
 }
 
 
+
+
+

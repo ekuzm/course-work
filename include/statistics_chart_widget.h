@@ -27,3 +27,6 @@ class StatisticsChartWidget : public QWidget {
 };
 
 
+
+
+

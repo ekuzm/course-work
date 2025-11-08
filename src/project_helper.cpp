@@ -73,7 +73,7 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table, const Project
             assignButton->setProperty("taskId", task.getId());
             QObject::connect(assignButton, &QPushButton::clicked, [mainWindow, projectId = project.getId(), taskId = task.getId()]() {
                 if (mainWindow) {
-                    // Передаем projectId и taskId напрямую через параметры
+
                     QMetaObject::invokeMethod(mainWindow, "assignTaskFromDetails", Qt::QueuedConnection,
                                               Q_ARG(int, projectId),
                                               Q_ARG(int, taskId));

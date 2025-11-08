@@ -29,7 +29,7 @@ StatisticsChartWidget::StatisticsChartWidget(QWidget* parent) : QWidget(parent),
 void StatisticsChartWidget::setData(const Company* company) {
     this->company = company;
     animationProgress = 0.0;
-    animationTimer->start(16);  // ~60 FPS
+    animationTimer->start(16);
     update();
 }
 
@@ -43,14 +43,14 @@ void StatisticsChartWidget::paintEvent(QPaintEvent* event) {
     int width = this->width();
     int height = this->height();
 
-    // Красивый градиентный фон
+
     QLinearGradient bgGradient(0, 0, width, height);
     bgGradient.setColorAt(0, QColor(245, 247, 250));
     bgGradient.setColorAt(0.5, QColor(250, 252, 255));
     bgGradient.setColorAt(1, QColor(255, 255, 255));
     painter.fillRect(0, 0, width, height, bgGradient);
 
-    // Получаем данные о сотрудниках
+
     auto employees = company->getAllEmployees();
 
     if (employees.empty()) {
@@ -60,7 +60,7 @@ void StatisticsChartWidget::paintEvent(QPaintEvent* event) {
         return;
     }
 
-    // Сортируем сотрудников по зарплате
+
     std::vector<std::pair<std::shared_ptr<Employee>, double>> employeeData;
     for (const auto& emp : employees) {
         if (emp && emp->getIsActive()) {
@@ -78,7 +78,7 @@ void StatisticsChartWidget::paintEvent(QPaintEvent* event) {
         return;
     }
 
-    // Рисуем главный график
+
     drawMainEmployeeSalaryChart(painter, width, height, employeeData, animationProgress);
 }
 
@@ -91,12 +91,12 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
     int chartWidth = width - padding * 2;
     int chartHeight = height - padding * 2 - 50;
 
-    // Заголовок
+
     painter.setPen(QPen(QColor(33, 33, 33), 2));
     painter.setFont(QFont("Segoe UI", 20, QFont::Bold));
     painter.drawText(0, 20, width, 40, Qt::AlignCenter, "Employee Salaries Distribution");
 
-    // Подзаголовок
+
     painter.setPen(QPen(QColor(100, 100, 100), 1));
     painter.setFont(QFont("Segoe UI", 11));
     QString subtitle = QString("Total Employees: %1 | Total Salary: $%2")
@@ -104,14 +104,14 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
                           .arg(company->getTotalSalaries(), 0, 'f', 2);
     painter.drawText(0, 50, width, 30, Qt::AlignCenter, subtitle);
 
-    // Находим максимальную зарплату
+
     double maxSalary = 0;
     for (const auto& [emp, salary] : employeeData) {
         if (salary > maxSalary) maxSalary = salary;
     }
     if (maxSalary == 0) maxSalary = 1;
 
-    // Рисуем сетку
+
     painter.setPen(QPen(QColor(230, 230, 230), 1));
     painter.setFont(QFont("Segoe UI", 9));
     int gridLines = 5;
@@ -120,21 +120,21 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
         int y = chartY + static_cast<int>((static_cast<double>(i) / gridLines) * chartHeight);
         painter.drawLine(chartX - 10, y, chartX + chartWidth, y);
 
-        // Подписи на оси Y
+
         painter.setPen(QPen(QColor(120, 120, 120), 1));
         painter.drawText(0, y - 10, chartX - 15, 20, Qt::AlignRight | Qt::AlignVCenter,
                         "$" + QString::number(value, 'f', 0));
         painter.setPen(QPen(QColor(230, 230, 230), 1));
     }
 
-    // Рисуем ось Y
+
     painter.setPen(QPen(QColor(200, 200, 200), 2));
     painter.drawLine(chartX, chartY, chartX, chartY + chartHeight);
 
-    // Рисуем ось X
+
     painter.drawLine(chartX, chartY + chartHeight, chartX + chartWidth, chartY + chartHeight);
 
-    // Вычисляем размеры столбцов
+
     int barCount = static_cast<int>(employeeData.size());
     int barSpacing = 8;
     int availableWidth = chartWidth - 20;
@@ -143,16 +143,16 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
     int barWidth = qBound(minBarWidth, (availableWidth - barSpacing * (barCount - 1)) / barCount, maxBarWidth);
     int baseY = chartY + chartHeight;
 
-    // Фиксированные цвета для каждого типа должности
+
     std::map<QString, QColor> fixedTypeColors = {
-        {"Developer", QColor(33, 150, 243)},   // Blue
-        {"Manager", QColor(76, 175, 80)},      // Green
-        {"Designer", QColor(255, 152, 0)},     // Orange
-        {"QA", QColor(156, 39, 176)},          // Purple
+        {"Developer", QColor(33, 150, 243)},
+        {"Manager", QColor(76, 175, 80)},
+        {"Designer", QColor(255, 152, 0)},
+        {"QA", QColor(156, 39, 176)},
     };
 
-    // Цвет по умолчанию для неизвестных типов
-    QColor defaultColor = QColor(128, 128, 128);  // Gray
+
+    QColor defaultColor = QColor(128, 128, 128);
 
     int currentX = chartX + 10;
 
@@ -160,34 +160,34 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
         const auto& [emp, salary] = employeeData[i];
         QString empType = emp->getEmployeeType();
 
-        // Получаем фиксированный цвет для типа должности
+
         QColor baseColor = defaultColor;
         if (fixedTypeColors.find(empType) != fixedTypeColors.end()) {
             baseColor = fixedTypeColors[empType];
         }
 
-        // Вычисляем высоту столбца с анимацией
+
         double normalizedSalary = salary / maxSalary;
         int maxBarHeight = chartHeight - 30;
         int targetBarHeight = static_cast<int>(normalizedSalary * maxBarHeight * progress);
 
-        // Градиент для столбца
+
         QLinearGradient gradient(currentX, baseY - targetBarHeight, currentX + barWidth, baseY);
         gradient.setColorAt(0, baseColor.lighter(130));
         gradient.setColorAt(0.5, baseColor);
         gradient.setColorAt(1, baseColor.darker(120));
 
-        // Тень столбца
+
         painter.setPen(Qt::NoPen);
         painter.setBrush(QBrush(QColor(0, 0, 0, 40)));
         painter.drawRoundedRect(currentX + 3, baseY - targetBarHeight + 3, barWidth, targetBarHeight, 6, 6);
 
-        // Сам столбец
+
         painter.setBrush(QBrush(gradient));
         painter.setPen(QPen(baseColor.darker(150), 1.5));
         painter.drawRoundedRect(currentX, baseY - targetBarHeight, barWidth, targetBarHeight, 6, 6);
 
-        // Значение зарплаты на столбце
+
         if (targetBarHeight > 25) {
             painter.setPen(QPen(QColor(255, 255, 255), 1));
             painter.setFont(QFont("Segoe UI", 9, QFont::Bold));
@@ -195,7 +195,7 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
             painter.drawText(currentX, baseY - targetBarHeight - 18, barWidth, 16, Qt::AlignCenter, salaryText);
         }
 
-        // Имя сотрудника под столбцом
+
         painter.setPen(QPen(QColor(66, 66, 66), 1));
         painter.setFont(QFont("Segoe UI", 8));
         QString name = emp->getName();
@@ -205,7 +205,7 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
         QRect nameRect(currentX, baseY + 5, barWidth, 20);
         painter.drawText(nameRect, Qt::AlignCenter | Qt::TextWordWrap, name);
 
-        // ID сотрудника
+
         painter.setPen(QPen(QColor(150, 150, 150), 1));
         painter.setFont(QFont("Segoe UI", 7));
         painter.drawText(currentX, baseY + 25, barWidth, 15, Qt::AlignCenter,
@@ -214,7 +214,7 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
         currentX += barWidth + barSpacing;
     }
 
-    // Легенда - показываем все фиксированные типы
+
     int legendX = chartX + chartWidth - 150;
     int legendY = chartY + 20;
     painter.setPen(QPen(QColor(33, 33, 33), 1));
@@ -233,5 +233,8 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
         legendY += 20;
     }
 }
+
+
+
 
 

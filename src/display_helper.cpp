@@ -48,7 +48,7 @@ QString DisplayHelper::formatTaskInfo(
     const Company* currentCompany) {
     QStringList taskInfoList;
 
-    // Получаем все проекты работника
+
     std::vector<int> projectIds = employee->getAssignedProjects();
     
     if (auto manager = std::dynamic_pointer_cast<const Manager>(employee)) {
@@ -67,14 +67,14 @@ QString DisplayHelper::formatTaskInfo(
         }
     }
 
-    // Для каждого проекта получаем задачи
+
     for (int projectId : projectIds) {
         const auto* project = currentCompany->getProject(projectId);
         if (project) {
             auto tasks = currentCompany->getProjectTasks(projectId);
             
             for (const auto& task : tasks) {
-                // Показываем задачи, на которые выделены часы (работник может быть назначен)
+
                 if (task.getAllocatedHours() > 0) {
                     QString taskName = task.getName();
                     if (!taskInfoList.contains(taskName)) {

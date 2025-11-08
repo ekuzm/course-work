@@ -19,4 +19,3 @@ class MainWindowUIBuilder {
     static void setupStatisticsTab(MainWindow* window, QTabWidget* tabWidget);
     static QWidget* createCompanyWidget(MainWindow* window);
 };
-
