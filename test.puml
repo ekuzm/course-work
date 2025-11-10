@@ -1,13 +1,14 @@
 @startuml course-work
-scale 0.55
+scale 1.2
 left to right direction
+
 skinparam monochrome true
 skinparam shadowing false
 skinparam backgroundColor white
 skinparam defaultFontColor black
 
-skinparam ranksep 0.12
-skinparam nodesep 0.12
+skinparam ranksep 0.9
+skinparam nodesep 0.8
 skinparam linetype ortho
 
 hide empty members
@@ -17,17 +18,15 @@ skinparam classAttributeIconSize 0
 skinparam classVisibilityIconSize 0
 
 skinparam class {
-    AttributeFontSize 7
-    FontSize 8
-    Padding 0
+    AttributeFontSize 9
+    FontSize 10
+    Padding 6
     BackgroundColor white
     BorderColor black
     ArrowColor black
     BorderThickness 1
 }
-
-skinparam defaultFontSize 8
-skinparam defaultFontName Arial
+skinparam defaultFontSize 10
 
 together {
     class Employee {
