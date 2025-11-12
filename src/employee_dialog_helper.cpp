@@ -113,7 +113,7 @@ void EmployeeDialogHelper::createEmployeeDialog(
     devLanguage->setVisible(false);
 
     devExperience = new QLineEdit();
-    devExperience->setPlaceholderText("e.g., 3");
+    devExperience->setPlaceholderText("e.g., 3.5 (0.0-50.0)");
     devExperienceLabel = new QLabel("Years of Experience:");
     form->addRow(devExperienceLabel, devExperience);
     devExperienceLabel->setVisible(false);
@@ -210,7 +210,7 @@ void EmployeeDialogHelper::createEditEmployeeDialog(
     form->addRow(devLanguageLabel, devLanguage);
 
     devExperience = new QLineEdit();
-    devExperience->setPlaceholderText("e.g., 3");
+    devExperience->setPlaceholderText("e.g., 3.5 (0.0-50.0)");
     devExperienceLabel = new QLabel("Years of Experience:");
     form->addRow(devExperienceLabel, devExperience);
 
@@ -272,7 +272,7 @@ void EmployeeDialogHelper::populateEmployeeFields(
             developer != nullptr) {
             devLanguage->setText(developer->getProgrammingLanguage());
             devExperience->setText(
-                QString::number(developer->getYearsOfExperience()));
+                QString::number(developer->getYearsOfExperience(), 'f', 1));
         }
         showDeveloperFields(devLanguageLabel, devLanguage, devExperienceLabel,
                             devExperience, true);
@@ -346,8 +346,8 @@ std::shared_ptr<Employee> EmployeeDialogHelper::createEmployeeFromType(
         }
 
         bool conversionSuccess = false;
-        int years = devExperience->text().toInt(&conversionSuccess);
-        if (!conversionSuccess || years < 0 || years > kMaxYearsOfExperience) {
+        double years = devExperience->text().toDouble(&conversionSuccess);
+        if (!conversionSuccess || years < 0.0 || years > 50.0) {
             return nullptr;
         }
 

@@ -31,7 +31,7 @@ void AutoSaveLoader::clearDataFiles(const QString& dataDirPath) {
     QDir projectsDir(dataDirPath + "/projects");
 
     const QStringList filters{"*.txt"};
-    
+
     companiesDir.setNameFilters(filters);
     companiesDir.setFilter(QDir::Files);
     for (const QString& fileName : companiesDir.entryList()) {
@@ -51,7 +51,8 @@ void AutoSaveLoader::clearDataFiles(const QString& dataDirPath) {
     }
 }
 
-void AutoSaveLoader::autoSave(const std::vector<Company*>& companies, MainWindow* mainWindow) {
+void AutoSaveLoader::autoSave(const std::vector<Company*>& companies,
+                              MainWindow* mainWindow) {
     try {
         QString dataDirPath = getDataDirectory();
         QDir dataDir(dataDirPath);
@@ -67,35 +68,88 @@ void AutoSaveLoader::autoSave(const std::vector<Company*>& companies, MainWindow
         if (!employeesDir.exists()) employeesDir.mkpath(".");
         if (!projectsDir.exists()) projectsDir.mkpath(".");
 
-        clearDataFiles(dataDirPath);
+        bool hasValidCompanies = false;
+        for (size_t i = 0; i < companies.size(); ++i) {
+            if (companies[i] != nullptr) {
+                hasValidCompanies = true;
+                break;
+            }
+        }
+
+        if (hasValidCompanies) {
+            clearDataFiles(dataDirPath);
+        }
 
         for (size_t i = 0; i < companies.size(); ++i) {
             if (companies[i] == nullptr) continue;
 
             QString index = QString::number(i + 1);
             QString companyFileName = QString("company_%1.txt").arg(index);
-            QString companyFilePath = companiesDir.absoluteFilePath(companyFileName);
-            FileManager::saveCompany(*companies[i], companyFilePath);
+            QString companyFilePath =
+                companiesDir.absoluteFilePath(companyFileName);
+            try {
+                FileManager::saveCompany(*companies[i], companyFilePath);
+            } catch (const FileManagerException& e) {
+                if (mainWindow) {
+                    QMessageBox::warning(
+                        mainWindow, "Auto-save Error",
+                        QString("Failed to save company data: %1")
+                            .arg(e.what()));
+                }
+                continue;
+            }
 
             QString employeesFileName = QString("employees_%1.txt").arg(index);
-            QString employeesFilePath = employeesDir.absoluteFilePath(employeesFileName);
-            FileManager::saveEmployees(*companies[i], employeesFilePath);
+            QString employeesFilePath =
+                employeesDir.absoluteFilePath(employeesFileName);
+            try {
+                FileManager::saveEmployees(*companies[i], employeesFilePath);
+            } catch (const FileManagerException& e) {
+                if (mainWindow) {
+                    QMessageBox::warning(
+                        mainWindow, "Auto-save Error",
+                        QString("Failed to save employees: %1").arg(e.what()));
+                }
+            }
 
             QString projectsFileName = QString("projects_%1.txt").arg(index);
-            QString projectsFilePath = projectsDir.absoluteFilePath(projectsFileName);
-            FileManager::saveProjects(*companies[i], projectsFilePath);
+            QString projectsFilePath =
+                projectsDir.absoluteFilePath(projectsFileName);
+            try {
+                FileManager::saveProjects(*companies[i], projectsFilePath);
+            } catch (const FileManagerException& e) {
+                if (mainWindow) {
+                    QMessageBox::warning(
+                        mainWindow, "Auto-save Error",
+                        QString("Failed to save projects: %1").arg(e.what()));
+                }
+            }
 
             QString tasksFileName = QString("tasks_%1.txt").arg(index);
             QString tasksFilePath = projectsDir.absoluteFilePath(tasksFileName);
-            FileManager::saveTasks(*companies[i], tasksFilePath);
+            try {
+                FileManager::saveTasks(*companies[i], tasksFilePath);
+            } catch (const FileManagerException& e) {
+                if (mainWindow) {
+                    QMessageBox::warning(
+                        mainWindow, "Auto-save Error",
+                        QString("Failed to save tasks: %1").arg(e.what()));
+                }
+            }
         }
-    } catch (const FileManagerException&) {
-
+    } catch (const FileManagerException& e) {
+        if (mainWindow) {
+            QMessageBox::warning(
+                mainWindow, "Auto-save Error",
+                QString("Failed to auto-save: %1").arg(e.what()));
+        }
     }
 }
 
-void AutoSaveLoader::autoLoad(std::vector<Company*>& companies, Company*& currentCompany,
-                              int& currentCompanyIndex, MainWindow* mainWindow) {
+void AutoSaveLoader::autoLoad(std::vector<Company*>& companies,
+                              Company*& currentCompany,
+                              int& currentCompanyIndex,
+                              MainWindow* mainWindow) {
     try {
         QString dataDirPath = getDataDirectory();
         QDir companiesDir(dataDirPath + "/companies");
@@ -106,7 +160,8 @@ void AutoSaveLoader::autoLoad(std::vector<Company*>& companies, Company*& curren
 
         companiesDir.setNameFilters(QStringList() << "company_*.txt");
         companiesDir.setFilter(QDir::Files);
-        QStringList companyFiles = companiesDir.entryList(QDir::Files, QDir::Name);
+        QStringList companyFiles =
+            companiesDir.entryList(QDir::Files, QDir::Name);
 
         if (companyFiles.isEmpty()) return;
 
@@ -120,26 +175,98 @@ void AutoSaveLoader::autoLoad(std::vector<Company*>& companies, Company*& curren
             if (!conversionOk) continue;
 
             try {
-                QString companyFilePath = companiesDir.absoluteFilePath(fileName);
+                QString companyFilePath =
+                    companiesDir.absoluteFilePath(fileName);
                 Company company = FileManager::loadCompany(companyFilePath);
 
-                QString employeesFileName = QString("employees_%1.txt").arg(index);
-                QString employeesFilePath = employeesDir.absoluteFilePath(employeesFileName);
+                QString employeesFileName =
+                    QString("employees_%1.txt").arg(index);
+                QString employeesFilePath =
+                    employeesDir.absoluteFilePath(employeesFileName);
                 if (QFile::exists(employeesFilePath)) {
                     FileManager::loadEmployees(company, employeesFilePath);
                 }
 
-                QString projectsFileName = QString("projects_%1.txt").arg(index);
-                QString projectsFilePath = projectsDir.absoluteFilePath(projectsFileName);
+                QString projectsFileName =
+                    QString("projects_%1.txt").arg(index);
+                QString projectsFilePath =
+                    projectsDir.absoluteFilePath(projectsFileName);
                 if (QFile::exists(projectsFilePath)) {
                     FileManager::loadProjects(company, projectsFilePath);
                 }
 
                 QString tasksFileName = QString("tasks_%1.txt").arg(index);
-                QString tasksFilePath = projectsDir.absoluteFilePath(tasksFileName);
+                QString tasksFilePath =
+                    projectsDir.absoluteFilePath(tasksFileName);
                 if (QFile::exists(tasksFilePath)) {
                     FileManager::loadTasks(company, tasksFilePath);
                 }
+
+                QString taskAssignmentsFileName =
+                    QString("task_assignments_%1.txt").arg(index);
+                QString taskAssignmentsFilePath =
+                    projectsDir.absoluteFilePath(taskAssignmentsFileName);
+                if (QFile::exists(taskAssignmentsFilePath)) {
+                    FileManager::loadTaskAssignments(company,
+                                                     taskAssignmentsFilePath);
+                }
+
+                company.recalculateEmployeeHours();
+
+                auto employees = company.getAllEmployees();
+                for (const auto& emp : employees) {
+                    if (emp) {
+                        auto it = FileManager::employeeStatusesFromFile.find(
+                            emp->getId());
+                        if (it != FileManager::employeeStatusesFromFile.end()) {
+                            bool shouldBeActive = it->second;
+
+                            if (!shouldBeActive) {
+                                auto assignedProjects =
+                                    emp->getAssignedProjects();
+
+                                auto allProjects = company.getAllProjects();
+                                for (const auto& project : allProjects) {
+                                    int projectId = project.getId();
+                                    auto tasks =
+                                        company.getProjectTasks(projectId);
+                                    bool hasAssignments = false;
+                                    for (const auto& task : tasks) {
+                                        if (company.getEmployeeTaskHours(
+                                                emp->getId(), projectId,
+                                                task.getId()) > 0) {
+                                            hasAssignments = true;
+                                            break;
+                                        }
+                                    }
+                                    if (hasAssignments) {
+                                        emp->addToProjectHistory(projectId);
+                                    }
+                                }
+
+                                for (int projectId : assignedProjects) {
+                                    emp->addToProjectHistory(projectId);
+                                }
+                            }
+
+                            if (!shouldBeActive &&
+                                emp->getCurrentWeeklyHours() > 0) {
+                                try {
+                                    int currentHours =
+                                        emp->getCurrentWeeklyHours();
+                                    emp->removeWeeklyHours(currentHours);
+                                } catch (const EmployeeException&) {
+                                    continue;
+                                }
+                            }
+                            try {
+                                emp->setIsActive(shouldBeActive);
+                            } catch (const EmployeeException&) {
+                            }
+                        }
+                    }
+                }
+                FileManager::employeeStatusesFromFile.clear();
 
                 if (mainWindow) {
                     mainWindow->validateAndFixProjectAssignments(&company);
@@ -158,7 +285,5 @@ void AutoSaveLoader::autoLoad(std::vector<Company*>& companies, Company*& curren
             currentCompanyIndex = 0;
         }
     } catch (const FileManagerException&) {
-
     }
 }
-

@@ -3,30 +3,37 @@
 #include <QDate>
 #include <QFile>
 #include <fstream>
+#include <iomanip>
 #include <memory>
-#include <utility>
+#include <set>
 #include <sstream>
+#include <utility>
 
 #include "derived_employees.h"
 
+std::map<int, bool> FileManager::employeeStatusesFromFile;
 
-int FileManager::parseIntFromStream(std::ifstream& fileStream, const QString& fieldName) {
+int FileManager::parseIntFromStream(std::ifstream& fileStream,
+                                    const QString& fieldName) {
     std::string lineContent;
     std::getline(fileStream, lineContent);
     try {
         return std::stoi(lineContent);
     } catch (const std::exception&) {
-        throw FileManagerException(QString("Invalid %1 format in file").arg(fieldName));
+        throw FileManagerException(
+            QString("Invalid %1 format in file").arg(fieldName));
     }
 }
 
-double FileManager::parseDoubleFromStream(std::ifstream& fileStream, const QString& fieldName) {
+double FileManager::parseDoubleFromStream(std::ifstream& fileStream,
+                                          const QString& fieldName) {
     std::string lineContent;
     std::getline(fileStream, lineContent);
     try {
         return std::stod(lineContent);
     } catch (const std::exception&) {
-        throw FileManagerException(QString("Invalid %1 format in file").arg(fieldName));
+        throw FileManagerException(
+            QString("Invalid %1 format in file").arg(fieldName));
     }
 }
 
@@ -54,22 +61,27 @@ double FileManager::parseEmploymentRate(std::ifstream& fileStream) {
     return employmentRate;
 }
 
-
-void FileManager::saveEmployeeBaseData(std::shared_ptr<Employee> employee, std::ofstream& fileStream) {
+void FileManager::saveEmployeeBaseData(std::shared_ptr<Employee> employee,
+                                       std::ofstream& fileStream) {
     fileStream << employee->getId() << "\n";
     fileStream << employee->getName().toStdString() << "\n";
     fileStream << employee->getSalary() << "\n";
     fileStream << employee->getDepartment().toStdString() << "\n";
     fileStream << employee->getEmploymentRate() << "\n";
+    fileStream << (employee->getIsActive() ? "1" : "0") << "\n";
+    if (!fileStream.good()) {
+        throw FileManagerException("Error writing employee base data");
+    }
 }
 
-
-void FileManager::saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employee, std::ofstream& fileStream) {
+void FileManager::saveEmployeeTypeSpecificData(
+    std::shared_ptr<Employee> employee, std::ofstream& fileStream) {
     if (auto manager = std::dynamic_pointer_cast<Manager>(employee)) {
         fileStream << manager->getManagedProjectId() << "\n";
-    } else if (auto developer = std::dynamic_pointer_cast<Developer>(employee)) {
+    } else if (auto developer =
+                   std::dynamic_pointer_cast<Developer>(employee)) {
         fileStream << developer->getProgrammingLanguage().toStdString() << "\n";
-        fileStream << developer->getYearsOfExperience() << "\n";
+        fileStream << std::fixed << std::setprecision(1) << developer->getYearsOfExperience() << "\n";
     } else if (auto designer = std::dynamic_pointer_cast<Designer>(employee)) {
         fileStream << designer->getDesignTool().toStdString() << "\n";
         fileStream << designer->getNumberOfProjects() << "\n";
@@ -79,14 +91,32 @@ void FileManager::saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employe
     }
 }
 
-
-FileManager::EmployeeBaseData FileManager::loadEmployeeBaseData(std::ifstream& fileStream) {
+FileManager::EmployeeBaseData FileManager::loadEmployeeBaseData(
+    std::ifstream& fileStream) {
     EmployeeBaseData data;
     data.id = parseIntFromStream(fileStream, "employee ID");
     data.name = parseStringFromStream(fileStream);
     data.salary = parseDoubleFromStream(fileStream, "salary");
     data.department = parseStringFromStream(fileStream);
     data.employmentRate = parseEmploymentRate(fileStream);
+    
+    std::streampos currentPos = fileStream.tellg();
+    std::string lineContent;
+    if (std::getline(fileStream, lineContent)) {
+        lineContent.erase(0, lineContent.find_first_not_of(" \t\n\r"));
+        lineContent.erase(lineContent.find_last_not_of(" \t\n\r") + 1);
+        
+        if (lineContent == "0" || lineContent == "1") {
+            data.isActive = (lineContent == "1");
+        } else {
+            fileStream.seekg(currentPos);
+            data.isActive = true;
+        }
+    } else {
+        fileStream.seekg(currentPos);
+        data.isActive = true;
+    }
+    
     return data;
 }
 
@@ -121,7 +151,7 @@ Company FileManager::loadFromFile(const QString& fileName) {
 Company FileManager::loadSingleCompany(std::ifstream& fileStream) {
     std::string lineContent{};
     std::getline(fileStream, lineContent);
-    
+
     QString companyName = parseStringFromStream(fileStream);
     QString companyIndustry = parseStringFromStream(fileStream);
     QString companyLocation = parseStringFromStream(fileStream);
@@ -151,9 +181,11 @@ void FileManager::saveEmployeesToStream(const Company& company,
     for (const auto& employee : employees) {
         if (auto manager = std::dynamic_pointer_cast<Manager>(employee)) {
             fileStream << "MANAGER\n";
-        } else if (auto developer = std::dynamic_pointer_cast<Developer>(employee)) {
+        } else if (auto developer =
+                       std::dynamic_pointer_cast<Developer>(employee)) {
             fileStream << "DEVELOPER\n";
-        } else if (auto designer = std::dynamic_pointer_cast<Designer>(employee)) {
+        } else if (auto designer =
+                       std::dynamic_pointer_cast<Designer>(employee)) {
             fileStream << "DESIGNER\n";
         } else if (auto qaEmployee = std::dynamic_pointer_cast<QA>(employee)) {
             fileStream << "QA\n";
@@ -175,33 +207,42 @@ void FileManager::loadEmployeesFromStream(Company& company,
         QString employeeType = QString::fromStdString(lineContent);
         EmployeeBaseData baseData = loadEmployeeBaseData(fileStream);
 
+        std::shared_ptr<Employee> employee;
+        
         if (employeeType == "MANAGER") {
-            int managedProjectId = parseIntFromStream(fileStream, "managed project ID");
-            auto manager = std::make_shared<Manager>(
-                baseData.id, baseData.name, baseData.salary, baseData.department,
-                managedProjectId, baseData.employmentRate);
-            company.addEmployee(manager);
+            int managedProjectId =
+                parseIntFromStream(fileStream, "managed project ID");
+            employee = std::make_shared<Manager>(
+                baseData.id, baseData.name, baseData.salary,
+                baseData.department, managedProjectId, baseData.employmentRate);
         } else if (employeeType == "DEVELOPER") {
             QString programmingLanguage = parseStringFromStream(fileStream);
-            int developerYearsOfExperience = parseIntFromStream(fileStream, "experience");
-            auto developer = std::make_shared<Developer>(
-                baseData.id, baseData.name, baseData.salary, baseData.department,
-                programmingLanguage, developerYearsOfExperience, baseData.employmentRate);
-            company.addEmployee(developer);
+            double developerYearsOfExperience =
+                parseDoubleFromStream(fileStream, "experience");
+            employee = std::make_shared<Developer>(
+                baseData.id, baseData.name, baseData.salary,
+                baseData.department, programmingLanguage,
+                developerYearsOfExperience, baseData.employmentRate);
         } else if (employeeType == "DESIGNER") {
             QString designerTool = parseStringFromStream(fileStream);
-            int designerNumberOfProjects = parseIntFromStream(fileStream, "number of projects");
-            auto designer = std::make_shared<Designer>(
-                baseData.id, baseData.name, baseData.salary, baseData.department,
-                designerTool, designerNumberOfProjects, baseData.employmentRate);
-            company.addEmployee(designer);
+            int designerNumberOfProjects =
+                parseIntFromStream(fileStream, "number of projects");
+            employee = std::make_shared<Designer>(
+                baseData.id, baseData.name, baseData.salary,
+                baseData.department, designerTool, designerNumberOfProjects,
+                baseData.employmentRate);
         } else if (employeeType == "QA") {
             QString qaTestingType = parseStringFromStream(fileStream);
             int qaBugsFound = parseIntFromStream(fileStream, "bugs found");
-            auto qaEmployee = std::make_shared<QA>(
-                baseData.id, baseData.name, baseData.salary, baseData.department,
-                qaTestingType, qaBugsFound, baseData.employmentRate);
-            company.addEmployee(qaEmployee);
+            employee = std::make_shared<QA>(
+                baseData.id, baseData.name, baseData.salary,
+                baseData.department, qaTestingType, qaBugsFound,
+                baseData.employmentRate);
+        }
+        
+        if (employee) {
+            employee->setIsActive(baseData.isActive);
+            company.addEmployee(employee);
         }
     }
 }
@@ -214,7 +255,7 @@ void FileManager::saveProjectsToStream(const Company& company,
         fileStream << project.getId() << "\n";
         fileStream << project.getName().toStdString() << "\n";
         fileStream << project.getDescription().toStdString() << "\n";
-        fileStream << project.getStatus().toStdString() << "\n";
+        fileStream << project.getPhase().toStdString() << "\n";
         fileStream << project.getStartDate().toString(Qt::ISODate).toStdString()
                    << "\n";
         fileStream << project.getEndDate().toString(Qt::ISODate).toStdString()
@@ -235,16 +276,18 @@ void FileManager::loadProjectsFromStream(Company& company,
         int projectId = parseIntFromStream(fileStream, "project ID");
         QString projectName = parseStringFromStream(fileStream);
         QString projectDescription = parseStringFromStream(fileStream);
-        QString projectStatus = parseStringFromStream(fileStream);
-        
-        QDate projectStartDate = QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
-        QDate projectEndDate = QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
+        QString projectPhase = parseStringFromStream(fileStream);
+
+        QDate projectStartDate =
+            QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
+        QDate projectEndDate =
+            QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
 
         double projectBudget = parseDoubleFromStream(fileStream, "budget");
         QString clientName = parseStringFromStream(fileStream);
 
         Project project(projectId, projectName, projectDescription,
-                        projectStatus, projectStartDate, projectEndDate,
+                        projectPhase, projectStartDate, projectEndDate,
                         projectBudget, clientName);
         company.addProject(project);
     }
@@ -287,18 +330,34 @@ Company FileManager::loadCompany(const QString& fileName) {
 
 void FileManager::saveEmployees(const Company& company,
                                 const QString& fileName) {
-    std::ofstream fileStream(fileName.toStdString());
+    std::ofstream fileStream(fileName.toStdString(), std::ios::out | std::ios::trunc);
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for writing: " + fileName);
     }
 
     auto employees = company.getAllEmployees();
     fileStream << employees.size() << "\n";
-
-    for (const auto& employee : employees) {
-        saveEmployeeToStream(employee, fileStream);
+    
+    if (!fileStream.good()) {
+        fileStream.close();
+        throw FileManagerException("Error writing employee count to file: " + fileName);
     }
 
+    for (const auto& employee : employees) {
+        if (!employee) continue;
+        saveEmployeeToStream(employee, fileStream);
+        if (!fileStream.good()) {
+            fileStream.close();
+            throw FileManagerException("Error writing employee data to file: " + fileName);
+        }
+    }
+    
+    fileStream.flush();
+    if (!fileStream.good()) {
+        fileStream.close();
+        throw FileManagerException("Error flushing data to file: " + fileName);
+    }
+    
     fileStream.close();
 }
 
@@ -306,7 +365,8 @@ void FileManager::saveEmployeeToStream(std::shared_ptr<Employee> employee,
                                        std::ofstream& fileStream) {
     if (auto manager = std::dynamic_pointer_cast<Manager>(employee)) {
         fileStream << "[MANAGER]\n";
-    } else if (auto developer = std::dynamic_pointer_cast<Developer>(employee)) {
+    } else if (auto developer =
+                   std::dynamic_pointer_cast<Developer>(employee)) {
         fileStream << "[DEVELOPER]\n";
     } else if (auto designer = std::dynamic_pointer_cast<Designer>(employee)) {
         fileStream << "[DESIGNER]\n";
@@ -317,13 +377,23 @@ void FileManager::saveEmployeeToStream(std::shared_ptr<Employee> employee,
     }
     saveEmployeeBaseData(employee, fileStream);
     saveEmployeeTypeSpecificData(employee, fileStream);
+    fileStream.flush();
 }
 
 void FileManager::loadEmployees(Company& company, const QString& fileName) {
+    employeeStatusesFromFile.clear();
+    
     std::ifstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for reading: " + fileName);
     }
+
+    fileStream.seekg(0, std::ios::end);
+    if (fileStream.tellg() == 0) {
+        fileStream.close();
+        return;
+    }
+    fileStream.seekg(0, std::ios::beg);
 
     int employeeCount = parseIntFromStream(fileStream, "employee count");
 
@@ -345,35 +415,46 @@ std::shared_ptr<Employee> FileManager::loadEmployeeFromStream(
 
     EmployeeBaseData baseData = loadEmployeeBaseData(fileStream);
 
+    std::shared_ptr<Employee> employee;
+    
     if (employeeType == "[MANAGER]") {
-        int managedProjectId = parseIntFromStream(fileStream, "managed project ID");
-        return std::make_shared<Manager>(baseData.id, baseData.name,
-                                         baseData.salary, baseData.department,
-                                         managedProjectId, baseData.employmentRate);
-    }
-    if (employeeType == "[DEVELOPER]") {
-        QString programmingLanguage = parseStringFromStream(fileStream);
-        int developerYearsOfExperience = parseIntFromStream(fileStream, "experience");
-        return std::make_shared<Developer>(
+        int managedProjectId =
+            parseIntFromStream(fileStream, "managed project ID");
+        employee = std::make_shared<Manager>(
             baseData.id, baseData.name, baseData.salary, baseData.department,
-            programmingLanguage, developerYearsOfExperience, baseData.employmentRate);
-    }
-    if (employeeType == "[DESIGNER]") {
+            managedProjectId, baseData.employmentRate);
+    } else if (employeeType == "[DEVELOPER]") {
+        QString programmingLanguage = parseStringFromStream(fileStream);
+        int developerYearsOfExperience =
+            parseIntFromStream(fileStream, "experience");
+        employee = std::make_shared<Developer>(
+            baseData.id, baseData.name, baseData.salary, baseData.department,
+            programmingLanguage, developerYearsOfExperience,
+            baseData.employmentRate);
+    } else if (employeeType == "[DESIGNER]") {
         QString designerTool = parseStringFromStream(fileStream);
-        int designerNumberOfProjects = parseIntFromStream(fileStream, "number of projects");
-        return std::make_shared<Designer>(
+        int designerNumberOfProjects =
+            parseIntFromStream(fileStream, "number of projects");
+        employee = std::make_shared<Designer>(
             baseData.id, baseData.name, baseData.salary, baseData.department,
             designerTool, designerNumberOfProjects, baseData.employmentRate);
-    }
-    if (employeeType == "[QA]") {
+    } else if (employeeType == "[QA]") {
         QString qaTestingType = parseStringFromStream(fileStream);
         int qaBugsFound = parseIntFromStream(fileStream, "bugs found");
-        return std::make_shared<QA>(baseData.id, baseData.name, baseData.salary,
+        employee = std::make_shared<QA>(baseData.id, baseData.name, baseData.salary,
                                     baseData.department, qaTestingType,
                                     qaBugsFound, baseData.employmentRate);
     }
-
-    return nullptr;
+    
+    if (employee) {
+        employeeStatusesFromFile[baseData.id] = baseData.isActive;
+        try {
+            employee->setIsActive(baseData.isActive);
+        } catch (const EmployeeException&) {
+        }
+    }
+    
+    return employee;
 }
 
 void FileManager::saveProjects(const Company& company,
@@ -398,7 +479,7 @@ void FileManager::saveProjectToStream(const Project& project,
     fileStream << project.getId() << "\n";
     fileStream << project.getName().toStdString() << "\n";
     fileStream << project.getDescription().toStdString() << "\n";
-    fileStream << project.getStatus().toStdString() << "\n";
+    fileStream << project.getPhase().toStdString() << "\n";
     fileStream << project.getStartDate().toString(Qt::ISODate).toStdString()
                << "\n";
     fileStream << project.getEndDate().toString(Qt::ISODate).toStdString()
@@ -406,7 +487,6 @@ void FileManager::saveProjectToStream(const Project& project,
     fileStream << project.getBudget() << "\n";
     fileStream << project.getClientName().toStdString() << "\n";
     fileStream << project.getInitialEstimatedHours() << "\n";
-
 }
 
 void FileManager::loadProjects(Company& company, const QString& fileName) {
@@ -436,26 +516,28 @@ Project FileManager::loadProjectFromStream(std::ifstream& fileStream) {
     int projectId = parseIntFromStream(fileStream, "project ID");
     QString projectName = parseStringFromStream(fileStream);
     QString projectDescription = parseStringFromStream(fileStream);
-    QString projectStatus = parseStringFromStream(fileStream);
-    
-    QDate projectStartDate = QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
-    QDate projectEndDate = QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
+    QString projectPhase = parseStringFromStream(fileStream);
+
+    QDate projectStartDate =
+        QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
+    QDate projectEndDate =
+        QDate::fromString(parseStringFromStream(fileStream), Qt::ISODate);
 
     double projectBudget = parseDoubleFromStream(fileStream, "budget");
     QString clientName = parseStringFromStream(fileStream);
-    
+
     int estimatedHours = 0;
     if (!fileStream.eof()) {
         std::streampos pos = fileStream.tellg();
-    try {
+        try {
             estimatedHours = parseIntFromStream(fileStream, "estimated hours");
         } catch (const FileManagerException&) {
             fileStream.seekg(pos);
-        estimatedHours = 0;
+            estimatedHours = 0;
         }
     }
 
-    Project project(projectId, projectName, projectDescription, projectStatus,
+    Project project(projectId, projectName, projectDescription, projectPhase,
                     projectStartDate, projectEndDate, projectBudget, clientName,
                     estimatedHours);
 
@@ -463,230 +545,295 @@ Project FileManager::loadProjectFromStream(std::ifstream& fileStream) {
 }
 
 void FileManager::saveTasks(const Company& company, const QString& fileName) {
-    std::ofstream fileStream(fileName.toStdString());
+    QString tempFileName = fileName + ".tmp";
+    std::ofstream fileStream(tempFileName.toStdString(), std::ios::out | std::ios::trunc);
     if (!fileStream.is_open()) {
-        throw FileManagerException("Cannot open file for writing: " + fileName);
+        throw FileManagerException("Cannot open temporary file for writing: " + tempFileName);
     }
 
     auto projects = company.getAllProjects();
     auto employees = company.getAllEmployees();
-    
 
-    std::vector<std::tuple<int, int, QString, QString, int, int, int, QString, std::vector<std::pair<int, int>>>> allTasks;
-    
+    std::vector<std::tuple<int, int, QString, QString, int, int, int, QString,
+                           std::vector<std::pair<int, int>>>>
+        allTasks;
+
     for (const auto& project : projects) {
         auto tasks = company.getProjectTasks(project.getId());
         for (const auto& task : tasks) {
-
-
             std::vector<std::pair<int, int>> assignments;
-            
+
             for (const auto& emp : employees) {
-                if (!emp || !emp->getIsActive()) continue;
-                if (!emp->isAssignedToProject(project.getId())) continue;
+                if (!emp) continue;
                 
-
-                if (task.getAllocatedHours() > 0) {
-                    auto projectTasks = company.getProjectTasks(project.getId());
-                    int totalAllocatedHours = 0;
-                    for (const auto& t : projectTasks) {
-                        totalAllocatedHours += t.getAllocatedHours();
-                    }
-                    
-                    if (totalAllocatedHours > 0) {
-                        int totalWeeklyHours = emp->getCurrentWeeklyHours();
-
-                        int taskHours = (task.getAllocatedHours() * totalWeeklyHours) / totalAllocatedHours;
-                        if (taskHours > 0) {
-                            assignments.push_back(std::make_pair(emp->getId(), taskHours));
-                        }
-                    }
+                int taskHours = company.getEmployeeTaskHours(
+                    emp->getId(), project.getId(), task.getId());
+                
+                if (taskHours > 0) {
+                    assignments.push_back(
+                        std::make_pair(emp->getId(), taskHours));
                 }
             }
-            
+
             allTasks.push_back(std::make_tuple(
-                project.getId(),
-                task.getId(),
-                task.getName(),
-                task.getType(),
-                task.getEstimatedHours(),
-                task.getAllocatedHours(),
-                task.getPriority(),
-                task.getStatus(),
-                assignments
-            ));
+                project.getId(), task.getId(), task.getName(), task.getType(),
+                task.getEstimatedHours(), task.getAllocatedHours(),
+                task.getPriority(), task.getPhase(), assignments));
         }
     }
-    
-    fileStream << allTasks.size() << "\n";
-    for (const auto& taskData : allTasks) {
-        fileStream << std::get<0>(taskData) << "\n";
-        fileStream << std::get<1>(taskData) << "\n";
-        fileStream << std::get<2>(taskData).toStdString() << "\n";
-        fileStream << std::get<3>(taskData).toStdString() << "\n";
-        fileStream << std::get<4>(taskData) << "\n";
-        fileStream << std::get<5>(taskData) << "\n";
-        fileStream << std::get<6>(taskData) << "\n";
-        fileStream << std::get<7>(taskData).toStdString() << "\n";
-        
 
-        const std::vector<std::pair<int, int>>& assignments = std::get<8>(taskData);
-        fileStream << assignments.size() << "\n";
-        for (const auto& assignment : assignments) {
-            fileStream << assignment.first << "\n";
-            fileStream << assignment.second << "\n";
+    fileStream << "TASKS_COUNT:" << allTasks.size() << "\n";
+    fileStream << "FORMAT_VERSION:2\n";
+    fileStream << "---\n";
+    
+    if (!fileStream.good()) {
+        fileStream.close();
+        QFile::remove(tempFileName);
+        throw FileManagerException("Error writing task header to file: " + fileName);
+    }
+    
+    for (size_t i = 0; i < allTasks.size(); ++i) {
+        const auto& taskData = allTasks[i];
+        
+        fileStream << "\n[TASK " << (i + 1) << "]\n";
+        fileStream << "PROJECT_ID:" << std::get<0>(taskData) << "\n";
+        fileStream << "TASK_ID:" << std::get<1>(taskData) << "\n";
+        fileStream << "NAME:" << std::get<2>(taskData).toStdString() << "\n";
+        fileStream << "TYPE:" << std::get<3>(taskData).toStdString() << "\n";
+        fileStream << "ESTIMATED_HOURS:" << std::get<4>(taskData) << "\n";
+        fileStream << "ALLOCATED_HOURS:" << std::get<5>(taskData) << "\n";
+        fileStream << "PRIORITY:" << std::get<6>(taskData) << "\n";
+        fileStream << "PHASE:" << std::get<7>(taskData).toStdString() << "\n";
+
+        const std::vector<std::pair<int, int>>& assignments =
+            std::get<8>(taskData);
+        fileStream << "ASSIGNMENTS_COUNT:" << assignments.size() << "\n";
+        
+        if (!assignments.empty()) {
+            fileStream << "ASSIGNMENTS:\n";
+            for (size_t j = 0; j < assignments.size(); ++j) {
+                fileStream << "  [" << (j + 1) << "] EMPLOYEE_ID:" << assignments[j].first 
+                           << " HOURS:" << assignments[j].second << "\n";
+            }
         }
+        
+        if (!fileStream.good()) {
+            fileStream.close();
+            QFile::remove(tempFileName);
+            throw FileManagerException("Error writing task data to file: " + fileName);
+        }
+    }
+
+    fileStream.flush();
+    if (!fileStream.good()) {
+        fileStream.close();
+        QFile::remove(tempFileName);
+        throw FileManagerException("Error flushing data to file: " + fileName);
     }
     
     fileStream.close();
+    
+    if (QFile::exists(fileName)) {
+        QFile::remove(fileName);
+    }
+    if (!QFile::rename(tempFileName, fileName)) {
+        throw FileManagerException("Error replacing file: " + fileName);
+    }
 }
 
 void FileManager::loadTasks(Company& company, const QString& fileName) {
     if (!QFile::exists(fileName)) {
         return;
     }
-    
+
     std::ifstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for reading: " + fileName);
     }
 
-    std::string lineContent;
-    std::getline(fileStream, lineContent);
-    int taskCount = 0;
-    try {
-        taskCount = std::stoi(lineContent);
-    } catch (const std::exception&) {
+    fileStream.seekg(0, std::ios::end);
+    if (fileStream.tellg() == 0) {
         fileStream.close();
         return;
     }
+    fileStream.seekg(0, std::ios::beg);
 
-    for (int i = 0; i < taskCount; ++i) {
-        std::getline(fileStream, lineContent);
-        int projectId = 0;
-        try {
-            projectId = std::stoi(lineContent);
-        } catch (const std::exception&) {
-            continue;
-        }
-
-        std::getline(fileStream, lineContent);
-        int taskId = 0;
-        try {
-            taskId = std::stoi(lineContent);
-        } catch (const std::exception&) {
-            continue;
-        }
-
-        std::getline(fileStream, lineContent);
-        QString taskName = QString::fromStdString(lineContent);
-
-        std::getline(fileStream, lineContent);
-        QString taskType = QString::fromStdString(lineContent);
-
-        std::getline(fileStream, lineContent);
-        int estimatedHours = 0;
-        try {
-            estimatedHours = std::stoi(lineContent);
-        } catch (const std::exception&) {
-            estimatedHours = 0;
-        }
-
-        std::getline(fileStream, lineContent);
-        int allocatedHours = 0;
-        try {
-            allocatedHours = std::stoi(lineContent);
-        } catch (const std::exception&) {
-            allocatedHours = 0;
-        }
-
-        std::getline(fileStream, lineContent);
-        int priority = 0;
-        try {
-            priority = std::stoi(lineContent);
-        } catch (const std::exception&) {
-            priority = 0;
-        }
-
-        std::getline(fileStream, lineContent);
-        QString status = QString::fromStdString(lineContent);
-
-
-        std::vector<std::pair<int, int>> assignments;
-        if (!fileStream.eof()) {
-            std::getline(fileStream, lineContent);
-            int assignmentCount = 0;
+    std::vector<std::string> lines;
+    std::string lineContent;
+    while (std::getline(fileStream, lineContent)) {
+        lines.push_back(lineContent);
+    }
+    fileStream.close();
+    
+    if (lines.empty()) {
+        return;
+    }
+    
+    int lastHeaderIndex = -1;
+    int taskCount = 0;
+    int formatVersion = 1;
+    
+    for (int i = lines.size() - 1; i >= 0; --i) {
+        if (lines[i].find("TASKS_COUNT:") == 0) {
             try {
-                assignmentCount = std::stoi(lineContent);
+                taskCount = std::stoi(lines[i].substr(12));
+                lastHeaderIndex = i;
+                break;
             } catch (const std::exception&) {
-                assignmentCount = 0;
+                continue;
             }
-            
-            for (int j = 0; j < assignmentCount; ++j) {
-                if (fileStream.eof()) break;
-                
-
-                std::getline(fileStream, lineContent);
-                int empId = 0;
-                try {
-                    empId = std::stoi(lineContent);
-                } catch (const std::exception&) {
-                    continue;
-                }
-                
-
-                if (fileStream.eof()) break;
-                std::getline(fileStream, lineContent);
-                int hours = 0;
-                try {
-                    hours = std::stoi(lineContent);
-                } catch (const std::exception&) {
-                    continue;
-                }
-                
-                if (empId > 0 && hours > 0) {
-                    assignments.push_back(std::make_pair(empId, hours));
-                }
-            }
-        }
-
-
-        try {
-            Task task(taskId, taskName, taskType, estimatedHours, priority);
-            task.setStatus(status);
-            
-            if (assignments.empty()) {
-
-                task.setAllocatedHours(allocatedHours);
-            } else {
-
-
-                task.setAllocatedHours(0);
-            }
-            
-            company.addTaskToProject(projectId, task);
-            
-
-
-            for (const auto& assignment : assignments) {
-                try {
-                    company.assignEmployeeToTask(assignment.first, projectId, taskId, assignment.second);
-                } catch (const std::exception&) {
-
-                    continue;
-                }
-            }
-        } catch (const std::exception&) {
-
-            continue;
         }
     }
+    
+    if (lastHeaderIndex == -1 || taskCount == 0) {
+        return;
+    }
+    
+    if (lastHeaderIndex + 1 < static_cast<int>(lines.size()) && 
+        lines[lastHeaderIndex + 1].find("FORMAT_VERSION:") == 0) {
+        try {
+            formatVersion = std::stoi(lines[lastHeaderIndex + 1].substr(15));
+        } catch (const std::exception&) {
+            formatVersion = 1;
+        }
+    }
+    
+    int startIndex = lastHeaderIndex + 2;
+    if (startIndex < static_cast<int>(lines.size()) && lines[startIndex] == "---") {
+        startIndex++;
+    }
 
-    fileStream.close();
+    int lineIndex = startIndex;
+    for (int i = 0; i < taskCount && lineIndex < static_cast<int>(lines.size()); ++i) {
+        int projectId = 0;
+        int taskId = 0;
+        QString taskName;
+        QString taskType;
+        int estimatedHours = 0;
+        int allocatedHours = 0;
+        int priority = 0;
+        QString phase;
+        
+        if (formatVersion >= 2) {
+            while (lineIndex < static_cast<int>(lines.size()) && 
+                   lines[lineIndex].find("[TASK") != 0) {
+                lineIndex++;
+            }
+            
+            if (lineIndex >= static_cast<int>(lines.size())) {
+                break;
+            }
+            
+            lineIndex++;
+            
+            std::vector<std::pair<int, int>> assignments;
+            bool readingAssignments = false;
+            int assignmentsCount = 0;
+            int assignmentsRead = 0;
+            
+            while (lineIndex < static_cast<int>(lines.size())) {
+                lineContent = lines[lineIndex];
+                
+                if (lineContent.empty() || lineContent == "---") {
+                    lineIndex++;
+                    continue;
+                }
+                
+                if (lineContent.find("[TASK") == 0 && i < taskCount - 1) {
+                    break;
+                }
+                
+                if (lineContent.find("PROJECT_ID:") == 0) {
+                    try {
+                        projectId = std::stoi(lineContent.substr(11));
+                    } catch (const std::exception&) {}
+                } else if (lineContent.find("TASK_ID:") == 0) {
+                    try {
+                        taskId = std::stoi(lineContent.substr(8));
+                    } catch (const std::exception&) {}
+                } else if (lineContent.find("NAME:") == 0) {
+                    taskName = QString::fromStdString(lineContent.substr(5));
+                } else if (lineContent.find("TYPE:") == 0) {
+                    taskType = QString::fromStdString(lineContent.substr(5));
+                } else if (lineContent.find("ESTIMATED_HOURS:") == 0) {
+                    try {
+                        estimatedHours = std::stoi(lineContent.substr(16));
+                    } catch (const std::exception&) {}
+                } else if (lineContent.find("ALLOCATED_HOURS:") == 0) {
+                    try {
+                        allocatedHours = std::stoi(lineContent.substr(16));
+                    } catch (const std::exception&) {}
+                } else if (lineContent.find("PRIORITY:") == 0) {
+                    try {
+                        priority = std::stoi(lineContent.substr(9));
+                    } catch (const std::exception&) {}
+                } else if (lineContent.find("PHASE:") == 0) {
+                    phase = QString::fromStdString(lineContent.substr(6));
+                } else if (lineContent.find("ASSIGNMENTS_COUNT:") == 0) {
+                    try {
+                        assignmentsCount = std::stoi(lineContent.substr(18));
+                        readingAssignments = assignmentsCount > 0;
+                        assignmentsRead = 0;
+                    } catch (const std::exception&) {
+                        assignmentsCount = 0;
+                    }
+                } else if (readingAssignments && lineContent.find("ASSIGNMENTS:") == 0) {
+                } else if (readingAssignments && lineContent.find("  [") == 0) {
+                    size_t empPos = lineContent.find("EMPLOYEE_ID:");
+                    size_t hoursPos = lineContent.find("HOURS:");
+                    
+                    if (empPos != std::string::npos && hoursPos != std::string::npos) {
+                        int employeeId = 0;
+                        int hours = 0;
+                        try {
+                            employeeId = std::stoi(lineContent.substr(empPos + 12));
+                            hours = std::stoi(lineContent.substr(hoursPos + 6));
+                        } catch (const std::exception&) {
+                            lineIndex++;
+                            continue;
+                        }
+                        
+                        if (employeeId > 0 && hours > 0) {
+                            assignments.push_back(std::make_pair(employeeId, hours));
+                            assignmentsRead++;
+                            if (assignmentsRead >= assignmentsCount) {
+                                readingAssignments = false;
+                            }
+                        }
+                    }
+                }
+                
+                lineIndex++;
+            }
+            
+            if (projectId > 0 && taskId > 0 && !taskName.isEmpty()) {
+                try {
+                    Task task(taskId, taskName, taskType, estimatedHours, priority);
+                    task.setPhase(phase);
+                    task.setAllocatedHours(allocatedHours);
+                    company.addTaskToProject(projectId, task);
+                    
+                    for (const auto& assignment : assignments) {
+                        try {
+                            company.assignEmployeeToTask(assignment.first, projectId, taskId, assignment.second);
+                        } catch (const std::exception&) {
+                            try {
+                                company.restoreTaskAssignment(assignment.first, projectId, taskId, assignment.second);
+                            } catch (const std::exception&) {
+                                continue;
+                            }
+                        }
+                    }
+                } catch (const std::exception&) {
+                    continue;
+                }
+            }
+        }
+    }
 }
 
 void FileManager::saveTaskAssignments(const Company& company,
-                                     const QString& fileName) {
+                                      const QString& fileName) {
     std::ofstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for writing: " + fileName);
@@ -694,50 +841,29 @@ void FileManager::saveTaskAssignments(const Company& company,
 
     auto employees = company.getAllEmployees();
     auto projects = company.getAllProjects();
-    
 
     std::vector<std::tuple<int, int, int, int>> assignments;
-    
+
     for (const auto& emp : employees) {
-        if (!emp || !emp->getIsActive()) continue;
-        
-        auto assignedProjectIds = emp->getAssignedProjects();
-        int totalWeeklyHours = emp->getCurrentWeeklyHours();
-        
-        for (int projectId : assignedProjectIds) {
+        if (!emp) continue;
+
+        for (const auto& project : projects) {
+            int projectId = project.getId();
             auto tasks = company.getProjectTasks(projectId);
-            int projectTasksWithAllocation = 0;
-            int totalAllocatedHours = 0;
             
-
             for (const auto& task : tasks) {
-                if (task.getAllocatedHours() > 0) {
-                    projectTasksWithAllocation++;
-                    totalAllocatedHours += task.getAllocatedHours();
-                }
-            }
-            
-
-            if (projectTasksWithAllocation > 0 && totalAllocatedHours > 0) {
-                int remainingHours = totalWeeklyHours;
-                for (const auto& task : tasks) {
-                    if (task.getAllocatedHours() > 0 && remainingHours > 0) {
-
-                        int taskHours = (task.getAllocatedHours() * totalWeeklyHours) / totalAllocatedHours;
-                        if (taskHours > remainingHours) {
-                            taskHours = remainingHours;
-                        }
-                        if (taskHours > 0) {
-                            assignments.push_back(std::make_tuple(
-                                emp->getId(), projectId, task.getId(), taskHours));
-                            remainingHours -= taskHours;
-                        }
-                    }
+                int taskHours = company.getEmployeeTaskHours(
+                    emp->getId(), projectId, task.getId());
+                
+                if (taskHours > 0) {
+                    assignments.push_back(
+                        std::make_tuple(emp->getId(), projectId,
+                                        task.getId(), taskHours));
                 }
             }
         }
     }
-    
+
     fileStream << assignments.size() << "\n";
     for (const auto& assignment : assignments) {
         fileStream << std::get<0>(assignment) << "\n";
@@ -745,16 +871,22 @@ void FileManager::saveTaskAssignments(const Company& company,
         fileStream << std::get<2>(assignment) << "\n";
         fileStream << std::get<3>(assignment) << "\n";
     }
-    
+
+    fileStream.flush();
+    if (!fileStream.good()) {
+        fileStream.close();
+        throw FileManagerException("Error writing task assignments to file: " + fileName);
+    }
+
     fileStream.close();
 }
 
 void FileManager::loadTaskAssignments(Company& company,
-                                     const QString& fileName) {
+                                      const QString& fileName) {
     if (!QFile::exists(fileName)) {
         return;
     }
-    
+
     std::ifstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for reading: " + fileName);
@@ -803,12 +935,14 @@ void FileManager::loadTaskAssignments(Company& company,
             continue;
         }
 
-
         try {
-            company.assignEmployeeToTask(employeeId, projectId, taskId, hours);
+            company.restoreTaskAssignment(employeeId, projectId, taskId, hours);
         } catch (const std::exception&) {
-
-            continue;
+            try {
+                company.assignEmployeeToTask(employeeId, projectId, taskId, hours);
+            } catch (const std::exception&) {
+                continue;
+            }
         }
     }
 

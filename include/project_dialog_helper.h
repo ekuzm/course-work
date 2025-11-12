@@ -15,7 +15,7 @@ class ProjectDialogHelper {
     struct ProjectDialogFields {
         QLineEdit* nameEdit = nullptr;
         QTextEdit* descEdit = nullptr;
-        QComboBox* statusCombo = nullptr;
+        QComboBox* phaseCombo = nullptr;
         QDateEdit* startDate = nullptr;
         QDateEdit* endDate = nullptr;
         QLineEdit* budgetEdit = nullptr;
@@ -29,12 +29,9 @@ class ProjectDialogHelper {
         QComboBox* projectTypeCombo = nullptr;
     };
 
-    static void createProjectDialogFields(QDialog& dialog, QFormLayout* form, ProjectDialogFields& fields);
-    static void populateProjectDialogFields(const Project* project, ProjectDialogFields& fields);
+    static void createProjectDialogFields(QDialog& dialog, QFormLayout* form,
+                                          ProjectDialogFields& fields);
+    static void populateProjectDialogFields(const Project* project,
+                                            ProjectDialogFields& fields);
     static void setupClientFieldsVisibility(ProjectDialogFields& fields);
 };
-
-
-
-
-

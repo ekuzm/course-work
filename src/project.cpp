@@ -9,7 +9,7 @@ QString Project::getName() const { return name; }
 
 QString Project::getDescription() const { return description; }
 
-QString Project::getStatus() const { return status; }
+QString Project::getPhase() const { return phase; }
 
 QDate Project::getStartDate() const { return startDate; }
 
@@ -20,13 +20,13 @@ double Project::getBudget() const { return budget; }
 QString Project::getClientName() const { return clientName; }
 
 Project::Project(int projectId, const QString& name, const QString& description,
-                 const QString& status, const QDate& startDate,
+                 const QString& phase, const QDate& startDate,
                  const QDate& endDate, double budget, const QString& clientName,
                  int estimatedHours)
     : id(projectId),
       name(name),
       description(description),
-      status(status),
+      phase(phase),
       startDate(startDate),
       endDate(endDate),
       budget(budget),
@@ -59,11 +59,35 @@ Project::Project(int projectId, const QString& name, const QString& description,
     }
 }
 
-void Project::setStatus(const QString& newStatus) {
-    if (newStatus.isEmpty()) {
-        throw ProjectException("Status cannot be empty");
+int Project::getPhaseOrder(const QString& phaseName) {
+    if (phaseName == "Analysis") return 0;
+    if (phaseName == "Planning") return 1;
+    if (phaseName == "Design") return 2;
+    if (phaseName == "Development") return 3;
+    if (phaseName == "Testing") return 4;
+    if (phaseName == "Deployment") return 5;
+    if (phaseName == "Maintenance") return 6;
+    if (phaseName == "Completed") return 7;
+    return -1;
+}
+
+void Project::setPhase(const QString& newPhase) {
+    if (newPhase.isEmpty()) {
+        throw ProjectException("phase cannot be empty");
     }
-    status = newStatus;
+    int currentPhaseOrder = getPhaseOrder(phase);
+    int newPhaseOrder = getPhaseOrder(newPhase);
+
+    if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
+        newPhaseOrder < currentPhaseOrder) {
+        throw ProjectException(
+            QString("Cannot set phase to '%1' because current phase '%2' is "
+                    "already later in the project lifecycle.\n\n"
+                    "Phase order: Analysis → Planning → Design → Development → "
+                    "Testing → Deployment → Maintenance → Completed")
+                .arg(newPhase, phase));
+    }
+    phase = newPhase;
 }
 
 void Project::setBudget(double newBudget) {
@@ -76,12 +100,12 @@ void Project::setBudget(double newBudget) {
 bool Project::isActive() const {
     QDate currentDate = QDate::currentDate();
 
-    bool isActiveStatus =
-        (status == "Analysis" || status == "Planning" || status == "Design" ||
-         status == "Development" || status == "Testing" ||
-         status == "Deployment" || status == "Maintenance");
-    return isActiveStatus && (currentDate >= startDate &&
-                              (endDate.isNull() || currentDate <= endDate));
+    bool isActivePhase =
+        (phase == "Analysis" || phase == "Planning" || phase == "Design" ||
+         phase == "Development" || phase == "Testing" ||
+         phase == "Deployment" || phase == "Maintenance");
+    return isActivePhase && (currentDate >= startDate &&
+                             (endDate.isNull() || currentDate <= endDate));
 }
 
 int Project::getEstimatedHours() const {

@@ -13,9 +13,9 @@ class Task {
     int estimatedHours;
     int allocatedHours{0};
     int priority;
-    QString status;
+    QString phase;
 
-    void updateStatus();
+    void updatePhase();
 
    public:
     Task(int taskId, const QString& name, const QString& type,
@@ -27,10 +27,10 @@ class Task {
     int getEstimatedHours() const;
     int getAllocatedHours() const;
     int getPriority() const;
-    QString getStatus() const;
+    QString getPhase() const;
 
     void setEstimatedHours(int hours);
     void setAllocatedHours(int hours);
     void addAllocatedHours(int hours);
-    void setStatus(const QString& statusValue);
+    void setPhase(const QString& phaseValue);
 };

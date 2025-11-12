@@ -13,7 +13,7 @@ class Project {
     int id;
     QString name;
     QString description;
-    QString status;
+    QString phase;
     QDate startDate;
     QDate endDate;
     double budget;
@@ -25,13 +25,13 @@ class Project {
 
    public:
     Project(int projectId, const QString& name, const QString& description,
-            const QString& status, const QDate& startDate, const QDate& endDate,
+            const QString& phase, const QDate& startDate, const QDate& endDate,
             double budget, const QString& clientName, int estimatedHours = 0);
 
     int getId() const;
     QString getName() const;
     QString getDescription() const;
-    QString getStatus() const;
+    QString getPhase() const;
     QDate getStartDate() const;
     QDate getEndDate() const;
     double getBudget() const;
@@ -48,7 +48,8 @@ class Project {
     int getTasksAllocatedTotal() const;
     int getNextTaskId() const;
 
-    void setStatus(const QString& newStatus);
+    static int getPhaseOrder(const QString& phaseName);
+    void setPhase(const QString& newPhase);
     void setBudget(double newBudget);
     void setEstimatedHours(int hours);
     void setAllocatedHours(int hours);

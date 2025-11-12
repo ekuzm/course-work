@@ -2,14 +2,17 @@
 
 #include <QDate>
 #include <QDateEdit>
+#include <QStandardItemModel>
 
 #include "consts.h"
 #include "project.h"
 
-void ProjectDialogHelper::createProjectDialogFields(QDialog& dialog, QFormLayout* form, ProjectDialogFields& fields) {
+void ProjectDialogHelper::createProjectDialogFields(
+    QDialog& dialog, QFormLayout* form, ProjectDialogFields& fields) {
     fields.projectTypeCombo = new QComboBox();
     fields.projectTypeCombo->addItems({"Web Development", "Mobile App",
-                                       "Software Product", "Consulting", "Other"});
+                                       "Software Product", "Consulting",
+                                       "Other"});
     fields.projectTypeCombo->setStyleSheet(
         "QComboBox { background-color: white; color: black; } "
         "QComboBox QAbstractItemView { background-color: white; color: black; "
@@ -25,14 +28,15 @@ void ProjectDialogHelper::createProjectDialogFields(QDialog& dialog, QFormLayout
     fields.descEdit->setPlaceholderText("Brief description of the project...");
     form->addRow("Description:", fields.descEdit);
 
-    fields.statusCombo = new QComboBox();
-    fields.statusCombo->addItems({"Analysis", "Planning", "Design", "Development",
-                                  "Testing", "Deployment", "Maintenance", "Completed"});
-    fields.statusCombo->setStyleSheet(
+    fields.phaseCombo = new QComboBox();
+    fields.phaseCombo->addItems({"Analysis", "Planning", "Design",
+                                 "Development", "Testing", "Deployment",
+                                 "Maintenance", "Completed"});
+    fields.phaseCombo->setStyleSheet(
         "QComboBox { background-color: white; color: black; } "
         "QComboBox QAbstractItemView { background-color: white; color: black; "
         "selection-background-color: #0078d4; }");
-    form->addRow("Status:", fields.statusCombo);
+    form->addRow("Phase:", fields.phaseCombo);
 
     fields.startDate = new QDateEdit();
     fields.startDate->setDate(QDate::currentDate());
@@ -41,7 +45,8 @@ void ProjectDialogHelper::createProjectDialogFields(QDialog& dialog, QFormLayout
     form->addRow("Start Date:", fields.startDate);
 
     fields.endDate = new QDateEdit();
-    fields.endDate->setDate(QDate::currentDate().addDays(kDefaultProjectEndDateDays));
+    fields.endDate->setDate(
+        QDate::currentDate().addDays(kDefaultProjectEndDateDays));
     fields.endDate->setCalendarPopup(true);
     fields.endDate->setMinimumWidth(kDateEditMinWidth);
     form->addRow("End Date:", fields.endDate);
@@ -78,7 +83,8 @@ void ProjectDialogHelper::createProjectDialogFields(QDialog& dialog, QFormLayout
                      [&fields](int index) {
                          constexpr int CONSULTING_INDEX = 3;
                          constexpr int OTHER_INDEX = 4;
-                         bool showDetails = (index == CONSULTING_INDEX || index == OTHER_INDEX);
+                         bool showDetails = (index == CONSULTING_INDEX ||
+                                             index == OTHER_INDEX);
                          fields.clientIndustryLabel->setVisible(showDetails);
                          fields.clientIndustryEdit->setVisible(showDetails);
                          fields.clientContactLabel->setVisible(showDetails);
@@ -86,32 +92,50 @@ void ProjectDialogHelper::createProjectDialogFields(QDialog& dialog, QFormLayout
                      });
 }
 
-void ProjectDialogHelper::populateProjectDialogFields(const Project* project, ProjectDialogFields& fields) {
+void ProjectDialogHelper::populateProjectDialogFields(
+    const Project* project, ProjectDialogFields& fields) {
     if (!project) return;
-    
+
     fields.nameEdit->setText(project->getName());
     fields.descEdit->setPlainText(project->getDescription());
-    
-    int statusIndex = fields.statusCombo->findText(project->getStatus());
-    if (statusIndex >= 0) {
-        fields.statusCombo->setCurrentIndex(statusIndex);
+
+    QString currentPhase = project->getPhase();
+    int currentPhaseOrder = Project::getPhaseOrder(currentPhase);
+
+    if (currentPhaseOrder >= 0) {
+        QStandardItemModel* model =
+            qobject_cast<QStandardItemModel*>(fields.phaseCombo->model());
+        if (model) {
+            for (int i = 0; i < fields.phaseCombo->count(); ++i) {
+                QString phaseText = fields.phaseCombo->itemText(i);
+                int phaseOrder = Project::getPhaseOrder(phaseText);
+                QStandardItem* item = model->item(i);
+                if (item && phaseOrder >= 0 && phaseOrder < currentPhaseOrder) {
+                    item->setEnabled(false);
+                } else if (item) {
+                    item->setEnabled(true);
+                }
+            }
+        }
     }
-    
+
+    int phaseIndex = fields.phaseCombo->findText(currentPhase);
+    if (phaseIndex >= 0) {
+        fields.phaseCombo->setCurrentIndex(phaseIndex);
+    }
+
     fields.startDate->setDate(project->getStartDate());
     fields.endDate->setDate(project->getEndDate());
     fields.budgetEdit->setText(QString::number(project->getBudget(), 'f', 2));
-    fields.estimatedHoursEdit->setText(QString::number(project->getEstimatedHours()));
+    fields.estimatedHoursEdit->setText(
+        QString::number(project->getEstimatedHours()));
     fields.clientNameEdit->setText(project->getClientName());
 }
 
-void ProjectDialogHelper::setupClientFieldsVisibility(ProjectDialogFields& fields) {
+void ProjectDialogHelper::setupClientFieldsVisibility(
+    ProjectDialogFields& fields) {
     fields.clientIndustryLabel->setVisible(false);
     fields.clientIndustryEdit->setVisible(false);
     fields.clientContactLabel->setVisible(false);
     fields.clientContactEdit->setVisible(false);
 }
-
-
-
-
-

@@ -23,19 +23,19 @@ class Manager : public Employee {
 class Developer : public Employee {
    private:
     QString programmingLanguage;
-    int yearsOfExperience;
+    double yearsOfExperience;
 
    public:
     Developer(int employeeId, QString employeeName, double employeeSalary,
               QString employeeDepartment, QString developerProgrammingLanguage,
-              int developerYearsOfExperience, double employmentRate = 1.0);
+              double developerYearsOfExperience, double employmentRate = 1.0);
 
     QString getEmployeeType() const override;
     QString getDetails() const override;
     double calculateBonus() const override;
 
     QString getProgrammingLanguage() const;
-    int getYearsOfExperience() const;
+    double getYearsOfExperience() const;
 };
 
 class Designer : public Employee {

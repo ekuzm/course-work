@@ -6,8 +6,3 @@ class FileHelper {
    public:
     static void clearAllDataFiles(QWidget* parent);
 };
-
-
-
-
-

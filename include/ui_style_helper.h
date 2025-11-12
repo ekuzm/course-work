@@ -7,4 +7,3 @@ class UIStyleHelper {
     static QString getMainWindowStylesheet();
     static QString getCompanyComboBoxStylesheet();
 };
-

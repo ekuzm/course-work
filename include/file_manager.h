@@ -2,6 +2,7 @@
 
 #include <QString>
 #include <exception>
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -18,7 +19,8 @@ class FileManager {
 
     static void saveTasks(const Company& company, const QString& fileName);
 
-    static void saveTaskAssignments(const Company& company, const QString& fileName);
+    static void saveTaskAssignments(const Company& company,
+                                    const QString& fileName);
 
     static Company loadCompany(const QString& fileName);
 
@@ -32,17 +34,21 @@ class FileManager {
 
     static Company loadFromFile(const QString& fileName);
 
-   private:
+    // Helper to store employee statuses during loading
+    static std::map<int, bool> employeeStatusesFromFile;
 
-    static int parseIntFromStream(std::ifstream& fileStream, const QString& fieldName);
-    static double parseDoubleFromStream(std::ifstream& fileStream, const QString& fieldName);
+   private:
+    static int parseIntFromStream(std::ifstream& fileStream,
+                                  const QString& fieldName);
+    static double parseDoubleFromStream(std::ifstream& fileStream,
+                                        const QString& fieldName);
     static QString parseStringFromStream(std::ifstream& fileStream);
     static double parseEmploymentRate(std::ifstream& fileStream);
-    
 
-    static void saveEmployeeBaseData(std::shared_ptr<Employee> employee, std::ofstream& fileStream);
-    static void saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employee, std::ofstream& fileStream);
-    
+    static void saveEmployeeBaseData(std::shared_ptr<Employee> employee,
+                                     std::ofstream& fileStream);
+    static void saveEmployeeTypeSpecificData(std::shared_ptr<Employee> employee,
+                                             std::ofstream& fileStream);
 
     struct EmployeeBaseData {
         int id;
@@ -50,9 +56,10 @@ class FileManager {
         double salary;
         QString department;
         double employmentRate;
+        bool isActive{true};  // Default to true for backward compatibility
     };
     static EmployeeBaseData loadEmployeeBaseData(std::ifstream& fileStream);
-    
+
     static void saveEmployeeToStream(std::shared_ptr<Employee> employee,
                                      std::ofstream& file);
     static std::shared_ptr<Employee> loadEmployeeFromStream(

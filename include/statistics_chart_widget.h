@@ -18,15 +18,11 @@ class StatisticsChartWidget : public QWidget {
    private:
     void drawMainEmployeeSalaryChart(
         class QPainter& painter, int width, int height,
-        const std::vector<std::pair<std::shared_ptr<class Employee>, double>>& employeeData,
+        const std::vector<std::pair<std::shared_ptr<class Employee>, double>>&
+            employeeData,
         double progress);
 
     const Company* company = nullptr;
     QTimer* animationTimer = nullptr;
     double animationProgress = 0.0;
 };
-
-
-
-
-

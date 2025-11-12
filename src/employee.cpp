@@ -104,6 +104,7 @@ const std::vector<int>& Employee::getAssignedProjects() const {
 void Employee::addAssignedProject(int projectId) {
     if (!isAssignedToProject(projectId)) {
         assignedProjects.push_back(projectId);
+        addToProjectHistory(projectId);
     }
 }
 
@@ -116,5 +117,15 @@ void Employee::removeAssignedProject(int projectId) {
     auto it = std::ranges::find(assignedProjects, projectId);
     if (it != assignedProjects.end()) {
         assignedProjects.erase(it);
+    }
+}
+
+const std::vector<int>& Employee::getProjectHistory() const {
+    return projectHistory;
+}
+
+void Employee::addToProjectHistory(int projectId) {
+    if (std::ranges::find(projectHistory, projectId) == projectHistory.end()) {
+        projectHistory.push_back(projectId);
     }
 }

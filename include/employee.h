@@ -18,6 +18,7 @@ class Employee {
     int weeklyHoursCapacity;
     int currentWeeklyHours{0};
     std::vector<int> assignedProjects;
+    std::vector<int> projectHistory;
 
    public:
     Employee(int employeeId, QString name, QString position, double salary,
@@ -48,6 +49,8 @@ class Employee {
     void addAssignedProject(int projectId);
     void removeAssignedProject(int projectId);
     bool isAssignedToProject(int projectId) const;
+    const std::vector<int>& getProjectHistory() const;
+    void addToProjectHistory(int projectId);
 
     void setIsActive(bool active);
 };

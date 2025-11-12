@@ -9,7 +9,7 @@ Task::Task(int taskId, const QString& name, const QString& type,
       type(type),
       estimatedHours(estimatedHours),
       priority(priority),
-      status("Planned") {
+      phase("Planned") {
     if (name.isEmpty()) throw TaskException("Task name cannot be empty");
     if (estimatedHours < 0)
         throw TaskException("Estimated hours cannot be negative");
@@ -27,37 +27,37 @@ int Task::getAllocatedHours() const { return allocatedHours; }
 
 int Task::getPriority() const { return priority; }
 
-QString Task::getStatus() const { return status; }
+QString Task::getPhase() const { return phase; }
 
 void Task::setEstimatedHours(int hours) {
     if (hours < 0) throw TaskException("Estimated hours cannot be negative");
     estimatedHours = hours;
-    updateStatus();
+    updatePhase();
 }
 
 void Task::setAllocatedHours(int hours) {
     if (hours < 0) throw TaskException("Allocated hours cannot be negative");
     allocatedHours = hours;
-    updateStatus();
+    updatePhase();
 }
 
 void Task::addAllocatedHours(int hours) {
     if (hours < 0) throw TaskException("Cannot add negative hours");
     allocatedHours += hours;
-    updateStatus();
+    updatePhase();
 }
 
-void Task::setStatus(const QString& statusValue) {
-    if (statusValue.isEmpty()) throw TaskException("Status cannot be empty");
-    status = statusValue;
+void Task::setPhase(const QString& phaseValue) {
+    if (phaseValue.isEmpty()) throw TaskException("Phase cannot be empty");
+    phase = phaseValue;
 }
 
-void Task::updateStatus() {
+void Task::updatePhase() {
     if (allocatedHours == 0) {
-        status = "Planned";
+        phase = "Planned";
     } else if (allocatedHours >= estimatedHours) {
-        status = "Completed";
+        phase = "Completed";
     } else {
-        status = "In Progress";
+        phase = "In Progress";
     }
 }

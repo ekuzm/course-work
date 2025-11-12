@@ -15,7 +15,9 @@ class SafeValue {
 
    public:
     SafeValue(T val, T min, T max)
-        : value(val), minValue(min), maxValue(max),
+        : value(val),
+          minValue(min),
+          maxValue(max),
           isValid(val >= min && val <= max) {}
 
     bool isValidValue() const { return isValid; }

@@ -34,6 +34,19 @@ class EmployeeDialogHelper {
         QLabel*& devExperienceLabel, QLabel*& designerToolLabel,
         QLabel*& designerProjectsLabel, QLabel*& qaTestTypeLabel,
         QLabel*& qaBugsLabel);
+    static void showManagerFields(QLabel* managerProjectLabel,
+                                  QComboBox* managerProject, bool show);
+    static void showDeveloperFields(QLabel* devLanguageLabel,
+                                    QLineEdit* devLanguage,
+                                    QLabel* devExperienceLabel,
+                                    QLineEdit* devExperience, bool show);
+    static void showDesignerFields(QLabel* designerToolLabel,
+                                   QLineEdit* designerTool,
+                                   QLabel* designerProjectsLabel,
+                                   QLineEdit* designerProjects, bool show);
+    static void showQaFields(QLabel* qaTestTypeLabel, QLineEdit* qaTestType,
+                             QLabel* qaBugsLabel, QLineEdit* qaBugs, bool show);
+
     static void populateEmployeeFields(
         QComboBox* employmentRateCombo, QComboBox* managerProject,
         QLineEdit* devLanguage, QLineEdit* devExperience,
@@ -57,16 +70,4 @@ class EmployeeDialogHelper {
 
    private:
     static QComboBox* createEmploymentRateCombo();
-    static void showManagerFields(QLabel* managerProjectLabel,
-                                  QComboBox* managerProject, bool show);
-    static void showDeveloperFields(QLabel* devLanguageLabel,
-                                    QLineEdit* devLanguage,
-                                    QLabel* devExperienceLabel,
-                                    QLineEdit* devExperience, bool show);
-    static void showDesignerFields(QLabel* designerToolLabel,
-                                   QLineEdit* designerTool,
-                                   QLabel* designerProjectsLabel,
-                                   QLineEdit* designerProjects, bool show);
-    static void showQaFields(QLabel* qaTestTypeLabel, QLineEdit* qaTestType,
-                             QLabel* qaBugsLabel, QLineEdit* qaBugs, bool show);
 };

@@ -77,7 +77,6 @@ class MainWindow : public QMainWindow {
 
     static QString getDataDirectory();
 
-
     friend class MainWindowUIBuilder;
     friend class FileHelper;
 
@@ -92,10 +91,11 @@ class MainWindow : public QMainWindow {
     int getSelectedProjectId() const;
     void autoSave() const;
     void autoLoad();
-public:
+
+   public:
     void validateAndFixProjectAssignments(Company* company);
 
-private:
+   private:
     bool checkCompanyAndHandleError(const QString& actionName);
     void clearAllDataFiles();
     static bool checkDuplicateProjectOnEdit(const QString& projectName,
@@ -107,18 +107,17 @@ private:
     void populateProjectTasksTable(const Project& project);
     void selectProjectRowById(int projectId);
 
-
-    static void setupTableWidget(QTableWidget* table, const QStringList& headers, 
-                                const QList<int>& columnWidths, bool stretchLast = true);
+    static void setupTableWidget(QTableWidget* table,
+                                 const QStringList& headers,
+                                 const QList<int>& columnWidths,
+                                 bool stretchLast = true);
     QWidget* createEmployeeActionButtons(int rowIndex);
     QWidget* createProjectActionButtons(int rowIndex);
-    
 
     QWidget* companyWidget = nullptr;
     QWidget* employeeTab = nullptr;
     QTableWidget* employeeTable = nullptr;
     QPushButton* employeeAddBtn = nullptr;
-    QPushButton* employeeSearchBtn = nullptr;
     QLineEdit* employeeSearchEdit = nullptr;
 
     QWidget* projectTab = nullptr;

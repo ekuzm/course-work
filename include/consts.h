@@ -27,7 +27,7 @@ inline const int kTableColumnWidthDepartment = 150;
 inline const int kTableColumnWidthSalary = 100;
 inline const int kTableColumnWidthType = 120;
 inline const int kTableColumnWidthProjectName = 200;
-inline const int kTableColumnWidthStatus = 120;
+inline const int kTableColumnWidthPhase = 120;
 inline const int kTableColumnWidthBudget = 120;
 inline const int kTableColumnWidthClient = 200;
 

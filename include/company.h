@@ -2,7 +2,9 @@
 
 #include <QString>
 #include <exception>
+#include <map>
 #include <memory>
+#include <tuple>
 #include <vector>
 
 #include "derived_employees.h"
@@ -44,6 +46,7 @@ class Company {
 
     EmployeeContainer employees;
     ProjectContainer projects;
+    std::map<std::tuple<int, int, int>, int> taskAssignments;
 
    public:
     Company(QString name, QString industry, QString location, int foundedYear);
@@ -68,7 +71,13 @@ class Company {
 
     void assignEmployeeToTask(int employeeId, int projectId, int taskId,
                               int hours);
+    void restoreTaskAssignment(int employeeId, int projectId, int taskId,
+                               int hours);
+    void removeEmployeeTaskAssignments(int employeeId);
+    void recalculateEmployeeHours();
     void autoAssignEmployeesToProject(int projectId);
+    int getEmployeeProjectHours(int employeeId, int projectId) const;
+    int getEmployeeTaskHours(int employeeId, int projectId, int taskId) const;
 
     int getEmployeeCount() const;
     int getProjectCount() const;

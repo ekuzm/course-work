@@ -23,8 +23,8 @@ QWidget* ActionButtonHelper::createEmployeeActionButtons(
     actionButton->setMinimumWidth(150);
     QMenu* actionMenu = new QMenu(actionButton);
 
-    QAction* editAction = actionMenu->addAction("✏️ Edit");
-    QAction* fireAction = actionMenu->addAction("🚪 Fire");
+    QAction* editAction = actionMenu->addAction("✎ Edit");
+    QAction* fireAction = actionMenu->addAction("❌ Fire");
     QAction* deleteAction = actionMenu->addAction("🗑️ Delete");
     QAction* historyAction = actionMenu->addAction("📋 History");
 
@@ -90,7 +90,7 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
     actionButton->setMinimumWidth(150);
     QMenu* actionMenu = new QMenu(actionButton);
 
-    QAction* editAction = actionMenu->addAction("✏️ Edit Project");
+    QAction* editAction = actionMenu->addAction("✎ Edit Project");
     QAction* deleteAction = actionMenu->addAction("🗑️ Delete Project");
 
     if (includeAddTask) {

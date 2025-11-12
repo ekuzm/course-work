@@ -48,9 +48,8 @@ QString DisplayHelper::formatTaskInfo(
     const Company* currentCompany) {
     QStringList taskInfoList;
 
-
     std::vector<int> projectIds = employee->getAssignedProjects();
-    
+
     if (auto manager = std::dynamic_pointer_cast<const Manager>(employee)) {
         int managedProjectId = manager->getManagedProjectId();
         if (managedProjectId >= 0) {
@@ -67,14 +66,12 @@ QString DisplayHelper::formatTaskInfo(
         }
     }
 
-
     for (int projectId : projectIds) {
         const auto* project = currentCompany->getProject(projectId);
         if (project) {
             auto tasks = currentCompany->getProjectTasks(projectId);
-            
-            for (const auto& task : tasks) {
 
+            for (const auto& task : tasks) {
                 if (task.getAllocatedHours() > 0) {
                     QString taskName = task.getName();
                     if (!taskInfoList.contains(taskName)) {
@@ -107,19 +104,29 @@ void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
         employeeTable->setItem(index, 3,
                                new QTableWidgetItem(QString::number(
                                    employee->getSalary(), 'f', 2)));
-        employeeTable->setItem(index, 4, new QTableWidgetItem(
-                                   formatEmploymentRate(employee->getEmploymentRate())));
         employeeTable->setItem(
-            index, 5, new QTableWidgetItem(employee->getEmployeeType()));
+            index, 4, new QTableWidgetItem(employee->getEmployeeType()));
 
         QString projectInfo =
             DisplayHelper::formatProjectInfo(employee, currentCompany);
-        employeeTable->setItem(index, 6, new QTableWidgetItem(projectInfo));
+        employeeTable->setItem(index, 5, new QTableWidgetItem(projectInfo));
 
-        if (QWidget* actionWidget = ActionButtonHelper::createEmployeeActionButtons(
-                employeeTable, static_cast<int>(index), mainWindow)) {
-            employeeTable->setCellWidget(index, 7, actionWidget);
-                             }
+        if (QWidget* actionWidget =
+                ActionButtonHelper::createEmployeeActionButtons(
+                    employeeTable, static_cast<int>(index), mainWindow)) {
+            employeeTable->setCellWidget(index, 6, actionWidget);
+        }
+
+        // Visual indication for fired employees - gray out the row
+        if (!employee->getIsActive()) {
+            for (int col = 0; col < employeeTable->columnCount(); ++col) {
+                QTableWidgetItem* item = employeeTable->item(index, col);
+                if (item) {
+                    item->setForeground(
+                        QBrush(QColor("#666666")));  // Gray color
+                }
+            }
+        }
     }
 }
 
@@ -138,7 +145,7 @@ void DisplayHelper::displayProjects(QTableWidget* projectTable,
         projectTable->setItem(index, 1,
                               new QTableWidgetItem(project.getName()));
         projectTable->setItem(index, 2,
-                              new QTableWidgetItem(project.getStatus()));
+                              new QTableWidgetItem(project.getPhase()));
         projectTable->setItem(
             index, 3,
             new QTableWidgetItem(QString::number(project.getBudget(), 'f', 2)));
@@ -151,10 +158,11 @@ void DisplayHelper::displayProjects(QTableWidget* projectTable,
         projectTable->setItem(index, 6,
                               new QTableWidgetItem(project.getClientName()));
 
-        if (QWidget* actionWidget = ActionButtonHelper::createProjectActionButtons(
-                projectTable, static_cast<int>(index), mainWindow)) {
+        if (QWidget* actionWidget =
+                ActionButtonHelper::createProjectActionButtons(
+                    projectTable, static_cast<int>(index), mainWindow)) {
             projectTable->setCellWidget(index, 7, actionWidget);
-                             }
+        }
     }
 }
 
@@ -350,9 +358,9 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
         employeeTypeCount[employee->getEmployeeType()]++;
     }
 
-    std::map<QString, int> projectStatusCount;
+    std::map<QString, int> projectPhaseCount;
     for (const auto& project : projects) {
-        projectStatusCount[project.getStatus()]++;
+        projectPhaseCount[project.getPhase()]++;
     }
 
     double utilizationPercent =
@@ -576,8 +584,8 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
     html += "</div>";
 
     html += R"(<div class="section">)";
-    html += R"(<div class="section-title">Projects by Status</div>)";
-    for (const auto& [status, count] : projectStatusCount) {
+    html += R"(<div class="section-title">Projects by Phase</div>)";
+    for (const auto& [phase, count] : projectPhaseCount) {
         double percentage =
             (totalProjects > 0)
                 ? (static_cast<double>(count) / totalProjects * 100.0)
@@ -588,7 +596,7 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
                 <span class="item-value">%2 <span class="badge badge-info">%3%</span></span>
             </div>
         )")
-                    .arg(status)
+                    .arg(phase)
                     .arg(count)
                     .arg(percentage, 0, 'f', 1);
     }

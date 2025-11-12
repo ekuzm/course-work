@@ -7,11 +7,7 @@
 
 class DialogHelper {
    public:
-    static void createHtmlDialog(QDialog* dialog, const QString& title, const QString& html,
-                                 int minWidth = 800, int minHeight = 600);
+    static void createHtmlDialog(QDialog* dialog, const QString& title,
+                                 const QString& html, int minWidth = 800,
+                                 int minHeight = 600);
 };
-
-
-
-
-

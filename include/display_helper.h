@@ -25,7 +25,7 @@ class DisplayHelper {
     static QString formatProjectInfo(
         const std::shared_ptr<const Employee>& employee,
         const Company* currentCompany);
-    
+
     static QString formatTaskInfo(
         const std::shared_ptr<const Employee>& employee,
         const Company* currentCompany);

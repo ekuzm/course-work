@@ -41,6 +41,7 @@ set(SOURCES
     src/action_button_helper.cpp
     src/task_dialog_helper.cpp
     src/file_helper.cpp
+    src/id_helper.cpp
 )
 
 set(HEADERS
@@ -73,6 +74,7 @@ set(HEADERS
     include/task.h
     include/file_manager.h
     include/exceptions.h
+    include/id_helper.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

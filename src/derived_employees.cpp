@@ -29,13 +29,14 @@ void Manager::setManagedProjectId(int projectId) {
 Developer::Developer(int employeeId, QString employeeName,
                      double employeeSalary, QString employeeDepartment,
                      QString developerProgrammingLanguage,
-                     int developerYearsOfExperience, double employmentRate)
+                     double developerYearsOfExperience, double employmentRate)
     : Employee(employeeId, std::move(employeeName), "Developer", employeeSalary,
                std::move(employeeDepartment), employmentRate),
       programmingLanguage(std::move(developerProgrammingLanguage)),
       yearsOfExperience(developerYearsOfExperience) {
-    if (developerYearsOfExperience < 0) {
-        throw EmployeeException("Years of experience cannot be negative");
+    if (developerYearsOfExperience < 0.0 || developerYearsOfExperience > 50.0) {
+        throw EmployeeException(
+            "Years of experience must be between 0.0 and 50.0");
     }
 }
 
@@ -45,7 +46,7 @@ QString Developer::getDetails() const {
     return Employee::getDetails() +
            QString(", Language: %1, Experience: %2 years")
                .arg(programmingLanguage)
-               .arg(yearsOfExperience);
+               .arg(yearsOfExperience, 0, 'f', 1);
 }
 
 double Developer::calculateBonus() const {
@@ -107,7 +108,7 @@ QString Developer::getProgrammingLanguage() const {
     return programmingLanguage;
 }
 
-int Developer::getYearsOfExperience() const { return yearsOfExperience; }
+double Developer::getYearsOfExperience() const { return yearsOfExperience; }
 
 QString Designer::getDesignTool() const { return designTool; }
 

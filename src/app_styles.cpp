@@ -238,4 +238,3 @@ QString UIStyleHelper::getCompanyComboBoxStylesheet() {
         }
     )";
 }
-

@@ -6,8 +6,9 @@
 #include <QTextEdit>
 #include <QVBoxLayout>
 
-void DialogHelper::createHtmlDialog(QDialog* dialog, const QString& title, const QString& html,
-                                    int minWidth, int minHeight) {
+void DialogHelper::createHtmlDialog(QDialog* dialog, const QString& title,
+                                    const QString& html, int minWidth,
+                                    int minHeight) {
     if (!dialog) return;
 
     dialog->setWindowTitle(title);
@@ -26,10 +27,12 @@ void DialogHelper::createHtmlDialog(QDialog* dialog, const QString& title, const
 
     auto* closeButton = new QPushButton("Close");
     closeButton->setStyleSheet(
-        "QPushButton { background-color: #1976d2; color: white; padding: 10px 30px; "
+        "QPushButton { background-color: #1976d2; color: white; padding: 10px "
+        "30px; "
         "border-radius: 5px; font-weight: bold; } "
         "QPushButton:hover { background-color: #1565c0; }");
-    QObject::connect(closeButton, &QPushButton::clicked, dialog, &QDialog::accept);
+    QObject::connect(closeButton, &QPushButton::clicked, dialog,
+                     &QDialog::accept);
 
     auto* buttonLayout = new QHBoxLayout();
     buttonLayout->addStretch();
@@ -37,8 +40,3 @@ void DialogHelper::createHtmlDialog(QDialog* dialog, const QString& title, const
     buttonLayout->addStretch();
     layout->addLayout(buttonLayout);
 }
-
-
-
-
-

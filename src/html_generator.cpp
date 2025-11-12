@@ -9,18 +9,25 @@
 #include "employee.h"
 #include "project.h"
 
-QString HtmlGenerator::generateProjectDetailHtml(const Project& project, const Company* company) {
+QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
+                                                 const Company* company) {
     if (!company) return "";
 
-    QString status = project.getStatus().trimmed();
-    bool projectCompleted = status.compare("Completed", Qt::CaseInsensitive) == 0;
-    QString projectName = project.getName().isEmpty() ? QString("Untitled project")
-                                                       : project.getName().toHtmlEscaped();
-    QString statusLabel = status.isEmpty() ? QString("Status not set") : status.toHtmlEscaped();
-    QString badgeClass = projectCompleted ? QString("phase-badge phase-completed")
-                                          : QString("phase-badge phase-active");
-    QString subtitle = projectCompleted ? QString("Team members who delivered this project")
-                                        : QString("Team members currently assigned to this project");
+    QString phase = project.getPhase().trimmed();
+    bool projectCompleted =
+        phase.compare("Completed", Qt::CaseInsensitive) == 0;
+    QString projectName = project.getName().isEmpty()
+                              ? QString("Untitled project")
+                              : project.getName().toHtmlEscaped();
+    QString phaseLabel =
+        phase.isEmpty() ? QString("Phase not set") : phase.toHtmlEscaped();
+    QString badgeClass = projectCompleted
+                             ? QString("phase-badge phase-completed")
+                             : QString("phase-badge phase-active");
+    QString subtitle =
+        projectCompleted
+            ? QString("Team members who delivered this project")
+            : QString("Team members currently assigned to this project");
 
     auto formatPercentText = [](double value) -> QString {
         double percent = value * 100.0;
@@ -33,8 +40,32 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project, const C
 
     QStringList memberCards;
     auto employees = company->getAllEmployees();
+    auto tasks = company->getProjectTasks(project.getId());
+
     for (const auto& employee : employees) {
-        if (employee == nullptr || !employee->isAssignedToProject(project.getId())) {
+        if (employee == nullptr) {
+            continue;
+        }
+
+        bool isAssigned = employee->isAssignedToProject(project.getId());
+
+        bool wasOnProject = false;
+        const auto& projectHistory = employee->getProjectHistory();
+        if (std::ranges::find(projectHistory, project.getId()) !=
+            projectHistory.end()) {
+            wasOnProject = true;
+        }
+
+        bool hasTaskAssignments = false;
+        for (const auto& task : tasks) {
+            if (company->getEmployeeTaskHours(
+                    employee->getId(), project.getId(), task.getId()) > 0) {
+                hasTaskAssignments = true;
+                break;
+            }
+        }
+
+        if (!isAssigned && !wasOnProject && !hasTaskAssignments) {
             continue;
         }
 
@@ -45,38 +76,65 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project, const C
 
         QString position = employee->getPosition().trimmed();
         QString department = employee->getDepartment().trimmed();
-        QString roleLine = position.isEmpty() ? QString("Role not specified") : position.toHtmlEscaped();
+        QString roleLine = position.isEmpty() ? QString("Role not specified")
+                                              : position.toHtmlEscaped();
         if (!department.isEmpty()) {
-            roleLine = QString("%1 · %2").arg(roleLine, department.toHtmlEscaped());
+            roleLine =
+                QString("%1 · %2").arg(roleLine, department.toHtmlEscaped());
         }
 
         bool isActiveEmployee = employee->getIsActive();
-        QString badgeState = isActiveEmployee ? "member-badge member-badge-active"
-                                              : "member-badge member-badge-inactive";
+        bool isCurrentlyAssigned =
+            employee->isAssignedToProject(project.getId());
+        QString badgeState = isActiveEmployee
+                                 ? "member-badge member-badge-active"
+                                 : "member-badge member-badge-inactive";
         QString badgeText;
         if (projectCompleted) {
-            badgeText = isActiveEmployee ? QString("Delivered · still employed")
-                                         : QString("Delivered · former employee");
+            badgeText = isActiveEmployee
+                            ? QString("Delivered · still employed")
+                            : QString("Delivered · former employee");
             if (!isActiveEmployee) {
                 badgeState += " member-badge-former";
             }
         } else {
-            badgeText = isActiveEmployee ? QString("Active on project") : QString("Inactive");
+            if (isActiveEmployee && isCurrentlyAssigned) {
+                badgeText = QString("Active on project");
+            } else if (!isCurrentlyAssigned) {
+                badgeText = QString("Fired");
+                badgeState += " member-badge-former";
+            } else {
+                badgeText = QString("Fired");
+                badgeState += " member-badge-former";
+            }
         }
 
-        QString involvement = projectCompleted
-                                  ? (isActiveEmployee ? QString("Stayed with the company after delivery")
-                                                      : QString("Contributed until completion"))
-                                  : (isActiveEmployee ? QString("Currently contributing")
-                                                      : QString("Temporarily unavailable"));
+        QString involvement;
+        if (projectCompleted) {
+            involvement =
+                isActiveEmployee
+                    ? QString("Stayed with the company after delivery")
+                    : QString("Contributed until completion");
+        } else {
+            if (isActiveEmployee && isCurrentlyAssigned) {
+                involvement = QString("Currently contributing");
+            } else if (!isCurrentlyAssigned) {
+                involvement = QString("He was fired from the project");
+            } else {
+                involvement = QString("Temporarily unavailable");
+            }
+        }
 
         int capacity = std::max(employee->getWeeklyHoursCapacity(), 0);
-        int used = std::max(employee->getCurrentWeeklyHours(), 0);
+        int projectHours = company->getEmployeeProjectHours(employee->getId(),
+                                                            project.getId());
+        int used = std::max(projectHours, 0);
         int available = std::max(employee->getAvailableHours(), 0);
 
-        QString employmentDisplay =
-            QString("%1% FTE").arg(formatPercentText(employee->getEmploymentRate()));
-        QString salaryDisplay = QString("$%1").arg(QString::number(employee->getSalary(), 'f', 2));
+        QString employmentDisplay = QString("%1% FTE").arg(
+            formatPercentText(employee->getEmploymentRate()));
+        QString salaryDisplay =
+            QString("$%1").arg(QString::number(employee->getSalary(), 'f', 2));
 
         QString card = QString(R"(
             <div class="member-card">
@@ -109,16 +167,16 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project, const C
                 </div>
             </div>
         )")
-                            .arg(name)
-                            .arg(roleLine)
-                            .arg(badgeState)
-                            .arg(badgeText)
-                            .arg(involvement)
-                            .arg(capacity)
-                            .arg(used)
-                            .arg(available)
-                            .arg(employmentDisplay)
-                            .arg(salaryDisplay);
+                           .arg(name)
+                           .arg(roleLine)
+                           .arg(badgeState)
+                           .arg(badgeText)
+                           .arg(involvement)
+                           .arg(capacity)
+                           .arg(used)
+                           .arg(available)
+                           .arg(employmentDisplay)
+                           .arg(salaryDisplay);
 
         memberCards.append(card);
     }
@@ -128,12 +186,17 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project, const C
 
     QString teamContent;
     if (memberCards.isEmpty()) {
-        teamContent = QString("<div class='empty'>%1</div>")
-                          .arg(projectCompleted
-                                   ? QString("No team members were recorded for this project.")
-                                   : QString("No team members assigned yet. Use the Assign button to add specialists."));
+        teamContent =
+            QString("<div class='empty'>%1</div>")
+                .arg(
+                    projectCompleted
+                        ? QString(
+                              "No team members were recorded for this project.")
+                        : QString("No team members assigned yet. Use the "
+                                  "Assign button to add specialists."));
     } else {
-        teamContent = QString("<div class='team-grid'>%1</div>").arg(memberCards.join(""));
+        teamContent = QString("<div class='team-grid'>%1</div>")
+                          .arg(memberCards.join(""));
     }
 
     QString html = QString(R"(
@@ -185,15 +248,16 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project, const C
         </body>
         </html>
     )")
-                        .arg(projectName)
-                        .arg(subtitle)
-                        .arg(badges)
-                        .arg(teamContent);
+                       .arg(projectName)
+                       .arg(subtitle)
+                       .arg(badges)
+                       .arg(teamContent);
 
     return html;
 }
 
-QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, const Company* company) {
+QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project,
+                                                      const Company* company) {
     if (!company) return "";
 
     QString html = R"(
@@ -232,11 +296,11 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
     html += QString(R"(
         <div class="header">
             <h1>📊 %1</h1>
-            <div class="header-detail">Status: %2 | Client: %3 | Budget: $%4</div>
+            <div class="header-detail">Phase: %2 | Client: %3 | Budget: $%4</div>
         </div>
     )")
                 .arg(project.getName())
-                .arg(project.getStatus())
+                .arg(project.getPhase())
                 .arg(project.getClientName())
                 .arg(project.getBudget(), 0, 'f', 2);
 
@@ -245,8 +309,13 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
     int needed = totalEstimated - totalAllocated;
     double budgetUsed = project.getEmployeeCosts();
     double budgetRemaining = project.getBudget() - budgetUsed;
-    double hoursPercent = totalEstimated > 0 ? (static_cast<double>(totalAllocated) / totalEstimated * 100.0) : 0.0;
-    double budgetPercent = project.getBudget() > 0 ? (budgetUsed / project.getBudget() * 100.0) : 0.0;
+    double hoursPercent =
+        totalEstimated > 0
+            ? (static_cast<double>(totalAllocated) / totalEstimated * 100.0)
+            : 0.0;
+    double budgetPercent = project.getBudget() > 0
+                               ? (budgetUsed / project.getBudget() * 100.0)
+                               : 0.0;
 
     html += R"(<div class="section">)";
     html += R"(<div class="section-title">Project Metrics</div>)";
@@ -310,16 +379,38 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
 
     std::vector<std::shared_ptr<Employee>> projectEmployees;
     for (const auto& emp : allEmployees) {
-        if (emp && emp->isAssignedToProject(project.getId())) {
+        if (!emp) continue;
+
+        bool isAssigned = emp->isAssignedToProject(project.getId());
+
+        bool wasOnProject = false;
+        const auto& projectHistory = emp->getProjectHistory();
+        if (std::ranges::find(projectHistory, project.getId()) !=
+            projectHistory.end()) {
+            wasOnProject = true;
+        }
+
+        bool hasTaskAssignments = false;
+        for (const auto& task : tasks) {
+            if (company->getEmployeeTaskHours(emp->getId(), project.getId(),
+                                              task.getId()) > 0) {
+                hasTaskAssignments = true;
+                break;
+            }
+        }
+
+        if (isAssigned || wasOnProject || hasTaskAssignments) {
             projectEmployees.push_back(emp);
         }
     }
 
     html += R"(<div class="section">)";
-    html += QString(R"(<div class="section-title">Team Members (%1)</div>)").arg(projectEmployees.size());
+    html += QString(R"(<div class="section-title">Team Members (%1)</div>)")
+                .arg(projectEmployees.size());
 
     if (projectEmployees.empty()) {
-        html += R"(<div class="empty-state">No employees assigned to this project yet.</div>)";
+        html +=
+            R"(<div class="empty-state">No employees assigned to this project yet.</div>)";
     } else {
         for (const auto& emp : projectEmployees) {
             QString badgeClass = "badge-info";
@@ -332,18 +423,29 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
             else if (emp->getEmployeeType() == "QA")
                 badgeClass = "badge-qa";
 
-            double utilization = emp->getWeeklyHoursCapacity() > 0
-                                     ? (static_cast<double>(emp->getCurrentWeeklyHours()) /
-                                        emp->getWeeklyHoursCapacity() * 100.0)
-                                     : 0.0;
+            int projectHours = 0;
+            for (const auto& task : tasks) {
+                projectHours += company->getEmployeeTaskHours(
+                    emp->getId(), project.getId(), task.getId());
+            }
+
+            double projectUtilization = 0.0;
+            if (emp->getWeeklyHoursCapacity() > 0) {
+                projectUtilization = (static_cast<double>(projectHours) /
+                                      emp->getWeeklyHoursCapacity() * 100.0);
+            }
+
+            bool isActive = emp->getIsActive();
+            QString statusText = isActive ? "" : " (Former Employee)";
+            QString statusStyle = isActive ? "" : " style=\"opacity: 0.7;\"";
 
             html += QString(R"(
-                <div class="employee-item">
+                <div class="employee-item"%10>
                     <div class="employee-header">
-                        %1 <span class="task-badge %2">%3</span>
+                        %1%9 <span class="task-badge %2">%3</span>
                     </div>
                     <div class="employee-details">
-                        Position: %4 | Salary: $%5 | Capacity: %6h/week | Used: %7h/week (%8%) | Available: %9h/week
+                        Position: %4 | Salary: $%5 | Capacity: %6h/week | Used on this project: %7h/week (%8%) | Available: %11h/week
                     </div>
                 </div>
             )")
@@ -353,8 +455,10 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
                         .arg(emp->getPosition())
                         .arg(emp->getSalary(), 0, 'f', 2)
                         .arg(emp->getWeeklyHoursCapacity())
-                        .arg(emp->getCurrentWeeklyHours())
-                        .arg(utilization, 0, 'f', 1)
+                        .arg(projectHours)
+                        .arg(projectUtilization, 0, 'f', 1)
+                        .arg(statusText)
+                        .arg(statusStyle)
                         .arg(emp->getAvailableHours());
         }
     }
@@ -362,10 +466,12 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
     html += R"(</div>)";
 
     html += R"(<div class="section">)";
-    html += QString(R"(<div class="section-title">Tasks (%1)</div>)").arg(tasks.size());
+    html += QString(R"(<div class="section-title">Tasks (%1)</div>)")
+                .arg(tasks.size());
 
     if (tasks.empty()) {
-        html += R"(<div class="empty-state">No tasks in this project yet.</div>)";
+        html +=
+            R"(<div class="empty-state">No tasks in this project yet.</div>)";
     } else {
         for (const auto& task : tasks) {
             QString badgeClass = "badge-info";
@@ -379,10 +485,11 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
                 badgeClass = "badge-qa";
 
             int remaining = task.getEstimatedHours() - task.getAllocatedHours();
-            double taskPercent = task.getEstimatedHours() > 0
-                                     ? (static_cast<double>(task.getAllocatedHours()) /
-                                        task.getEstimatedHours() * 100.0)
-                                     : 0.0;
+            double taskPercent =
+                task.getEstimatedHours() > 0
+                    ? (static_cast<double>(task.getAllocatedHours()) /
+                       task.getEstimatedHours() * 100.0)
+                    : 0.0;
 
             html += QString(R"(
                 <div class="task-item">
@@ -390,7 +497,7 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
                         %1 <span class="task-badge %2">%3</span>
                     </div>
                     <div class="task-details">
-                        Estimated: %4h | Allocated: %5h | Remaining: %6h | Priority: %7 | Status: %8
+                        Estimated: %4h | Allocated: %5h | Remaining: %6h | Priority: %7 | Phase: %8
                     </div>
                     <div class="progress-bar" style="margin-top: 8px;">
                         <div class="progress-fill" style="width: %9%;">%10% Complete</div>
@@ -404,7 +511,7 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
                         .arg(task.getAllocatedHours())
                         .arg(remaining)
                         .arg(task.getPriority())
-                        .arg(task.getStatus())
+                        .arg(task.getPhase())
                         .arg(taskPercent, 0, 'f', 1)
                         .arg(taskPercent, 0, 'f', 1);
         }
@@ -419,8 +526,9 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project, co
     return html;
 }
 
-QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, const Company* company,
-                                                   const std::vector<const Project*>& employeeProjects) {
+QString HtmlGenerator::generateEmployeeHistoryHtml(
+    const Employee& employee, const Company* company,
+    const std::vector<const Project*>& employeeProjects) {
     if (!company) return "";
 
     QString html = R"(
@@ -449,7 +557,7 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
                 .badge-development { background: #d0d0d0; color: #000000; font-weight: normal; }
                 .badge-design { background: #d0d0d0; color: #000000; font-weight: normal; }
                 .badge-qa { background: #d0d0d0; color: #000000; font-weight: normal; }
-                .badge-status { background: #d0d0d0; color: #000000; font-weight: normal; }
+                .badge-phase { background: #d0d0d0; color: #000000; font-weight: normal; }
                 .badge-type { background: transparent; color: #000000; }
                 .progress-bar { background: #e0e0e0; border-radius: 10px; height: 18px; margin-top: 8px; overflow: hidden; }
                 .progress-fill { height: 100%; background: #d0d0d0; display: flex; align-items: center; justify-content: center; color: #000000; font-size: 10px; font-weight: normal; }
@@ -463,10 +571,11 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
         <body>
     )";
 
-    double utilization = employee.getWeeklyHoursCapacity() > 0
-                             ? (static_cast<double>(employee.getCurrentWeeklyHours()) /
-                                employee.getWeeklyHoursCapacity() * 100.0)
-                             : 0.0;
+    double utilization =
+        employee.getWeeklyHoursCapacity() > 0
+            ? (static_cast<double>(employee.getCurrentWeeklyHours()) /
+               employee.getWeeklyHoursCapacity() * 100.0)
+            : 0.0;
 
     QString badgeClass = "badge-type";
     if (employee.getEmployeeType() == "Manager")
@@ -478,9 +587,10 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
     else if (employee.getEmployeeType() == "QA")
         badgeClass = "badge-qa";
 
-    QString activeBadge = employee.getIsActive()
-                              ? R"(<span class="badge badge-status">Active</span>)"
-                              : R"(<span class="badge badge-status" style="background: transparent; color: #000000;">Inactive</span>)";
+    QString activeBadge =
+        employee.getIsActive()
+            ? R"(<span class="badge badge-phase">Active</span>)"
+            : R"(<span class="badge badge-phase" style="background: transparent; color: #000000;">Inactive</span>)";
 
     html += QString(R"(
         <div class="header">
@@ -552,7 +662,8 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
     html += R"(<div class="section">)";
     html += R"(<div class="section-title">Employee Details</div>)";
 
-    QString employmentRateFormatted = DisplayHelper::formatEmploymentRate(employee.getEmploymentRate());
+    QString employmentRateFormatted =
+        DisplayHelper::formatEmploymentRate(employee.getEmploymentRate());
     employmentRateFormatted.replace(" (Full)", "");
     employmentRateFormatted.replace(" (3/4)", "");
     employmentRateFormatted.replace(" (Half)", "");
@@ -585,7 +696,7 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
             <span class="info-value">%6 (%7)</span>
         </div>
         <div class="info-row">
-            <span class="info-label">Status</span>
+            <span class="info-label">Phase</span>
             <span class="info-value">%8</span>
         </div>
     )")
@@ -601,41 +712,57 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
     html += R"(</div>)";
 
     html += R"(<div class="section">)";
-    html += QString(R"(<div class="section-title">Project History (%1 Projects)</div>)").arg(employeeProjects.size());
+    html +=
+        QString(
+            R"(<div class="section-title">Project History (%1 Projects)</div>)")
+            .arg(employeeProjects.size());
 
     if (employeeProjects.empty()) {
-        html += R"(<div class="empty-state">This employee is not assigned to any projects yet.</div>)";
+        html +=
+            R"(<div class="empty-state">This employee is not assigned to any projects yet.</div>)";
     } else {
         for (const auto* proj : employeeProjects) {
             auto tasks = company->getProjectTasks(proj->getId());
 
             int projectEstimated = proj->getEstimatedHours();
             int projectAllocated = proj->getAllocatedHours();
-            double projectProgress = projectEstimated > 0
-                                         ? (static_cast<double>(projectAllocated) / projectEstimated * 100.0)
-                                         : 0.0;
+            double projectProgress =
+                projectEstimated > 0 ? (static_cast<double>(projectAllocated) /
+                                        projectEstimated * 100.0)
+                                     : 0.0;
+
+            bool isCurrentlyAssigned =
+                employee.isAssignedToProject(proj->getId());
+            QString statusBadge = "";
+            if (!isCurrentlyAssigned) {
+                statusBadge =
+                    R"( <span class="badge badge-phase" style="background: #fbeaea; color: #8b1f2d; border: 1px solid #f3c6cc;">Fired</span>)";
+            }
 
             html += QString(R"(
                 <div class="project-item">
                     <div class="project-header">
-                        %1 <span class="badge badge-status">%2</span>
+                        %1 <span class="badge badge-phase">%2</span>%9
                     </div>
                     <div class="project-details">
                         Client: %3 | Budget: $%4 | Employee Costs: $%5 | Hours: %6h estimated, %7h allocated (%8%)
                     </div>
             )")
                         .arg(proj->getName())
-                        .arg(proj->getStatus())
+                        .arg(proj->getPhase())
                         .arg(proj->getClientName())
                         .arg(proj->getBudget(), 0, 'f', 2)
                         .arg(proj->getEmployeeCosts(), 0, 'f', 2)
                         .arg(projectEstimated)
                         .arg(projectAllocated)
-                        .arg(projectProgress, 0, 'f', 1);
+                        .arg(projectProgress, 0, 'f', 1)
+                        .arg(statusBadge);
 
             if (!tasks.empty()) {
-                html += R"(<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">)";
-                html += R"(<div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600;">Tasks:</div>)";
+                html +=
+                    R"(<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">)";
+                html +=
+                    R"(<div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600;">Tasks:</div>)";
 
                 for (const auto& task : tasks) {
                     QString taskBadgeClass = "badge-type";
@@ -648,11 +775,13 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
                     else if (task.getType() == "QA")
                         taskBadgeClass = "badge-qa";
 
-                    int taskRemaining = task.getEstimatedHours() - task.getAllocatedHours();
-                    double taskProgress = task.getEstimatedHours() > 0
-                                              ? (static_cast<double>(task.getAllocatedHours()) /
-                                                 task.getEstimatedHours() * 100.0)
-                                              : 0.0;
+                    int taskRemaining =
+                        task.getEstimatedHours() - task.getAllocatedHours();
+                    double taskProgress =
+                        task.getEstimatedHours() > 0
+                            ? (static_cast<double>(task.getAllocatedHours()) /
+                               task.getEstimatedHours() * 100.0)
+                            : 0.0;
 
                     html += QString(R"(
                         <div class="task-item">
@@ -660,14 +789,14 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
                                 %1 <span class="badge %2">%3</span>
                             </div>
                             <div class="task-details">
-                                Estimated: %5h | Allocated: %6h | Remaining: %7h | Priority: %8 | Progress: %9% | Status: %4
+                                Estimated: %5h | Allocated: %6h | Remaining: %7h | Priority: %8 | Progress: %9% | Phase: %4
                             </div>
                         </div>
                     )")
                                 .arg(task.getName())
                                 .arg(taskBadgeClass)
                                 .arg(task.getType())
-                                .arg(task.getStatus())
+                                .arg(task.getPhase())
                                 .arg(task.getEstimatedHours())
                                 .arg(task.getAllocatedHours())
                                 .arg(taskRemaining)
@@ -690,5 +819,3 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(const Employee& employee, con
 
     return html;
 }
-
-

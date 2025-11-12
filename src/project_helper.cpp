@@ -13,7 +13,8 @@
 #include "project.h"
 #include "task.h"
 
-void ProjectHelper::populateProjectTasksTable(QTableWidget* table, const Project& project,
+void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
+                                              const Project& project,
                                               MainWindow* mainWindow) {
     if (!table || !mainWindow) return;
 
@@ -39,24 +40,29 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table, const Project
         typeItem->setTextAlignment(Qt::AlignVCenter | Qt::AlignLeft);
         table->setItem(row, 1, typeItem);
 
-        auto* priorityItem = new QTableWidgetItem(QString::number(task.getPriority()));
+        auto* priorityItem =
+            new QTableWidgetItem(QString::number(task.getPriority()));
         priorityItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         priorityItem->setTextAlignment(Qt::AlignCenter);
         table->setItem(row, 2, priorityItem);
 
-        auto* estimatedItem = new QTableWidgetItem(QString::number(task.getEstimatedHours()));
+        auto* estimatedItem =
+            new QTableWidgetItem(QString::number(task.getEstimatedHours()));
         estimatedItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         estimatedItem->setTextAlignment(Qt::AlignCenter);
         table->setItem(row, 3, estimatedItem);
 
-        auto* allocatedItem = new QTableWidgetItem(QString::number(task.getAllocatedHours()));
+        auto* allocatedItem =
+            new QTableWidgetItem(QString::number(task.getAllocatedHours()));
         allocatedItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
         allocatedItem->setTextAlignment(Qt::AlignCenter);
         table->setItem(row, 4, allocatedItem);
 
-        if (task.getAllocatedHours() >= task.getEstimatedHours() && task.getEstimatedHours() > 0) {
+        if (task.getAllocatedHours() >= task.getEstimatedHours() &&
+            task.getEstimatedHours() > 0) {
             auto* fullyAllocatedItem = new QTableWidgetItem("Fully Allocated");
-            fullyAllocatedItem->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+            fullyAllocatedItem->setFlags(Qt::ItemIsSelectable |
+                                         Qt::ItemIsEnabled);
             fullyAllocatedItem->setTextAlignment(Qt::AlignCenter);
             fullyAllocatedItem->setForeground(QBrush(QColor(100, 100, 100)));
             table->setItem(row, 5, fullyAllocatedItem);
@@ -71,14 +77,17 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table, const Project
             assignButton->setFixedHeight(39);
             assignButton->setProperty("projectId", project.getId());
             assignButton->setProperty("taskId", task.getId());
-            QObject::connect(assignButton, &QPushButton::clicked, [mainWindow, projectId = project.getId(), taskId = task.getId()]() {
-                if (mainWindow) {
-
-                    QMetaObject::invokeMethod(mainWindow, "assignTaskFromDetails", Qt::QueuedConnection,
-                                              Q_ARG(int, projectId),
-                                              Q_ARG(int, taskId));
-                }
-            });
+            QObject::connect(assignButton, &QPushButton::clicked,
+                             [mainWindow, projectId = project.getId(),
+                              taskId = task.getId()]() {
+                                 if (mainWindow) {
+                                     QMetaObject::invokeMethod(
+                                         mainWindow, "assignTaskFromDetails",
+                                         Qt::QueuedConnection,
+                                         Q_ARG(int, projectId),
+                                         Q_ARG(int, taskId));
+                                 }
+                             });
 
             assignLayout->addWidget(assignButton);
             table->setCellWidget(row, 5, assignContainer);
@@ -87,7 +96,8 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table, const Project
     }
 }
 
-void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company, int projectId) {
+void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company,
+                                                            int projectId) {
     if (!company) return;
 
     const Project* project = company->getProject(projectId);
@@ -105,7 +115,8 @@ void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company, in
     }
 }
 
-bool ProjectHelper::hasAssignedEmployees(const Company* company, int projectId) {
+bool ProjectHelper::hasAssignedEmployees(const Company* company,
+                                         int projectId) {
     if (!company) return false;
 
     auto employees = company->getAllEmployees();
@@ -116,4 +127,3 @@ bool ProjectHelper::hasAssignedEmployees(const Company* company, int projectId) 
     }
     return false;
 }
-
