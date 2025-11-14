@@ -2,3 +2,5 @@
 build
 *.md
 !README.md
+class_diagram.puml
+course-work.png
