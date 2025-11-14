@@ -136,12 +136,12 @@ void Employee::setEmploymentRate(double newRate, int baseWeeklyCapacity) {
     }
 
     int oldCapacity = weeklyHoursCapacity;
-    int newCapacity = static_cast<int>(baseWeeklyCapacity * newRate);
+    auto newCapacity = static_cast<int>(baseWeeklyCapacity * newRate);
 
     
     if (oldCapacity > 0 && currentWeeklyHours > 0) {
-        double scaleFactor = static_cast<double>(newCapacity) / oldCapacity;
-        int scaledHours = static_cast<int>(std::round(currentWeeklyHours * scaleFactor));
+        auto scaleFactor = static_cast<double>(newCapacity) / oldCapacity;
+        auto scaledHours = static_cast<int>(std::round(currentWeeklyHours * scaleFactor));
         
         
         if (scaledHours > newCapacity) {

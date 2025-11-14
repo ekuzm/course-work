@@ -70,8 +70,7 @@ void DialogHelper::createTableDialog(QDialog* dialog, const QString& title,
     table->setSortingEnabled(true);
     
     
-    QHeaderView* horizontalHeader = table->horizontalHeader();
-    if (horizontalHeader) {
+    if (QHeaderView* horizontalHeader = table->horizontalHeader(); horizontalHeader) {
         horizontalHeader->setDefaultAlignment(Qt::AlignCenter);
     }
     

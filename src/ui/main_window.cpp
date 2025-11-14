@@ -1760,7 +1760,7 @@ void MainWindow::viewProjectAssignments() {
     
     auto allProjects = currentCompany->getAllProjects();
 
-    QTableWidget* table = new QTableWidget();
+    auto table = new QTableWidget();
     QStringList headers = {"ID", "Project Name", "Client", "Phase", 
                            "Budget ($)", "Estimated Hours", "Allocated Hours", 
                            "Employee Costs ($)", "Status"};
@@ -1885,7 +1885,7 @@ void MainWindow::viewEmployeeHistory() {
         }
     }
 
-    QTableWidget* table = new QTableWidget();
+    auto table = new QTableWidget();
     QStringList headers = {"ID", "Project Name", "Client", "Phase", 
                            "Budget ($)", "Estimated Hours", "Allocated Hours", 
                            "Employee Costs ($)", "Status"};

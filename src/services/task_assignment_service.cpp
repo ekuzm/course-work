@@ -269,8 +269,7 @@ int TaskAssignmentService::getEmployeeProjectHours(int employeeId, int projectId
     }
 
     
-    int capacity = employee->getWeeklyHoursCapacity();
-    if (totalHours > capacity) {
+    if (int capacity = employee->getWeeklyHoursCapacity(); totalHours > capacity) {
         totalHours = capacity;
     }
 
@@ -294,9 +293,8 @@ void TaskAssignmentService::updateTaskAndProjectCosts(Project* projPtr, int task
             task.setAllocatedHours(newAllocated);
             
             
-            double costDiff = CostCalculationService::calculateEmployeeCost(employee->getSalary(), newHours) -
-                            CostCalculationService::calculateEmployeeCost(employee->getSalary(), oldHours);
-            if (costDiff < 0) {
+            if (double costDiff = CostCalculationService::calculateEmployeeCost(employee->getSalary(), newHours) -
+                            CostCalculationService::calculateEmployeeCost(employee->getSalary(), oldHours); costDiff < 0) {
                 projPtr->removeEmployeeCost(-costDiff);
             } else {
                 projPtr->addEmployeeCost(costDiff);
@@ -347,6 +345,7 @@ void TaskAssignmentService::restoreTaskAssignment(int employeeId, int projectId,
                 } catch (const EmployeeException&) {
                     
                     
+                    // Ignore exception
                 }
             }
 
@@ -360,10 +359,8 @@ void TaskAssignmentService::removeEmployeeTaskAssignments(int employeeId) {
     auto allAssignments = company->getAllTaskAssignments();
     
     for (const auto& assignment : allAssignments) {
-        int empId = std::get<0>(assignment.first);
+        auto [empId, projectId, taskId] = assignment.first;
         if (empId == employeeId) {
-            int projectId = std::get<1>(assignment.first);
-            int taskId = std::get<2>(assignment.first);
             company->removeTaskAssignment(employeeId, projectId, taskId);
         }
     }
@@ -376,9 +373,7 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
     
     auto allAssignments = company->getAllTaskAssignments();
     for (const auto& assignment : allAssignments) {
-        int employeeId = std::get<0>(assignment.first);
-        int projectId = std::get<1>(assignment.first);
-        int taskId = std::get<2>(assignment.first);
+        auto [employeeId, projectId, taskId] = assignment.first;
         int hours = assignment.second;
         
         employeeAssignments[employeeId].push_back(
@@ -386,8 +381,7 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
     }
     
     
-    for (auto& empAssignments : employeeAssignments) {
-        int employeeId = empAssignments.first;
+    for (auto& [employeeId, assignments] : employeeAssignments) {
         std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
         if (!employee) continue;
         
@@ -395,24 +389,21 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
         
         
         int totalHours = 0;
-        for (auto& assignment : empAssignments.second) {
-            totalHours += std::get<2>(assignment);
+        for (auto& assignment : assignments) {
+            auto [projectId, taskId, oldHours, newHours] = assignment;
+            totalHours += oldHours;
         }
         
         
         if (totalHours > capacity && totalHours > 0) {
             double scaleFactor = static_cast<double>(capacity) / totalHours;
             
-            for (auto& assignment : empAssignments.second) {
-                int projectId = std::get<0>(assignment);
-                int taskId = std::get<1>(assignment);
-                int oldHours = std::get<2>(assignment);
-                int newHours = static_cast<int>(std::round(oldHours * scaleFactor));
+            for (auto& assignment : assignments) {
+                auto& [projectId, taskId, oldHours, newHours] = assignment;
+                newHours = static_cast<int>(std::round(oldHours * scaleFactor));
                 
                 if (newHours < 0) newHours = 0;
-                if (newHours > capacity) newHours = capacity;
-                
-                std::get<3>(assignment) = newHours;  
+                if (newHours > capacity) newHours = capacity;  
                 
                 
                 company->setTaskAssignment(employeeId, projectId, taskId, newHours);
@@ -505,12 +496,10 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
     
     auto allAssignments = company->getAllTaskAssignments();
     for (const auto& assignment : allAssignments) {
-        int empId = std::get<0>(assignment.first);
+        auto [empId, projectId, taskId] = assignment.first;
         if (empId == employeeId) {
-            int projectId = std::get<1>(assignment.first);
-            int taskId = std::get<2>(assignment.first);
             int oldHours = assignment.second;
-            int scaledHours = static_cast<int>(std::round(oldHours * scaleFactor));
+            auto scaledHours = static_cast<int>(std::round(oldHours * scaleFactor));
             
             if (scaledHours < 0) {
                 scaledHours = 0;
@@ -527,13 +516,13 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         totalScaledHours = 0;
         
         for (auto& assignment : assignmentsData) {
-            int scaledHours = std::get<3>(assignment);
-            int adjustedHours = static_cast<int>(std::round(scaledHours * adjustFactor));
+            auto& [projectId, taskId, oldHours, scaledHours] = assignment;
+            auto adjustedHours = static_cast<int>(std::round(scaledHours * adjustFactor));
             
             if (adjustedHours < 0) adjustedHours = 0;
             if (adjustedHours > capacity) adjustedHours = capacity;
             
-            std::get<3>(assignment) = adjustedHours;
+            scaledHours = adjustedHours;
             totalScaledHours += adjustedHours;
         }
         
@@ -548,10 +537,10 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
             
             for (auto& assignment : assignmentsData) {
                 if (excess <= 0) break;
-                int adjustedHours = std::get<3>(assignment);
+                auto& [projectId, taskId, oldHours, adjustedHours] = assignment;
                 if (adjustedHours > 0) {
                     int reduction = std::min(excess, adjustedHours);
-                    std::get<3>(assignment) = adjustedHours - reduction;
+                    adjustedHours = adjustedHours - reduction;
                     totalScaledHours -= reduction;
                     excess -= reduction;
                 }
@@ -561,10 +550,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
 
     
     for (const auto& assignment : assignmentsData) {
-        int projectId = std::get<0>(assignment);
-        int taskId = std::get<1>(assignment);
-        int oldHours = std::get<2>(assignment);
-        int newHours = std::get<3>(assignment);
+        auto [projectId, taskId, oldHours, newHours] = assignment;
 
         
         if (newHours > 0) {
@@ -603,12 +589,12 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         
         
         
-        int currentHours = employee->getCurrentWeeklyHours();
-        if (currentHours > 0) {
+        if (int currentHours = employee->getCurrentWeeklyHours(); currentHours > 0) {
             try {
                 employee->removeWeeklyHours(currentHours);
             } catch (const EmployeeException&) {
                 
+                    // Ignore exception
             }
         }
         
@@ -625,6 +611,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
                     }
                 } catch (const EmployeeException&) {
                     
+                    // Ignore exception
                 }
             }
         }
@@ -862,18 +849,15 @@ bool TaskAssignmentService::validateAssignment(std::shared_ptr<Employee> employe
     
     if (hours > task.getEstimatedHours()) return false;
     
-    QString employeePosition = employee->getPosition();
-    if (!roleMatchesSDLCStage(employeePosition, project->getPhase())) return false;
+    if (QString employeePosition = employee->getPosition(); !roleMatchesSDLCStage(employeePosition, project->getPhase())) return false;
     
     QString taskType = task.getType();
-    QString employeeType = employee->getEmployeeType();
-    if (!taskTypeMatchesEmployeeType(taskType, employeeType)) return false;
+    if (QString employeeType = employee->getEmployeeType(); !taskTypeMatchesEmployeeType(taskType, employeeType)) return false;
     
     if (!employee->isAvailable(hours)) return false;
     
     double hourlyRate = CostCalculationService::calculateHourlyRate(employee->getSalary());
-    double assignmentCost = CostCalculationService::calculateEmployeeCost(employee->getSalary(), hours);
-    if (project->getEmployeeCosts() + assignmentCost > project->getBudget()) return false;
+    if (double assignmentCost = CostCalculationService::calculateEmployeeCost(employee->getSalary(), hours); project->getEmployeeCosts() + assignmentCost > project->getBudget()) return false;
     
     return true;
 }

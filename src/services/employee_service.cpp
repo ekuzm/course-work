@@ -20,6 +20,7 @@ void EmployeeService::recalculateEmployeeHours() {
                     emp->removeWeeklyHours(currentHours);
                 } catch (const EmployeeException&) {
                     
+                    // Ignore exception
                 }
             }
         }
@@ -28,7 +29,7 @@ void EmployeeService::recalculateEmployeeHours() {
     
     auto allAssignments = company->getAllTaskAssignments();
     for (const auto& assignment : allAssignments) {
-        int employeeId = std::get<0>(assignment.first);
+        auto [employeeId, projectId, taskId] = assignment.first;
         int hours = assignment.second;
 
         std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
@@ -37,6 +38,7 @@ void EmployeeService::recalculateEmployeeHours() {
                 employee->addWeeklyHours(hours);
             } catch (const EmployeeException&) {
                 
+                    // Ignore exception
             }
         }
     }
@@ -55,5 +57,7 @@ int EmployeeService::calculateTotalAssignedHours(int employeeId) const {
     
     return totalHours;
 }
+
+
 
 
