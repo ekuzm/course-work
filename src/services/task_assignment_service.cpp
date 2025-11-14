@@ -7,10 +7,14 @@
 #include <tuple>
 #include <vector>
 
+#include <QLoggingCategory>
+
 #include "utils/consts.h"
 #include "utils/container_utils.h"
 #include "exceptions/exceptions.h"
 #include "services/cost_calculation_service.h"
+
+Q_LOGGING_CATEGORY(taskAssignmentService, "task.assignment.service")
 
 TaskAssignmentService::TaskAssignmentService(Company* company) : company(company) {
     if (!company) {
@@ -131,8 +135,6 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
             }
 
             
-            int existingHours = company->getTaskAssignment(employeeId, projectId, taskId);
-
             int needed = task.getEstimatedHours() - task.getAllocatedHours();
             if (needed <= 0)
                 throw CompanyException("Task already fully allocated");
@@ -278,7 +280,7 @@ int TaskAssignmentService::getEmployeeProjectHours(int employeeId, int projectId
 
 void TaskAssignmentService::updateTaskAndProjectCosts(Project* projPtr, int taskId,
                                                       int oldHours, int newHours,
-                                                      std::shared_ptr<Employee> employee) {
+                                                      std::shared_ptr<Employee> employee) const {
     if (!projPtr || !employee) return;
     
     std::vector<Task>& tasks = projPtr->getTasks();
@@ -342,10 +344,8 @@ void TaskAssignmentService::restoreTaskAssignment(int employeeId, int projectId,
             if (employee->getIsActive() && newHours > 0) {
                 try {
                     employee->addWeeklyHours(newHours);
-                } catch (const EmployeeException&) {
-                    
-                    
-                    // Ignore exception
+                } catch (const EmployeeException& e) {
+                    qCWarning(taskAssignmentService) << "Failed to add weekly hours:" << e.what();
                 }
             }
 
@@ -376,8 +376,7 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
         auto [employeeId, projectId, taskId] = assignment.first;
         int hours = assignment.second;
         
-        employeeAssignments[employeeId].push_back(
-            std::make_tuple(projectId, taskId, hours, 0));
+        employeeAssignments[employeeId].emplace_back(projectId, taskId, hours, 0);
     }
     
     
@@ -505,13 +504,13 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
                 scaledHours = 0;
             }
             
-            assignmentsData.push_back(std::make_tuple(projectId, taskId, oldHours, scaledHours));
+            assignmentsData.emplace_back(projectId, taskId, oldHours, scaledHours);
             totalScaledHours += scaledHours;
         }
     }
 
     
-    if (totalScaledHours > capacity && assignmentsData.size() > 0) {
+    if (totalScaledHours > capacity && !assignmentsData.empty()) {
         double adjustFactor = static_cast<double>(capacity) / totalScaledHours;
         totalScaledHours = 0;
         
@@ -530,7 +529,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         if (totalScaledHours > capacity) {
             int excess = totalScaledHours - capacity;
             
-            std::sort(assignmentsData.begin(), assignmentsData.end(),
+            std::ranges::sort(assignmentsData,
                 [](const std::tuple<int, int, int, int>& a, const std::tuple<int, int, int, int>& b) {
                     return std::get<3>(a) > std::get<3>(b);
                 });
@@ -576,7 +575,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         int totalHours = 0;
         auto allAssignments = company->getAllTaskAssignments();
         for (const auto& assignment : allAssignments) {
-            int empId = std::get<0>(assignment.first);
+            auto [empId, projectId, taskId] = assignment.first;
             if (empId == employeeId) {
                 totalHours += assignment.second;
             }
@@ -592,9 +591,8 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         if (int currentHours = employee->getCurrentWeeklyHours(); currentHours > 0) {
             try {
                 employee->removeWeeklyHours(currentHours);
-            } catch (const EmployeeException&) {
-                
-                    // Ignore exception
+            } catch (const EmployeeException& e) {
+                qCWarning(taskAssignmentService) << "Failed to remove weekly hours:" << e.what();
             }
         }
         
@@ -602,16 +600,14 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         if (totalHours > 0) {
             try {
                 employee->addWeeklyHours(totalHours);
-            } catch (const EmployeeException&) {
-                
-                
+            } catch (const EmployeeException& e) {
+                qCWarning(taskAssignmentService) << "Failed to add weekly hours:" << e.what();
                 try {
                     if (totalHours > currentCapacity) {
                         employee->addWeeklyHours(currentCapacity);
                     }
-                } catch (const EmployeeException&) {
-                    
-                    // Ignore exception
+                } catch (const EmployeeException& e2) {
+                    qCWarning(taskAssignmentService) << "Failed to add weekly hours (fallback):" << e2.what();
                 }
             }
         }
@@ -841,7 +837,7 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
 
 bool TaskAssignmentService::validateAssignment(std::shared_ptr<Employee> employee,
                                                std::shared_ptr<Project> project,
-                                               const Task& task, int hours) {
+                                               const Task& task, int hours) const {
     if (!employee || !project) return false;
     
     if (!employee->getIsActive()) return false;
@@ -856,7 +852,6 @@ bool TaskAssignmentService::validateAssignment(std::shared_ptr<Employee> employe
     
     if (!employee->isAvailable(hours)) return false;
     
-    double hourlyRate = CostCalculationService::calculateHourlyRate(employee->getSalary());
     if (double assignmentCost = CostCalculationService::calculateEmployeeCost(employee->getSalary(), hours); project->getEmployeeCosts() + assignmentCost > project->getBudget()) return false;
     
     return true;

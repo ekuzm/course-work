@@ -39,9 +39,9 @@ class TaskAssignmentService {
 
    private:
     void updateTaskAndProjectCosts(Project* projPtr, int taskId, int oldHours,
-                                   int newHours, std::shared_ptr<Employee> employee);
+                                   int newHours, std::shared_ptr<Employee> employee) const;
     bool validateAssignment(std::shared_ptr<Employee> employee,
                            std::shared_ptr<Project> project, const Task& task,
-                           int hours);
+                           int hours) const;
 };
 

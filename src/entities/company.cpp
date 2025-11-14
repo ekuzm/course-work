@@ -6,9 +6,13 @@
 #include <tuple>
 #include <utility>
 
+#include <QLoggingCategory>
+
 #include "utils/consts.h"
 #include "utils/container_utils.h"
 #include "exceptions/exceptions.h"
+
+Q_LOGGING_CATEGORY(companyExceptions, "company.exceptions")
 
 static double calculateHourlyRate(double monthlySalary) {
     if (kHoursPerMonth <= 0) return 0.0;
@@ -420,14 +424,7 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
             
             
             
-            int newHoursToAssign;
-            if (existingHours > 0) {
-                
-                newHoursToAssign = hours;
-            } else {
-                
-                newHoursToAssign = hours;
-            }
+            int newHoursToAssign = hours;
             
             if (newHoursToAssign <= 0) {
                 
@@ -583,9 +580,8 @@ void Company::restoreTaskAssignment(int employeeId, int projectId, int taskId,
             if (employee->getIsActive() && newHours > 0) {
                 try {
                     employee->addWeeklyHours(newHours);
-                } catch (const EmployeeException&) {
-                    
-                    // Ignore exception
+                } catch (const EmployeeException& e) {
+                    qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
                 }
             }
 
@@ -616,9 +612,8 @@ void Company::recalculateEmployeeHours() {
             if (currentHours > 0) {
                 try {
                     emp->removeWeeklyHours(currentHours);
-                } catch (const EmployeeException&) {
-                    
-                    // Ignore exception
+                } catch (const EmployeeException& e) {
+                    qCWarning(companyExceptions) << "Failed to remove weekly hours:" << e.what();
                 }
             }
         }
@@ -633,9 +628,8 @@ void Company::recalculateEmployeeHours() {
         if (employee && employee->getIsActive() && hours > 0) {
             try {
                 employee->addWeeklyHours(hours);
-            } catch (const EmployeeException&) {
-                
-                    // Ignore exception
+            } catch (const EmployeeException& e) {
+                qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
             }
         }
     }
@@ -649,8 +643,8 @@ void Company::fixTaskAssignmentsToCapacity() {
     for (auto& assignment : taskAssignments) {
         auto [employeeId, projectId, taskId] = assignment.first;
         
-        employeeAssignments[employeeId].push_back(
-            std::make_tuple(projectId, taskId, assignment.second, &assignment.second));
+        employeeAssignments[employeeId].emplace_back(
+            projectId, taskId, assignment.second, &assignment.second);
     }
     
     
@@ -696,7 +690,7 @@ void Company::recalculateTaskAllocatedHours() {
     
     auto allProjects = getAllProjects();
     for (const auto& project : allProjects) {
-        auto mutableProject = const_cast<Project*>(getProject(project.getId()));
+        auto mutableProject = getMutableProject(project.getId());
         if (mutableProject) {
             
             double currentCosts = mutableProject->getEmployeeCosts();
@@ -709,7 +703,7 @@ void Company::recalculateTaskAllocatedHours() {
     
     
     for (const auto& project : allProjects) {
-        auto mutableProject = const_cast<Project*>(getProject(project.getId()));
+        auto mutableProject = getMutableProject(project.getId());
         if (!mutableProject) continue;
         
         int projectId = project.getId();
@@ -1002,8 +996,7 @@ int Company::getEmployeeTaskHours(int employeeId, int projectId,
                                   int taskId) const {
     std::tuple<int, int, int> key =
         std::make_tuple(employeeId, projectId, taskId);
-    auto it = taskAssignments.find(key);
-    if (it != taskAssignments.end()) {
+    if (auto it = taskAssignments.find(key); it != taskAssignments.end()) {
         return it->second;
     }
     return 0;
@@ -1035,13 +1028,13 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
                 scaledHours = 0;
             }
             
-            assignmentsData.push_back(std::make_tuple(projectId, taskId, oldHours, scaledHours));
+            assignmentsData.emplace_back(projectId, taskId, oldHours, scaledHours);
             totalScaledHours += scaledHours;
         }
     }
 
     
-    if (totalScaledHours > capacity && assignmentsData.size() > 0) {
+    if (totalScaledHours > capacity && !assignmentsData.empty()) {
         double adjustFactor = static_cast<double>(capacity) / totalScaledHours;
         totalScaledHours = 0;
         
@@ -1060,7 +1053,7 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
         if (totalScaledHours > capacity) {
             int excess = totalScaledHours - capacity;
             
-            std::sort(assignmentsData.begin(), assignmentsData.end(),
+            std::ranges::sort(assignmentsData,
                 [](const std::tuple<int, int, int, int>& a, const std::tuple<int, int, int, int>& b) {
                     return std::get<3>(a) > std::get<3>(b);
                 });
@@ -1124,9 +1117,8 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
         if (int currentHours = employee->getCurrentWeeklyHours(); currentHours > 0) {
             try {
                 employee->removeWeeklyHours(currentHours);
-            } catch (const EmployeeException&) {
-                
-                    // Ignore exception
+            } catch (const EmployeeException& e) {
+                qCWarning(companyExceptions) << "Failed to remove weekly hours:" << e.what();
             }
         }
         
@@ -1134,18 +1126,16 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
         if (totalHours > 0) {
             try {
                 employee->addWeeklyHours(totalHours);
-            } catch (const EmployeeException&) {
-                
-                    // Ignore exception
+            } catch (const EmployeeException& e) {
+                qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
             }
             
             try {
                     if (totalHours > currentCapacity) {
                         employee->addWeeklyHours(currentCapacity);
                     }
-                } catch (const EmployeeException&) {
-                    
-                    // Ignore exception
+                } catch (const EmployeeException& e) {
+                    qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
                 }
             }
         }

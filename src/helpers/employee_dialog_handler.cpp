@@ -15,9 +15,9 @@
 #include "helpers/validation_helper.h"
 
 bool EmployeeDialogHandler::validateEmployeeFields(QDialog* dialog,
-                                                   QLineEdit* nameEdit,
-                                                   QLineEdit* salaryEdit,
-                                                   QLineEdit* deptEdit,
+                                                   const QLineEdit* nameEdit,
+                                                   const QLineEdit* salaryEdit,
+                                                   const QLineEdit* deptEdit,
                                                    QString& name,
                                                    double& salary,
                                                    QString& department) {

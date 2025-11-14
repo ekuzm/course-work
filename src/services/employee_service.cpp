@@ -1,6 +1,10 @@
 #include "services/employee_service.h"
 
+#include <QLoggingCategory>
+
 #include "exceptions/exceptions.h"
+
+Q_LOGGING_CATEGORY(employeeService, "employee.service")
 
 EmployeeService::EmployeeService(Company* company) : company(company) {
     if (!company) {
@@ -8,7 +12,7 @@ EmployeeService::EmployeeService(Company* company) : company(company) {
     }
 }
 
-void EmployeeService::recalculateEmployeeHours() {
+void EmployeeService::recalculateEmployeeHours() const {
     
     auto employees = company->getAllEmployees();
     for (const auto& emp : employees) {
@@ -18,9 +22,8 @@ void EmployeeService::recalculateEmployeeHours() {
             if (currentHours > 0) {
                 try {
                     emp->removeWeeklyHours(currentHours);
-                } catch (const EmployeeException&) {
-                    
-                    // Ignore exception
+                } catch (const EmployeeException& e) {
+                    qCWarning(employeeService) << "Failed to remove weekly hours:" << e.what();
                 }
             }
         }
@@ -36,9 +39,8 @@ void EmployeeService::recalculateEmployeeHours() {
         if (employee && employee->getIsActive() && hours > 0) {
             try {
                 employee->addWeeklyHours(hours);
-            } catch (const EmployeeException&) {
-                
-                    // Ignore exception
+            } catch (const EmployeeException& e) {
+                qCWarning(employeeService) << "Failed to add weekly hours:" << e.what();
             }
         }
     }
@@ -49,7 +51,7 @@ int EmployeeService::calculateTotalAssignedHours(int employeeId) const {
     auto allAssignments = company->getAllTaskAssignments();
     
     for (const auto& assignment : allAssignments) {
-        int empId = std::get<0>(assignment.first);
+        auto [empId, projectId, taskId] = assignment.first;
         if (empId == employeeId) {
             totalHours += assignment.second;
         }
