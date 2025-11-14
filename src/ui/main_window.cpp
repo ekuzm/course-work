@@ -35,6 +35,7 @@
 #include "helpers/dialog_helper.h"
 #include "helpers/display_helper.h"
 #include "exceptions/exception_handler.h"
+#include "helpers/employee_dialog_handler.h"
 #include "helpers/file_helper.h"
 #include "helpers/html_generator.h"
 #include "helpers/id_helper.h"
@@ -231,7 +232,7 @@ void MainWindow::addEmployee() {
 
     connect(okButton, &QPushButton::clicked, [&]() {
         try {
-            if (!EmployeeDialogHelper::processAddEmployee(
+            if (!EmployeeDialogHandler::processAddEmployee(
                     &dialog, currentCompany, nextEmployeeId, nameEdit,
                     salaryEdit, deptEdit, typeCombo, employmentRateCombo,
                     managerProject, devLanguage, devExperience, designerTool,
@@ -266,7 +267,8 @@ void MainWindow::addEmployee() {
 void MainWindow::editEmployee() {
     if (!checkCompanyAndHandleError("editing employees")) return;
 
-    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
+    auto employeeId = getSelectedEmployeeId();
+    if (employeeId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select an employee to edit.");
         return;
@@ -366,7 +368,7 @@ void MainWindow::editEmployee() {
 
     connect(okButton, &QPushButton::clicked, [&]() {
         try {
-            if (!EmployeeDialogHelper::processEditEmployee(
+            if (!EmployeeDialogHandler::processEditEmployee(
                     &dialog, currentCompany, employeeId, nextEmployeeId,
                     nameEdit, salaryEdit, deptEdit, employmentRateCombo,
                     managerProject, devLanguage, devExperience, designerTool,
@@ -400,7 +402,8 @@ void MainWindow::editEmployee() {
 void MainWindow::deleteEmployee() {
     if (!checkCompanyAndHandleError("deleting employees")) return;
 
-    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
+    auto employeeId = getSelectedEmployeeId();
+    if (employeeId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select an employee to delete.");
         return;
@@ -436,7 +439,8 @@ void MainWindow::deleteEmployee() {
 void MainWindow::fireEmployee() {
     if (!checkCompanyAndHandleError("firing employees")) return;
 
-    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
+    auto employeeId = getSelectedEmployeeId();
+    if (employeeId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select an employee to fire.");
         return;
@@ -699,7 +703,8 @@ void MainWindow::addProject() {
 void MainWindow::editProject() {
     if (!checkCompanyAndHandleError("editing projects")) return;
 
-    if (int projectId = getSelectedProjectId(); projectId < 0) {
+    auto projectId = getSelectedProjectId();
+    if (projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project to edit.");
         return;
     }
@@ -907,7 +912,8 @@ void MainWindow::editProject() {
 void MainWindow::deleteProject() {
     if (!checkCompanyAndHandleError("deleting projects")) return;
 
-    if (int projectId = getSelectedProjectId(); projectId < 0) {
+    auto projectId = getSelectedProjectId();
+    if (projectId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select a project to delete.");
         return;
@@ -1181,7 +1187,8 @@ void MainWindow::deleteCompany() {
 void MainWindow::addProjectTask() {
     if (!checkCompanyAndHandleError("adding tasks")) return;
 
-    if (int projectId = getSelectedProjectId(); projectId < 0) {
+    auto projectId = getSelectedProjectId();
+    if (projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project first.");
         return;
     }
@@ -1251,7 +1258,8 @@ void MainWindow::addProjectTask() {
 void MainWindow::assignEmployeeToTask() {
     if (!checkCompanyAndHandleError("assigning employees to tasks")) return;
 
-    if (int projectId = getSelectedProjectId(); projectId < 0) {
+    auto projectId = getSelectedProjectId();
+    if (projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project first.");
         return;
     }
@@ -1540,7 +1548,8 @@ void MainWindow::autoAssignToProject(int projectId) {
 
 void MainWindow::openProjectDetails() {
     if (!checkCompanyAndHandleError("viewing project details")) return;
-    if (int projectId = getSelectedProjectId(); projectId < 0) {
+    auto projectId = getSelectedProjectId();
+    if (projectId < 0) {
         QMessageBox::information(this, "Project Details",
                                  "Please select a project to view details.");
         return;
@@ -1738,7 +1747,8 @@ void MainWindow::selectProjectRowById(int projectId) {
 void MainWindow::viewProjectAssignments() {
     if (!checkCompanyAndHandleError("viewing project assignments")) return;
 
-    if (int projectId = getSelectedProjectId(); projectId < 0) {
+    auto projectId = getSelectedProjectId();
+    if (projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project first.");
         return;
     }
@@ -1846,7 +1856,8 @@ void MainWindow::viewProjectAssignments() {
 void MainWindow::viewEmployeeHistory() {
     if (!checkCompanyAndHandleError("viewing employee history")) return;
 
-    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
+    auto employeeId = getSelectedEmployeeId();
+    if (employeeId < 0) {
         QMessageBox::warning(this, "Error", "Please select an employee first.");
         return;
     }

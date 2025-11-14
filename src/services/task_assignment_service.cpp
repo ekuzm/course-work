@@ -81,7 +81,8 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
     Project* projPtr = company->getMutableProject(projectId);
     if (!projPtr) throw CompanyException("Project not found");
 
-    if (QString projectPhase = projPtr->getPhase(); projectPhase == "Completed") {
+    auto projectPhase = projPtr->getPhase();
+    if (projectPhase == "Completed") {
         throw CompanyException("Cannot assign to project with phase: " +
                                projectPhase);
     }
@@ -673,7 +674,8 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     Project* projPtr = company->getMutableProject(projectId);
     if (!projPtr) throw CompanyException("Project not found");
 
-    if (QString projectPhase = projPtr->getPhase(); projectPhase == "Completed") {
+    auto projectPhase = projPtr->getPhase();
+    if (projectPhase == "Completed") {
         throw CompanyException("Cannot auto-assign to project with phase: " +
                                projectPhase);
     }

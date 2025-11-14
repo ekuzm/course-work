@@ -813,7 +813,8 @@ void Company::autoAssignEmployeesToProject(int projectId) {
     std::shared_ptr<Project> projPtr = projects.find(projectId);
     if (!projPtr) throw CompanyException("Project not found");
 
-    if (QString projectPhase = projPtr->getPhase(); projectPhase == "Completed") {
+    auto projectPhase = projPtr->getPhase();
+    if (projectPhase == "Completed") {
         throw CompanyException("Cannot auto-assign to project with phase: " +
                                projectPhase);
     }
