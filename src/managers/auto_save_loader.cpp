@@ -267,6 +267,7 @@ void AutoSaveLoader::autoLoad(std::vector<Company*>& companies,
                             try {
                                 emp->setIsActive(shouldBeActive);
                             } catch (const EmployeeException&) {
+                                (void)emp;
                             }
                         }
                     }

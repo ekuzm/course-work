@@ -266,8 +266,7 @@ void MainWindow::addEmployee() {
 void MainWindow::editEmployee() {
     if (!checkCompanyAndHandleError("editing employees")) return;
 
-    int employeeId = getSelectedEmployeeId();
-    if (employeeId < 0) {
+    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select an employee to edit.");
         return;
@@ -287,7 +286,7 @@ void MainWindow::editEmployee() {
     auto* mainLayout = new QVBoxLayout(&dialog);
     auto* form = new QFormLayout();
     mainLayout->addLayout(form);
-    QString currentType = employee->getEmployeeType();
+    auto currentType = employee->getEmployeeType();
     QLineEdit* nameEdit = nullptr;
     QLineEdit* salaryEdit = nullptr;
     QLineEdit* deptEdit = nullptr;
@@ -321,10 +320,11 @@ void MainWindow::editEmployee() {
     }
 
     if (const auto* manager = dynamic_cast<const Manager*>(employee.get())) {
-        int currentProjectId = manager->getManagedProjectId();
-        int index = managerProject->findData(currentProjectId);
-        if (index >= 0) {
-            managerProject->setCurrentIndex(index);
+        if (int currentProjectId = manager->getManagedProjectId(); currentProjectId > 0) {
+            auto index = managerProject->findData(currentProjectId);
+            if (index >= 0) {
+                managerProject->setCurrentIndex(index);
+            }
         }
     }
 
@@ -400,8 +400,7 @@ void MainWindow::editEmployee() {
 void MainWindow::deleteEmployee() {
     if (!checkCompanyAndHandleError("deleting employees")) return;
 
-    int employeeId = getSelectedEmployeeId();
-    if (employeeId < 0) {
+    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select an employee to delete.");
         return;
@@ -437,8 +436,7 @@ void MainWindow::deleteEmployee() {
 void MainWindow::fireEmployee() {
     if (!checkCompanyAndHandleError("firing employees")) return;
 
-    int employeeId = getSelectedEmployeeId();
-    if (employeeId < 0) {
+    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select an employee to fire.");
         return;
@@ -480,17 +478,17 @@ void MainWindow::fireEmployee() {
                 Project* mutableProject =
                     const_cast<Project*>(currentCompany->getProject(projectId));
                 if (mutableProject) {
-                    double employeeHourlyRate = employee->getSalary() / 160.0;
+                    auto employeeHourlyRate = employee->getSalary() / 160.0;
                     double totalCostToRemove = 0.0;
 
                     for (auto& task : mutableProject->getTasks()) {
-                        int taskId = task.getId();
-                        int employeeTaskHours =
+                        auto taskId = task.getId();
+                        auto employeeTaskHours =
                             currentCompany->getEmployeeTaskHours(
                                 employeeId, projectId, taskId);
 
                         if (employeeTaskHours > 0) {
-                            int currentAllocated = task.getAllocatedHours();
+                            auto currentAllocated = task.getAllocatedHours();
                             int newAllocated =
                                 currentAllocated - employeeTaskHours;
                             if (newAllocated < 0) {
@@ -519,7 +517,7 @@ void MainWindow::fireEmployee() {
             }
         }
 
-        int currentHours = employee->getCurrentWeeklyHours();
+        auto currentHours = employee->getCurrentWeeklyHours();
         employee->removeWeeklyHours(currentHours);
 
         for (int projectId : assignedProjects) {
@@ -556,7 +554,7 @@ void MainWindow::fireEmployee() {
 void MainWindow::searchEmployee() {
     if (!checkCompanyAndHandleError("searching employees")) return;
 
-    QString searchTerm = employeeSearchEdit->text().trimmed().toLower();
+    auto searchTerm = employeeSearchEdit->text().trimmed().toLower();
 
     if (searchTerm.isEmpty()) {
         DisplayHelper::displayEmployees(employeeTable, currentCompany, this);
@@ -570,9 +568,9 @@ void MainWindow::searchEmployee() {
     for (const auto& employee : employees) {
         if (!employee) continue;
 
-        QString name = employee->getName().toLower();
-        QString department = employee->getDepartment().toLower();
-        QString position = employee->getPosition().toLower();
+        auto name = employee->getName().toLower();
+        auto department = employee->getDepartment().toLower();
+        auto position = employee->getPosition().toLower();
 
         if (name.contains(searchTerm) || department.contains(searchTerm) ||
             position.contains(searchTerm)) {
@@ -618,7 +616,7 @@ void MainWindow::addProject() {
 
     connect(okButton, &QPushButton::clicked, [&]() {
         try {
-            QString projectName = fields.nameEdit->text().trimmed();
+            auto projectName = fields.nameEdit->text().trimmed();
             if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
                                                     &dialog))
                 return;
@@ -629,8 +627,8 @@ void MainWindow::addProject() {
                     kMaxBudget, "Budget", &dialog))
                 return;
 
-            QString selectedPhase = fields.phaseCombo->currentText();
-            QString clientName = fields.clientNameEdit->text().trimmed();
+            auto selectedPhase = fields.phaseCombo->currentText();
+            auto clientName = fields.clientNameEdit->text().trimmed();
 
             if (!ValidationHelper::validateNonEmpty(clientName, "Client name",
                                                     &dialog))
@@ -701,8 +699,7 @@ void MainWindow::addProject() {
 void MainWindow::editProject() {
     if (!checkCompanyAndHandleError("editing projects")) return;
 
-    int projectId = getSelectedProjectId();
-    if (projectId < 0) {
+    if (int projectId = getSelectedProjectId(); projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project to edit.");
         return;
     }
@@ -728,7 +725,7 @@ void MainWindow::editProject() {
 
     connect(okButton, &QPushButton::clicked, [&]() {
         try {
-            QString projectName = fields.nameEdit->text().trimmed();
+            auto projectName = fields.nameEdit->text().trimmed();
             if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
                                                     &dialog))
                 return;
@@ -739,8 +736,8 @@ void MainWindow::editProject() {
                     kMaxBudget, "Budget", &dialog))
                 return;
 
-            QString selectedPhase = fields.phaseCombo->currentText();
-            QString clientName = fields.clientNameEdit->text().trimmed();
+            auto selectedPhase = fields.phaseCombo->currentText();
+            auto clientName = fields.clientNameEdit->text().trimmed();
 
             if (!ValidationHelper::validateNonEmpty(clientName, "Client name",
                                                     &dialog))
@@ -779,12 +776,12 @@ void MainWindow::editProject() {
 
             bool hasChanges = false;
 
-            QString newName = fields.nameEdit->text().trimmed();
-            QString newDescription = fields.descEdit->toPlainText().trimmed();
-            QString newPhase = fields.phaseCombo->currentText();
-            QDate newStartDate = fields.startDate->date();
-            QDate newEndDate = fields.endDate->date();
-            QString newClientName = fields.clientNameEdit->text().trimmed();
+            auto newName = fields.nameEdit->text().trimmed();
+            auto newDescription = fields.descEdit->toPlainText().trimmed();
+            auto newPhase = fields.phaseCombo->currentText();
+            auto newStartDate = fields.startDate->date();
+            auto newEndDate = fields.endDate->date();
+            auto newClientName = fields.clientNameEdit->text().trimmed();
 
             if (oldProject->getName() != newName ||
                 oldProject->getDescription() != newDescription ||
@@ -805,10 +802,10 @@ void MainWindow::editProject() {
                 return;
             }
 
-            QString currentPhase = oldProject->getPhase();
+            auto currentPhase = oldProject->getPhase();
             if (currentPhase != newPhase) {
-                int currentPhaseOrder = Project::getPhaseOrder(currentPhase);
-                int newPhaseOrder = Project::getPhaseOrder(newPhase);
+                auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
+                auto newPhaseOrder = Project::getPhaseOrder(newPhase);
 
                 if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
                     newPhaseOrder < currentPhaseOrder) {
@@ -835,8 +832,8 @@ void MainWindow::editProject() {
             for (const auto& emp : allEmployees) {
                 if (!emp) continue;
                 for (const auto& task : savedTasks) {
-                    int taskId = task.getId();
-                    int hours = currentCompany->getEmployeeTaskHours(
+                    auto taskId = task.getId();
+                    auto hours = currentCompany->getEmployeeTaskHours(
                         emp->getId(), projectId, taskId);
                     if (hours > 0) {
                         savedTaskAssignments.push_back(std::make_tuple(
@@ -910,8 +907,7 @@ void MainWindow::editProject() {
 void MainWindow::deleteProject() {
     if (!checkCompanyAndHandleError("deleting projects")) return;
 
-    int projectId = getSelectedProjectId();
-    if (projectId < 0) {
+    if (int projectId = getSelectedProjectId(); projectId < 0) {
         QMessageBox::warning(this, "Error",
                              "Please select a project to delete.");
         return;
@@ -1116,7 +1112,7 @@ void MainWindow::validateAndFixProjectAssignments(Company* company) {
     for (const auto& project : projects) {
         if (project.getAllocatedHours() > 0 &&
             !ProjectHelper::hasAssignedEmployees(company, project.getId())) {
-            int oldAllocatedHours = project.getAllocatedHours();
+            auto oldAllocatedHours = project.getAllocatedHours();
             ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(
                 company, project.getId());
             hasWarnings = true;
@@ -1185,8 +1181,7 @@ void MainWindow::deleteCompany() {
 void MainWindow::addProjectTask() {
     if (!checkCompanyAndHandleError("adding tasks")) return;
 
-    int projectId = getSelectedProjectId();
-    if (projectId < 0) {
+    if (int projectId = getSelectedProjectId(); projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project first.");
         return;
     }
@@ -1208,7 +1203,7 @@ void MainWindow::addProjectTask() {
 
     connect(okButton, &QPushButton::clicked, [&]() {
         try {
-            QString taskName = taskNameEdit->text().trimmed();
+            auto taskName = taskNameEdit->text().trimmed();
             if (!ValidationHelper::validateNonEmpty(taskName, "Task name",
                                                     &dialog))
                 return;
@@ -1256,8 +1251,7 @@ void MainWindow::addProjectTask() {
 void MainWindow::assignEmployeeToTask() {
     if (!checkCompanyAndHandleError("assigning employees to tasks")) return;
 
-    int projectId = getSelectedProjectId();
-    if (projectId < 0) {
+    if (int projectId = getSelectedProjectId(); projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project first.");
         return;
     }
@@ -1391,7 +1385,7 @@ void MainWindow::assignEmployeeToTask() {
                 return;
             }
 
-            int availableHours = employee->getAvailableHours();
+            auto availableHours = employee->getAvailableHours();
             int maxHours = std::min(kMaxHoursPerWeek, availableHours);
 
             if (maxHours <= 0) {
@@ -1489,7 +1483,7 @@ void MainWindow::autoAssignToProject(int projectId) {
 
     if (response == QMessageBox::Yes) {
         try {
-            int allocatedBefore = project->getAllocatedHours();
+            auto allocatedBefore = project->getAllocatedHours();
 
             currentCompany->autoAssignEmployeesToProject(projectId);
             refreshAllData();
@@ -1546,8 +1540,7 @@ void MainWindow::autoAssignToProject(int projectId) {
 
 void MainWindow::openProjectDetails() {
     if (!checkCompanyAndHandleError("viewing project details")) return;
-    int projectId = getSelectedProjectId();
-    if (projectId < 0) {
+    if (int projectId = getSelectedProjectId(); projectId < 0) {
         QMessageBox::information(this, "Project Details",
                                  "Please select a project to view details.");
         return;
@@ -1745,8 +1738,7 @@ void MainWindow::selectProjectRowById(int projectId) {
 void MainWindow::viewProjectAssignments() {
     if (!checkCompanyAndHandleError("viewing project assignments")) return;
 
-    int projectId = getSelectedProjectId();
-    if (projectId < 0) {
+    if (int projectId = getSelectedProjectId(); projectId < 0) {
         QMessageBox::warning(this, "Error", "Please select a project first.");
         return;
     }
@@ -1761,61 +1753,62 @@ void MainWindow::viewProjectAssignments() {
     auto allProjects = currentCompany->getAllProjects();
 
     auto* table = new QTableWidget();
-    QStringList headers = {"ID", "Project Name", "Client", "Phase", 
-                           "Budget ($)", "Estimated Hours", "Allocated Hours", 
-                           "Employee Costs ($)", "Status"};
+    auto headers = QStringList{"ID", "Project Name", "Client", "Phase", 
+                               "Budget ($)", "Estimated Hours", "Allocated Hours", 
+                               "Employee Costs ($)", "Status"};
     table->setColumnCount(headers.size());
     table->setHorizontalHeaderLabels(headers);
     table->setRowCount(allProjects.size());
 
-    for (size_t i = 0; i < allProjects.size(); ++i) {
-        const auto& proj = allProjects[i];
+    auto row = 0;
+    for (const auto& proj : allProjects) {
         
         
         auto* idItem = new QTableWidgetItem(QString::number(proj.getId()));
         idItem->setTextAlignment(Qt::AlignCenter);
-        table->setItem(i, 0, idItem);
+        table->setItem(row, 0, idItem);
         
         
         auto* nameItem = new QTableWidgetItem(proj.getName());
         nameItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        table->setItem(i, 1, nameItem);
+        table->setItem(row, 1, nameItem);
         
         
         auto* clientItem = new QTableWidgetItem(proj.getClientName());
         clientItem->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-        table->setItem(i, 2, clientItem);
+        table->setItem(row, 2, clientItem);
         
         
         auto* phaseItem = new QTableWidgetItem(proj.getPhase());
         phaseItem->setTextAlignment(Qt::AlignCenter);
-        table->setItem(i, 3, phaseItem);
+        table->setItem(row, 3, phaseItem);
         
         
         auto* budgetItem = new QTableWidgetItem(QString::number(proj.getBudget(), 'f', 2));
         budgetItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        table->setItem(i, 4, budgetItem);
+        table->setItem(row, 4, budgetItem);
         
         
         auto* estimatedItem = new QTableWidgetItem(QString::number(proj.getEstimatedHours()));
         estimatedItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        table->setItem(i, 5, estimatedItem);
+        table->setItem(row, 5, estimatedItem);
         
         
         auto* allocatedItem = new QTableWidgetItem(QString::number(proj.getAllocatedHours()));
         allocatedItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        table->setItem(i, 6, allocatedItem);
+        table->setItem(row, 6, allocatedItem);
         
         
         auto* costsItem = new QTableWidgetItem(QString::number(proj.getEmployeeCosts(), 'f', 2));
         costsItem->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-        table->setItem(i, 7, costsItem);
+        table->setItem(row, 7, costsItem);
         
         
-        QString status = proj.isActive() ? "Active" : "Inactive";
+        auto status = proj.isActive() ? "Active" : "Inactive";
         auto* statusItem = new QTableWidgetItem(status);
         statusItem->setTextAlignment(Qt::AlignCenter);
-        table->setItem(i, 8, statusItem);
+        table->setItem(row, 8, statusItem);
+        row++;
     }
 
     
@@ -1853,8 +1846,7 @@ void MainWindow::viewProjectAssignments() {
 void MainWindow::viewEmployeeHistory() {
     if (!checkCompanyAndHandleError("viewing employee history")) return;
 
-    int employeeId = getSelectedEmployeeId();
-    if (employeeId < 0) {
+    if (int employeeId = getSelectedEmployeeId(); employeeId < 0) {
         QMessageBox::warning(this, "Error", "Please select an employee first.");
         return;
     }
@@ -1886,27 +1878,28 @@ void MainWindow::viewEmployeeHistory() {
     }
 
     auto* table = new QTableWidget();
-    QStringList headers = {"ID", "Project Name", "Client", "Phase", 
-                           "Budget ($)", "Estimated Hours", "Allocated Hours", 
-                           "Employee Costs ($)", "Status"};
+    auto headers = QStringList{"ID", "Project Name", "Client", "Phase", 
+                               "Budget ($)", "Estimated Hours", "Allocated Hours", 
+                               "Employee Costs ($)", "Status"};
     table->setColumnCount(headers.size());
     table->setHorizontalHeaderLabels(headers);
     table->setRowCount(employeeProjects.size());
 
-    for (size_t i = 0; i < employeeProjects.size(); ++i) {
-        const auto* proj = employeeProjects[i];
+    auto row = 0;
+    for (const auto* proj : employeeProjects) {
         bool isCurrentlyAssigned = employee->isAssignedToProject(proj->getId());
-        QString status = isCurrentlyAssigned ? "Active" : "Fired";
+        auto status = isCurrentlyAssigned ? "Active" : "Fired";
 
-        table->setItem(i, 0, new QTableWidgetItem(QString::number(proj->getId())));
-        table->setItem(i, 1, new QTableWidgetItem(proj->getName()));
-        table->setItem(i, 2, new QTableWidgetItem(proj->getClientName()));
-        table->setItem(i, 3, new QTableWidgetItem(proj->getPhase()));
-        table->setItem(i, 4, new QTableWidgetItem(QString::number(proj->getBudget(), 'f', 2)));
-        table->setItem(i, 5, new QTableWidgetItem(QString::number(proj->getEstimatedHours())));
-        table->setItem(i, 6, new QTableWidgetItem(QString::number(proj->getAllocatedHours())));
-        table->setItem(i, 7, new QTableWidgetItem(QString::number(proj->getEmployeeCosts(), 'f', 2)));
-        table->setItem(i, 8, new QTableWidgetItem(status));
+        table->setItem(row, 0, new QTableWidgetItem(QString::number(proj->getId())));
+        table->setItem(row, 1, new QTableWidgetItem(proj->getName()));
+        table->setItem(row, 2, new QTableWidgetItem(proj->getClientName()));
+        table->setItem(row, 3, new QTableWidgetItem(proj->getPhase()));
+        table->setItem(row, 4, new QTableWidgetItem(QString::number(proj->getBudget(), 'f', 2)));
+        table->setItem(row, 5, new QTableWidgetItem(QString::number(proj->getEstimatedHours())));
+        table->setItem(row, 6, new QTableWidgetItem(QString::number(proj->getAllocatedHours())));
+        table->setItem(row, 7, new QTableWidgetItem(QString::number(proj->getEmployeeCosts(), 'f', 2)));
+        table->setItem(row, 8, new QTableWidgetItem(status));
+        row++;
     }
 
     table->resizeColumnsToContents();

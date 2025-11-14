@@ -163,8 +163,7 @@ void Company::removeEmployee(int employeeId) {
             if (projPtr) {
                 auto projectTasks = getProjectTasks(projectId);
                 for (const auto& task : projectTasks) {
-                    std::tuple<int, int, int> key =
-                        std::make_tuple(employeeId, projectId, task.getId());
+                    auto key = std::make_tuple(employeeId, projectId, task.getId());
                     taskAssignments.erase(key);
                 }
                 projPtr->recomputeTotalsFromTasks();
@@ -174,7 +173,9 @@ void Company::removeEmployee(int employeeId) {
 
     auto it = taskAssignments.begin();
     while (it != taskAssignments.end()) {
-        if (std::get<0>(it->first) == employeeId) {
+        const auto& [key, hours] = *it;
+        const auto [empId, projectId, taskId] = key;
+        if (empId == employeeId) {
             it = taskAssignments.erase(it);
         } else {
             ++it;
@@ -203,7 +204,9 @@ void Company::addProject(const Project& project) {
 void Company::removeProject(int projectId) {
     auto it = taskAssignments.begin();
     while (it != taskAssignments.end()) {
-        if (std::get<1>(it->first) == projectId) {
+        const auto& [key, hours] = *it;
+        const auto [empId, projId, taskId] = key;
+        if (projId == projectId) {
             it = taskAssignments.erase(it);
         } else {
             ++it;
@@ -230,10 +233,10 @@ Project* Company::getProject(int projectId) {
 
 std::vector<Project> Company::getAllProjects() const {
     std::vector<Project> projectList;
-    std::vector<std::shared_ptr<Project>> allProjects = projects.getAll();
-    for (size_t i = 0; i < allProjects.size(); ++i) {
-        if (allProjects[i]) {
-            projectList.push_back(*allProjects[i]);
+    auto allProjects = projects.getAll();
+    for (const auto& proj : allProjects) {
+        if (proj) {
+            projectList.push_back(*proj);
         }
     }
     return projectList;
@@ -248,18 +251,18 @@ int Company::getProjectCount() const {
 }
 
 double Company::getTotalSalaries() const {
-    std::vector<std::shared_ptr<Employee>> allEmployees = employees.getAll();
+    auto allEmployees = employees.getAll();
     size_t activeCount = 0;
-    for (size_t i = 0; i < allEmployees.size(); ++i) {
-        if (isEmployeeActive(allEmployees[i])) {
+    for (const auto& emp : allEmployees) {
+        if (isEmployeeActive(emp)) {
             activeCount++;
         }
     }
 
     double total = 0.0;
-    for (size_t i = 0; i < allEmployees.size(); ++i) {
-        if (allEmployees[i]) {
-            total += allEmployees[i]->getSalary();
+    for (const auto& emp : allEmployees) {
+        if (emp) {
+            total += emp->getSalary();
         }
     }
     return total;
@@ -267,10 +270,10 @@ double Company::getTotalSalaries() const {
 
 double Company::getTotalBudget() const {
     double total = 0.0;
-    std::vector<std::shared_ptr<Project>> allProjects = projects.getAll();
-    for (size_t i = 0; i < allProjects.size(); ++i) {
-        if (allProjects[i]) {
-            total += allProjects[i]->getBudget();
+    auto allProjects = projects.getAll();
+    for (const auto& proj : allProjects) {
+        if (proj) {
+            total += proj->getBudget();
         }
     }
     return total;
@@ -330,19 +333,15 @@ static bool roleMatchesSDLCStage(const QString& employeePosition,
 
 static bool taskTypeMatchesEmployeeType(const QString& taskType,
                                         const QString& employeeType) {
-    if (taskType == "Management" && employeeType == "Manager") {
-        return true;
-    }
-    if (taskType == "Development" && employeeType == "Developer") {
-        return true;
-    }
-    if (taskType == "Design" && employeeType == "Designer") {
-        return true;
-    }
-    if (taskType == "QA" && employeeType == "QA") {
-        return true;
-    }
-    return false;
+    static const std::map<QString, QString> typeMapping = {
+        {"Management", "Manager"},
+        {"Development", "Developer"},
+        {"Design", "Designer"},
+        {"QA", "QA"}
+    };
+    
+    const auto it = typeMapping.find(taskType);
+    return it != typeMapping.end() && it->second == employeeType;
 }
 
 void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
@@ -363,7 +362,7 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
     std::shared_ptr<Project> projPtr = projects.find(projectId);
     if (!projPtr) throw CompanyException("Project not found");
 
-    QString projectPhase = projPtr->getPhase();
+    auto projectPhase = projPtr->getPhase();
     if (projectPhase == "Completed") {
         throw CompanyException("Cannot assign to project with phase: " +
                                projectPhase);
@@ -371,8 +370,7 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
 
     std::vector<Task>& tasks = projPtr->getTasks();
     bool found = false;
-    for (size_t i = 0; i < tasks.size(); ++i) {
-        Task& task = tasks[i];
+    for (auto& task : tasks) {
         if (task.getId() == taskId) {
             if (hours > task.getEstimatedHours()) {
                 throw CompanyException(QString("Cannot assign %1 hours: task "
@@ -381,7 +379,7 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
                                            .arg(task.getEstimatedHours()));
             }
 
-            QString employeePosition = employee->getPosition();
+            auto employeePosition = employee->getPosition();
             bool roleMatches =
                 roleMatchesSDLCStage(employeePosition, projectPhase);
 
@@ -392,22 +390,20 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
                                            .arg(projectPhase));
             }
 
-            QString taskType = task.getType();
-            QString employeeType = employee->getEmployeeType();
+            auto taskType = task.getType();
+            auto employeeType = employee->getEmployeeType();
             bool taskTypeMatches =
                 taskTypeMatchesEmployeeType(taskType, employeeType);
 
             if (!taskTypeMatches) {
-                QString requiredType;
-                if (taskType == "Management") {
-                    requiredType = "Manager";
-                } else if (taskType == "Development") {
-                    requiredType = "Developer";
-                } else if (taskType == "Design") {
-                    requiredType = "Designer";
-                } else {
-                    requiredType = "QA";
-                }
+                static const std::map<QString, QString> typeMapping = {
+                    {"Management", "Manager"},
+                    {"Development", "Developer"},
+                    {"Design", "Designer"},
+                    {"QA", "QA"}
+                };
+                const auto it = typeMapping.find(taskType);
+                const QString requiredType = (it != typeMapping.end()) ? it->second : "Unknown";
                 throw CompanyException(
                     QString(
                         "Employee type '%1' does not match task type '%2'.\n"
@@ -418,15 +414,9 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
             }
 
             
-            std::tuple<int, int, int> key =
-                std::make_tuple(employeeId, projectId, taskId);
-            int existingHours = 0;
-            auto it = taskAssignments.find(key);
-            if (it != taskAssignments.end()) {
-                existingHours = it->second;
-            }
-
-            int needed = task.getEstimatedHours() - task.getAllocatedHours();
+            auto key = std::make_tuple(employeeId, projectId, taskId);
+            
+            auto needed = task.getEstimatedHours() - task.getAllocatedHours();
             if (needed <= 0)
                 throw CompanyException("Task already fully allocated");
 
@@ -445,9 +435,9 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
                 needed < newHoursToAssign ? needed : newHoursToAssign;
 
             if (!employee->isAvailable(toAssign)) {
-                int availableHours = employee->getAvailableHours();
-                int currentHours = employee->getCurrentWeeklyHours();
-                int capacity = employee->getWeeklyHoursCapacity();
+                auto availableHours = employee->getAvailableHours();
+                auto currentHours = employee->getCurrentWeeklyHours();
+                auto capacity = employee->getWeeklyHoursCapacity();
                 throw CompanyException(
                     QString("Not enough available hours to assign %1 hours.\n\n"
                             "Employee: %2\n"
@@ -465,12 +455,12 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
                         .arg(toAssign));
             }
 
-            double employeeHourlyRate =
+            auto employeeHourlyRate =
                 calculateHourlyRate(employee->getSalary());
-            double assignmentCost =
+            auto assignmentCost =
                 calculateEmployeeCost(employee->getSalary(), toAssign);
-            double currentEmployeeCosts = projPtr->getEmployeeCosts();
-            double remainingBudget =
+            auto currentEmployeeCosts = projPtr->getEmployeeCosts();
+            auto remainingBudget =
                 projPtr->getBudget() - currentEmployeeCosts;
 
             if (employee->getSalary() > projPtr->getBudget()) {
@@ -487,9 +477,9 @@ void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
 
             double projectEstimatedHours = projPtr->getEstimatedHours();
             if (projectEstimatedHours > 0) {
-                double averageBudgetPerHour =
+                    auto averageBudgetPerHour =
                     projPtr->getBudget() / projectEstimatedHours;
-                double maxAffordableHourlyRate = averageBudgetPerHour * kMaxAffordableHourlyRateMultiplier;
+                auto maxAffordableHourlyRate = averageBudgetPerHour * kMaxAffordableHourlyRateMultiplier;
 
                 if (employeeHourlyRate > maxAffordableHourlyRate) {
                     throw CompanyException(
@@ -552,12 +542,10 @@ void Company::restoreTaskAssignment(int employeeId, int projectId, int taskId,
     if (!projPtr) return;  
 
     std::vector<Task>& tasks = projPtr->getTasks();
-    for (size_t i = 0; i < tasks.size(); ++i) {
-        Task& task = tasks[i];
+    for (auto& task : tasks) {
         if (task.getId() == taskId) {
             
-            std::tuple<int, int, int> key =
-                std::make_tuple(employeeId, projectId, taskId);
+                auto key = std::make_tuple(employeeId, projectId, taskId);
             int existingHours = 0;
             auto it = taskAssignments.find(key);
             if (it != taskAssignments.end()) {
@@ -565,7 +553,7 @@ void Company::restoreTaskAssignment(int employeeId, int projectId, int taskId,
             }
 
             
-            int newHours = hours - existingHours;
+            auto newHours = hours - existingHours;
 
             
             
@@ -603,7 +591,9 @@ void Company::removeEmployeeTaskAssignments(int employeeId) {
     
     auto it = taskAssignments.begin();
     while (it != taskAssignments.end()) {
-        if (std::get<0>(it->first) == employeeId) {
+        const auto& [key, hours] = *it;
+        const auto [empId, projectId, taskId] = key;
+        if (empId == employeeId) {
             it = taskAssignments.erase(it);
         } else {
             ++it;
@@ -616,9 +606,8 @@ void Company::recalculateEmployeeHours() {
     auto employees = getAllEmployees();
     for (const auto& emp : employees) {
         if (emp) {
-            
-            int currentHours = emp->getCurrentWeeklyHours();
-            if (currentHours > 0) {
+            // Remove existing hours
+            if (int currentHours = emp->getCurrentWeeklyHours(); currentHours > 0) {
                 try {
                     emp->removeWeeklyHours(currentHours);
                 } catch (const EmployeeException& e) {
@@ -629,11 +618,11 @@ void Company::recalculateEmployeeHours() {
     }
 
     
-    for (const auto& assignment : taskAssignments) {
-        auto [employeeId, projectId, taskId] = assignment.first;
-        int hours = assignment.second;
+    for (const auto& [key, hours] : taskAssignments) {
+        const auto [employeeId, projectId, taskId] = key;
 
         std::shared_ptr<Employee> employee = getEmployee(employeeId);
+        // Add hours for active employees
         if (employee && employee->getIsActive() && hours > 0) {
             try {
                 employee->addWeeklyHours(hours);
@@ -649,7 +638,7 @@ void Company::fixTaskAssignmentsToCapacity() {
     
     std::map<int, std::vector<std::tuple<int, int, int, int*>>> employeeAssignments;
     
-    for (const auto& [key, hours] : taskAssignments) {
+    for (auto& [key, hours] : taskAssignments) {
         const auto [employeeId, projectId, taskId] = key;
         
         employeeAssignments[employeeId].emplace_back(
@@ -665,8 +654,7 @@ void Company::fixTaskAssignmentsToCapacity() {
         
         
         int totalHours = 0;
-        for (const auto& assignment : assignments) {
-            const auto [projectId, taskId, oldHours, hoursPtr] = assignment;
+        for (const auto& [projectId, taskId, oldHours, hoursPtr] : assignments) {
             totalHours += oldHours;
         }
         
@@ -675,7 +663,7 @@ void Company::fixTaskAssignmentsToCapacity() {
             const auto scaleFactor = static_cast<double>(capacity) / totalHours;
             
             for (auto& assignment : assignments) {
-                const auto& [projectId, taskId, oldHours, hoursPtr] = assignment;
+                auto& [projectId, taskId, oldHours, hoursPtr] = assignment;
                 auto newHours = static_cast<int>(std::round(oldHours * scaleFactor));
                 
                 if (newHours < 0) newHours = 0;
@@ -697,11 +685,11 @@ void Company::recalculateTaskAllocatedHours() {
     fixTaskAssignmentsToCapacity();
     
     
-    auto allProjects = getAllProjects();
-    for (const auto& project : allProjects) {
-        Project* mutableProject = getProject(project.getId());
+        auto allProjects = getAllProjects();
+    for (const auto& proj : allProjects) {
+        auto* mutableProject = getProject(proj.getId());
         if (mutableProject) {
-            
+            // Clear existing costs
             double currentCosts = mutableProject->getEmployeeCosts();
             if (currentCosts > 0) {
                 mutableProject->removeEmployeeCost(currentCosts);
@@ -720,7 +708,7 @@ void Company::recalculateTaskAllocatedHours() {
         double projectTotalCosts = 0.0;
         
         for (auto& task : tasks) {
-            int taskId = task.getId();
+            auto taskId = task.getId();
             
             
             auto totalAllocated = 0;
@@ -732,11 +720,11 @@ void Company::recalculateTaskAllocatedHours() {
                     auto key = std::make_tuple(employee->getId(), projectId, taskId);
                     auto assignmentIt = taskAssignments.find(key);
                     if (assignmentIt != taskAssignments.end()) {
-                        int hours = assignmentIt->second;
+                        auto hours = assignmentIt->second;
                         totalAllocated += hours;
                         
                         
-                        double cost = calculateEmployeeCost(employee->getSalary(), hours);
+                        auto cost = calculateEmployeeCost(employee->getSalary(), hours);
                         projectTotalCosts += cost;
                     }
                 }
@@ -825,8 +813,7 @@ void Company::autoAssignEmployeesToProject(int projectId) {
     std::shared_ptr<Project> projPtr = projects.find(projectId);
     if (!projPtr) throw CompanyException("Project not found");
 
-    QString projectPhase = projPtr->getPhase();
-    if (projectPhase == "Completed") {
+    if (QString projectPhase = projPtr->getPhase(); projectPhase == "Completed") {
         throw CompanyException("Cannot auto-assign to project with phase: " +
                                projectPhase);
     }
@@ -844,18 +831,18 @@ void Company::autoAssignEmployeesToProject(int projectId) {
                   return compareTaskPriority(tasks[a], tasks[b]) < 0;
               });
 
-    std::vector<std::shared_ptr<Employee>> allEmployees = getAllEmployees();
+    auto allEmployees = getAllEmployees();
     std::vector<std::shared_ptr<Employee>> employeesList;
-    for (size_t i = 0; i < allEmployees.size(); ++i) {
-        if (allEmployees[i] && allEmployees[i]->getIsActive()) {
-            employeesList.push_back(allEmployees[i]);
+    for (const auto& emp : allEmployees) {
+        if (emp && emp->getIsActive()) {
+            employeesList.push_back(emp);
         }
     }
 
     std::map<int, int> employeeUsage;
 
-    double currentEmployeeCosts = projPtr->getEmployeeCosts();
-    double remainingBudget = projPtr->getBudget() - currentEmployeeCosts;
+    auto currentEmployeeCosts = projPtr->getEmployeeCosts();
+    auto remainingBudget = projPtr->getBudget() - currentEmployeeCosts;
 
     for (size_t idx = 0; idx < taskIndices.size(); ++idx) {
         size_t taskIndex = taskIndices[idx];
@@ -873,10 +860,9 @@ void Company::autoAssignEmployeesToProject(int projectId) {
         }
         double maxAffordableHourlyRate = averageBudgetPerHour * 0.7;
 
-        QString taskType = task.getType();
+        auto taskType = task.getType();
 
-        for (size_t i = 0; i < employeesList.size(); ++i) {
-            std::shared_ptr<Employee> employee = employeesList[i];
+        for (const auto& employee : employeesList) {
             if (!employee) continue;
             if (!employeeRoleMatchesSDLC(employee, projectPhase)) continue;
 
@@ -899,8 +885,8 @@ void Company::autoAssignEmployeesToProject(int projectId) {
             int available = employee->getAvailableHours();
             int employeeId = employee->getId();
             int alreadyUsed = 0;
-            if (employeeUsage.find(employeeId) != employeeUsage.end()) {
-                alreadyUsed = employeeUsage[employeeId];
+            if (auto it = employeeUsage.find(employeeId); it != employeeUsage.end()) {
+                alreadyUsed = it->second;
             }
             int trulyAvailable = available - alreadyUsed;
             if (trulyAvailable > 0) {
@@ -915,15 +901,13 @@ void Company::autoAssignEmployeesToProject(int projectId) {
                              0;
                   });
 
-        for (size_t i = 0; i < pool.size(); ++i) {
+        for (const auto& poolEmployee : pool) {
             if (remaining <= 0) break;
-
-            std::shared_ptr<Employee> poolEmployee = pool[i];
             int employeeId = poolEmployee->getId();
 
             int trulyAvailable = poolEmployee->getAvailableHours();
-            if (employeeUsage.find(employeeId) != employeeUsage.end()) {
-                trulyAvailable -= employeeUsage[employeeId];
+            if (auto it = employeeUsage.find(employeeId); it != employeeUsage.end()) {
+                trulyAvailable -= it->second;
             }
             if (trulyAvailable <= 0) continue;
 
@@ -954,8 +938,7 @@ void Company::autoAssignEmployeesToProject(int projectId) {
             task.addAllocatedHours(toAssign);
             employeeUsage[employeeId] += toAssign;
 
-            std::tuple<int, int, int> key =
-                std::make_tuple(employeeId, projectId, task.getId());
+            auto key = std::make_tuple(employeeId, projectId, task.getId());
             taskAssignments[key] += toAssign;
             currentEmployeeCosts += assignmentCost;
             remainingBudget -= assignmentCost;
@@ -965,10 +948,7 @@ void Company::autoAssignEmployeesToProject(int projectId) {
 
     double totalNewCosts = 0.0;
     int totalAssignedHours = 0;
-    for (std::map<int, int>::const_iterator it = employeeUsage.begin();
-         it != employeeUsage.end(); ++it) {
-        int employeeId = it->first;
-        int hours = it->second;
+    for (const auto& [employeeId, hours] : employeeUsage) {
         totalAssignedHours += hours;
         std::shared_ptr<Employee> emp = getEmployee(employeeId);
         if (emp) {
@@ -1002,12 +982,7 @@ int Company::getEmployeeProjectHours(int employeeId, int projectId) const {
 
 int Company::getEmployeeTaskHours(int employeeId, int projectId,
                                   int taskId) const {
-    const std::tuple<int, int, int> key =
-        std::make_tuple(employeeId, projectId, taskId);
-    if (const auto it = taskAssignments.find(key); it != taskAssignments.end()) {
-        return it->second;
-    }
-    return 0;
+    return getTaskAssignment(employeeId, projectId, taskId);
 }
 
 void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
@@ -1026,10 +1001,9 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
     std::vector<std::tuple<int, int, int, int>> assignmentsData;
     int totalScaledHours = 0;
     
-    for (const auto& assignment : taskAssignments) {
-        const auto [empId, projectId, taskId] = assignment.first;
+    for (const auto& [key, oldHours] : taskAssignments) {
+        const auto [empId, projectId, taskId] = key;
         if (empId == employeeId) {
-            int oldHours = assignment.second;
             auto scaledHours = static_cast<int>(std::round(oldHours * scaleFactor));
             
             if (scaledHours < 0) {
@@ -1042,7 +1016,10 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
     }
 
     
-    if (!assignmentsData.empty() && totalScaledHours > capacity) {
+    if (assignmentsData.empty()) {
+        return;
+    }
+    if (totalScaledHours > capacity) {
         const auto adjustFactor = static_cast<double>(capacity) / totalScaledHours;
         totalScaledHours = 0;
         
@@ -1062,14 +1039,16 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
             int excess = totalScaledHours - capacity;
             
             std::ranges::sort(assignmentsData, [](const auto& a, const auto& b) {
-                return std::get<3>(a) > std::get<3>(b);
+                const auto& [projectIdA, taskIdA, oldHoursA, adjustedHoursA] = a;
+                const auto& [projectIdB, taskIdB, oldHoursB, adjustedHoursB] = b;
+                return adjustedHoursA > adjustedHoursB;
             });
             
             for (auto& assignment : assignmentsData) {
                 if (excess <= 0) break;
                 auto& [projectId, taskId, oldHours, adjustedHours] = assignment;
                 if (adjustedHours > 0) {
-                    int reduction = std::min(excess, adjustedHours);
+                    auto reduction = std::min(excess, adjustedHours);
                     adjustedHours = adjustedHours - reduction;
                     totalScaledHours -= reduction;
                     excess -= reduction;
@@ -1080,9 +1059,8 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
 
     
     for (const auto& assignment : assignmentsData) {
-        auto [projectId, taskId, oldHours, newHours] = assignment;
-
-        auto key = std::make_tuple(employeeId, projectId, taskId);
+        const auto [projectId, taskId, oldHours, newHours] = assignment;
+        const auto key = std::make_tuple(employeeId, projectId, taskId);
         
         
         if (newHours > 0) {
@@ -1102,20 +1080,20 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
     
     if (employee->getIsActive()) {
         
-        int currentCapacity = employee->getWeeklyHoursCapacity();
+        const int currentCapacity = employee->getWeeklyHoursCapacity();
         
         
         int totalHours = 0;
-        for (const auto& assignment : taskAssignments) {
-            const auto [empId, projectId, taskId] = assignment.first;
+        for (const auto& [key, hours] : taskAssignments) {
+            const auto [empId, projectId, taskId] = key;
             if (empId == employeeId) {
-                totalHours += assignment.second;
+                totalHours += hours;
             }
         }
         
         
-        if (totalHours > currentCapacity) {
-            totalHours = currentCapacity;
+        if (const int capacity = employee->getWeeklyHoursCapacity(); totalHours > capacity) {
+            totalHours = capacity;
         }
         
         
@@ -1136,10 +1114,9 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
                 qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
             }
             
-            try {
-                    if (totalHours > currentCapacity) {
-                        employee->addWeeklyHours(currentCapacity);
-                    }
+            if (totalHours > currentCapacity) {
+                try {
+                    employee->addWeeklyHours(currentCapacity);
                 } catch (const EmployeeException& e) {
                     qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
                 }
@@ -1149,15 +1126,15 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
 }
 
 int Company::getTaskAssignment(int employeeId, int projectId, int taskId) const {
-    std::tuple<int, int, int> key = std::make_tuple(employeeId, projectId, taskId);
-    if (auto it = taskAssignments.find(key); it != taskAssignments.end()) {
+    const auto key = std::make_tuple(employeeId, projectId, taskId);
+    if (const auto it = taskAssignments.find(key); it != taskAssignments.end()) {
         return it->second;
     }
     return 0;
 }
 
 void Company::setTaskAssignment(int employeeId, int projectId, int taskId, int hours) {
-    std::tuple<int, int, int> key = std::make_tuple(employeeId, projectId, taskId);
+    const auto key = std::make_tuple(employeeId, projectId, taskId);
     if (hours > 0) {
         taskAssignments[key] = hours;
     } else {
@@ -1166,12 +1143,12 @@ void Company::setTaskAssignment(int employeeId, int projectId, int taskId, int h
 }
 
 void Company::addTaskAssignment(int employeeId, int projectId, int taskId, int hours) {
-    const std::tuple<int, int, int> key = std::make_tuple(employeeId, projectId, taskId);
+    const auto key = std::make_tuple(employeeId, projectId, taskId);
     taskAssignments[key] += hours;
 }
 
 void Company::removeTaskAssignment(int employeeId, int projectId, int taskId) {
-    std::tuple<int, int, int> key = std::make_tuple(employeeId, projectId, taskId);
+    const auto key = std::make_tuple(employeeId, projectId, taskId);
     taskAssignments.erase(key);
 }
 

@@ -25,7 +25,7 @@ bool EmployeeDialogHandler::validateEmployeeFields(const QDialog* dialog,
         return false;
 
     name = nameEdit->text().trimmed();
-    QString salaryText = salaryEdit->text().trimmed();
+    auto salaryText = salaryEdit->text().trimmed();
     department = deptEdit->text().trimmed();
 
     if (!ValidationHelper::validateNonEmpty(name, "Employee name", dialog))
@@ -70,7 +70,7 @@ bool EmployeeDialogHandler::processAddEmployee(
         return false;
     }
 
-    QString employeeType = typeCombo->currentText();
+    auto employeeType = typeCombo->currentText();
     if (!EmployeeValidator::validateEmployeeTypeFields(
             employeeType, dialog, devLanguage, devExperience, designerTool,
             designerProjects, qaTestType, qaBugs)) {
@@ -165,7 +165,7 @@ bool EmployeeDialogHandler::processEditEmployee(
     } else if (currentType == "Developer") {
         if (const auto* developer =
                 dynamic_cast<const Developer*>(oldEmployee.get())) {
-            QString newLanguage = devLanguage->text().trimmed();
+            auto newLanguage = devLanguage->text().trimmed();
             double newExperience = devExperience->text().toDouble();
             if (developer->getProgrammingLanguage() != newLanguage ||
                 qAbs(developer->getYearsOfExperience() - newExperience) >
@@ -176,7 +176,7 @@ bool EmployeeDialogHandler::processEditEmployee(
     } else if (currentType == "Designer") {
         if (const auto* designer =
                 dynamic_cast<const Designer*>(oldEmployee.get())) {
-            QString newTool = designerTool->text().trimmed();
+            auto newTool = designerTool->text().trimmed();
             int newProjects = designerProjects->text().toInt();
             if (designer->getDesignTool() != newTool ||
                 designer->getNumberOfProjects() != newProjects) {
@@ -185,7 +185,7 @@ bool EmployeeDialogHandler::processEditEmployee(
         }
     } else if (currentType == "QA") {
         if (const auto* qa = dynamic_cast<const QA*>(oldEmployee.get())) {
-            QString newTestType = qaTestType->text().trimmed();
+            auto newTestType = qaTestType->text().trimmed();
             int newBugs = qaBugs->text().toInt();
             if (qa->getTestingType() != newTestType ||
                 qa->getBugsFound() != newBugs) {

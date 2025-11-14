@@ -456,7 +456,8 @@ std::shared_ptr<Employee> FileManager::loadEmployeeFromStream(
         employeeStatusesFromFile[baseData.id] = baseData.isActive;
         try {
             employee->setIsActive(baseData.isActive);
-        } catch (const EmployeeException&) {
+        } catch (const EmployeeException& e) {
+            (void)e;
         }
     }
     
@@ -572,7 +573,7 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
             for (const auto& emp : employees) {
                 if (!emp) continue;
                 
-                int taskHours = company.getEmployeeTaskHours(
+                auto taskHours = company.getEmployeeTaskHours(
                     emp->getId(), project.getId(), task.getId());
                 
                 if (taskHours > 0) {
@@ -617,9 +618,11 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
         
         if (!assignments.empty()) {
             fileStream << "ASSIGNMENTS:\n";
-            for (size_t j = 0; j < assignments.size(); ++j) {
-                fileStream << "  [" << (j + 1) << "] EMPLOYEE_ID:" << assignments[j].first 
-                           << " HOURS:" << assignments[j].second << "\n";
+            int j = 1;
+            for (const auto& [empId, hours] : assignments) {
+                fileStream << "  [" << j << "] EMPLOYEE_ID:" << empId 
+                           << " HOURS:" << hours << "\n";
+                j++;
             }
         }
         
@@ -752,11 +755,15 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                 if (lineContent.find("PROJECT_ID:") == 0) {
                     try {
                         projectId = std::stoi(lineContent.substr(11));
-                    } catch (const std::exception&) {}
+                    } catch (const std::exception& e) {
+                        (void)e;
+                    }
                 } else if (lineContent.find("TASK_ID:") == 0) {
                     try {
                         taskId = std::stoi(lineContent.substr(8));
-                    } catch (const std::exception&) {}
+                    } catch (const std::exception& e) {
+                        (void)e;
+                    }
                 } else if (lineContent.find("NAME:") == 0) {
                     taskName = QString::fromStdString(lineContent.substr(5));
                 } else if (lineContent.find("TYPE:") == 0) {
@@ -764,15 +771,21 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                 } else if (lineContent.find("ESTIMATED_HOURS:") == 0) {
                     try {
                         estimatedHours = std::stoi(lineContent.substr(16));
-                    } catch (const std::exception&) {}
+                    } catch (const std::exception& e) {
+                        (void)e;
+                    }
                 } else if (lineContent.find("ALLOCATED_HOURS:") == 0) {
                     try {
                         allocatedHours = std::stoi(lineContent.substr(16));
-                    } catch (const std::exception&) {}
+                    } catch (const std::exception& e) {
+                        (void)e;
+                    }
                 } else if (lineContent.find("PRIORITY:") == 0) {
                     try {
                         priority = std::stoi(lineContent.substr(9));
-                    } catch (const std::exception&) {}
+                    } catch (const std::exception& e) {
+                        (void)e;
+                    }
                 } else if (lineContent.find("PHASE:") == 0) {
                     phase = QString::fromStdString(lineContent.substr(6));
                 } else if (lineContent.find("ASSIGNMENTS_COUNT:") == 0) {
@@ -784,6 +797,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                         assignmentsCount = 0;
                     }
                 } else if (readingAssignments && lineContent.find("ASSIGNMENTS:") == 0) {
+                    (void)0;
                 } else if (readingAssignments && lineContent.find("  [") == 0) {
                     size_t empPos = lineContent.find("EMPLOYEE_ID:");
                     size_t hoursPos = lineContent.find("HOURS:");
@@ -820,11 +834,12 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                     company.addTaskToProject(projectId, task);
                     
                     for (const auto& assignment : assignments) {
+                        const auto& [empId, hours] = assignment;
                         try {
-                            company.assignEmployeeToTask(assignment.first, projectId, taskId, assignment.second);
+                            company.assignEmployeeToTask(empId, projectId, taskId, hours);
                         } catch (const std::exception&) {
                             try {
-                                company.restoreTaskAssignment(assignment.first, projectId, taskId, assignment.second);
+                                company.restoreTaskAssignment(empId, projectId, taskId, hours);
                             } catch (const std::exception&) {
                                 continue;
                             }
@@ -854,7 +869,7 @@ void FileManager::saveTaskAssignments(const Company& company,
         if (!emp) continue;
 
         for (const auto& project : projects) {
-            int projectId = project.getId();
+            auto projectId = project.getId();
             auto tasks = company.getProjectTasks(projectId);
             
             for (const auto& task : tasks) {

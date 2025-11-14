@@ -17,9 +17,8 @@ void EmployeeService::recalculateEmployeeHours() const {
     auto employees = company->getAllEmployees();
     for (const auto& emp : employees) {
         if (emp) {
-            
-            int currentHours = emp->getCurrentWeeklyHours();
-            if (currentHours > 0) {
+            // Remove existing hours
+            if (int currentHours = emp->getCurrentWeeklyHours(); currentHours > 0) {
                 try {
                     emp->removeWeeklyHours(currentHours);
                 } catch (const EmployeeException& e) {
@@ -31,11 +30,11 @@ void EmployeeService::recalculateEmployeeHours() const {
 
     
     auto allAssignments = company->getAllTaskAssignments();
-    for (const auto& assignment : allAssignments) {
-        const auto [employeeId, projectId, taskId] = assignment.first;
-        int hours = assignment.second;
+    for (const auto& [key, hours] : allAssignments) {
+        const auto [employeeId, projectId, taskId] = key;
 
         std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
+        // Add hours for active employees
         if (employee && employee->getIsActive() && hours > 0) {
             try {
                 employee->addWeeklyHours(hours);
@@ -50,10 +49,10 @@ int EmployeeService::calculateTotalAssignedHours(int employeeId) const {
     int totalHours = 0;
     auto allAssignments = company->getAllTaskAssignments();
     
-    for (const auto& assignment : allAssignments) {
-        const auto [empId, projectId, taskId] = assignment.first;
+    for (const auto& [key, hours] : allAssignments) {
+        const auto [empId, projectId, taskId] = key;
         if (empId == employeeId) {
-            totalHours += assignment.second;
+            totalHours += hours;
         }
     }
     
