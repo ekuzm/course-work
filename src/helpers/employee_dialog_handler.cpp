@@ -14,7 +14,7 @@
 #include "helpers/id_helper.h"
 #include "helpers/validation_helper.h"
 
-bool EmployeeDialogHandler::validateEmployeeFields(QDialog* dialog,
+bool EmployeeDialogHandler::validateEmployeeFields(const QDialog* dialog,
                                                    const QLineEdit* nameEdit,
                                                    const QLineEdit* salaryEdit,
                                                    const QLineEdit* deptEdit,

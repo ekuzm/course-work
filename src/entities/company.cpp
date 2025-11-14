@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <ranges>
 #include <tuple>
 #include <utility>
 
@@ -212,6 +213,14 @@ void Company::removeProject(int projectId) {
 }
 
 const Project* Company::getProject(int projectId) const {
+    std::shared_ptr<Project> result = projects.find(projectId);
+    if (result) {
+        return result.get();
+    }
+    return nullptr;
+}
+
+Project* Company::getProject(int projectId) {
     std::shared_ptr<Project> result = projects.find(projectId);
     if (result) {
         return result.get();
@@ -640,15 +649,15 @@ void Company::fixTaskAssignmentsToCapacity() {
     
     std::map<int, std::vector<std::tuple<int, int, int, int*>>> employeeAssignments;
     
-    for (auto& assignment : taskAssignments) {
-        auto [employeeId, projectId, taskId] = assignment.first;
+    for (const auto& [key, hours] : taskAssignments) {
+        const auto [employeeId, projectId, taskId] = key;
         
         employeeAssignments[employeeId].emplace_back(
-            projectId, taskId, assignment.second, &assignment.second);
+            projectId, taskId, hours, &hours);
     }
     
     
-    for (auto& [employeeId, assignments] : employeeAssignments) {
+    for (const auto& [employeeId, assignments] : employeeAssignments) {
         std::shared_ptr<Employee> employee = getEmployee(employeeId);
         if (!employee) continue;
         
@@ -657,16 +666,16 @@ void Company::fixTaskAssignmentsToCapacity() {
         
         int totalHours = 0;
         for (const auto& assignment : assignments) {
-            auto [projectId, taskId, oldHours, hoursPtr] = assignment;
+            const auto [projectId, taskId, oldHours, hoursPtr] = assignment;
             totalHours += oldHours;
         }
         
         
         if (totalHours > capacity && totalHours > 0) {
-            double scaleFactor = static_cast<double>(capacity) / totalHours;
+            const auto scaleFactor = static_cast<double>(capacity) / totalHours;
             
             for (auto& assignment : assignments) {
-                auto& [projectId, taskId, oldHours, hoursPtr] = assignment;
+                const auto& [projectId, taskId, oldHours, hoursPtr] = assignment;
                 auto newHours = static_cast<int>(std::round(oldHours * scaleFactor));
                 
                 if (newHours < 0) newHours = 0;
@@ -676,7 +685,7 @@ void Company::fixTaskAssignmentsToCapacity() {
                 *hoursPtr = newHours;
                 
                 
-                std::shared_ptr<Project> projPtr = projects.find(projectId);
+                auto projPtr = projects.find(projectId);
                 updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
             }
         }
@@ -690,7 +699,7 @@ void Company::recalculateTaskAllocatedHours() {
     
     auto allProjects = getAllProjects();
     for (const auto& project : allProjects) {
-        auto mutableProject = getMutableProject(project.getId());
+        Project* mutableProject = getProject(project.getId());
         if (mutableProject) {
             
             double currentCosts = mutableProject->getEmployeeCosts();
@@ -703,25 +712,24 @@ void Company::recalculateTaskAllocatedHours() {
     
     
     for (const auto& project : allProjects) {
-        auto mutableProject = getMutableProject(project.getId());
+        Project* mutableProject = getProject(project.getId());
         if (!mutableProject) continue;
         
-        int projectId = project.getId();
-        std::vector<Task>& tasks = mutableProject->getTasks();
+        auto projectId = project.getId();
+        auto& tasks = mutableProject->getTasks();
         double projectTotalCosts = 0.0;
         
         for (auto& task : tasks) {
             int taskId = task.getId();
             
             
-            int totalAllocated = 0;
+            auto totalAllocated = 0;
             auto allEmployees = getAllEmployees();
             
             for (const auto& employee : allEmployees) {
                 if (employee && employee->isAssignedToProject(projectId)) {
                     
-                    std::tuple<int, int, int> key = std::make_tuple(
-                        employee->getId(), projectId, taskId);
+                    auto key = std::make_tuple(employee->getId(), projectId, taskId);
                     auto assignmentIt = taskAssignments.find(key);
                     if (assignmentIt != taskAssignments.end()) {
                         int hours = assignmentIt->second;
@@ -994,9 +1002,9 @@ int Company::getEmployeeProjectHours(int employeeId, int projectId) const {
 
 int Company::getEmployeeTaskHours(int employeeId, int projectId,
                                   int taskId) const {
-    std::tuple<int, int, int> key =
+    const std::tuple<int, int, int> key =
         std::make_tuple(employeeId, projectId, taskId);
-    if (auto it = taskAssignments.find(key); it != taskAssignments.end()) {
+    if (const auto it = taskAssignments.find(key); it != taskAssignments.end()) {
         return it->second;
     }
     return 0;
@@ -1019,7 +1027,7 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
     int totalScaledHours = 0;
     
     for (const auto& assignment : taskAssignments) {
-        auto [empId, projectId, taskId] = assignment.first;
+        const auto [empId, projectId, taskId] = assignment.first;
         if (empId == employeeId) {
             int oldHours = assignment.second;
             auto scaledHours = static_cast<int>(std::round(oldHours * scaleFactor));
@@ -1034,8 +1042,8 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
     }
 
     
-    if (totalScaledHours > capacity && !assignmentsData.empty()) {
-        double adjustFactor = static_cast<double>(capacity) / totalScaledHours;
+    if (!assignmentsData.empty() && totalScaledHours > capacity) {
+        const auto adjustFactor = static_cast<double>(capacity) / totalScaledHours;
         totalScaledHours = 0;
         
         for (auto& assignment : assignmentsData) {
@@ -1053,10 +1061,9 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
         if (totalScaledHours > capacity) {
             int excess = totalScaledHours - capacity;
             
-            std::ranges::sort(assignmentsData,
-                [](const std::tuple<int, int, int, int>& a, const std::tuple<int, int, int, int>& b) {
-                    return std::get<3>(a) > std::get<3>(b);
-                });
+            std::ranges::sort(assignmentsData, [](const auto& a, const auto& b) {
+                return std::get<3>(a) > std::get<3>(b);
+            });
             
             for (auto& assignment : assignmentsData) {
                 if (excess <= 0) break;
@@ -1075,8 +1082,7 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
     for (const auto& assignment : assignmentsData) {
         auto [projectId, taskId, oldHours, newHours] = assignment;
 
-        std::tuple<int, int, int> key =
-            std::make_tuple(employeeId, projectId, taskId);
+        auto key = std::make_tuple(employeeId, projectId, taskId);
         
         
         if (newHours > 0) {
@@ -1101,7 +1107,7 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
         
         int totalHours = 0;
         for (const auto& assignment : taskAssignments) {
-            auto [empId, projectId, taskId] = assignment.first;
+            const auto [empId, projectId, taskId] = assignment.first;
             if (empId == employeeId) {
                 totalHours += assignment.second;
             }
@@ -1160,7 +1166,7 @@ void Company::setTaskAssignment(int employeeId, int projectId, int taskId, int h
 }
 
 void Company::addTaskAssignment(int employeeId, int projectId, int taskId, int hours) {
-    std::tuple<int, int, int> key = std::make_tuple(employeeId, projectId, taskId);
+    const std::tuple<int, int, int> key = std::make_tuple(employeeId, projectId, taskId);
     taskAssignments[key] += hours;
 }
 
@@ -1174,5 +1180,5 @@ std::map<std::tuple<int, int, int>, int> Company::getAllTaskAssignments() const 
 }
 
 Project* Company::getMutableProject(int projectId) {
-    return const_cast<Project*>(getProject(projectId));
+    return getProject(projectId);
 }

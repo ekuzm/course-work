@@ -24,7 +24,7 @@ class EmployeeDialogHandler {
         QLineEdit* qaTestType, QLineEdit* qaBugs, const QString& currentType);
 
    private:
-    static bool validateEmployeeFields(QDialog* dialog,
+    static bool validateEmployeeFields(const QDialog* dialog,
                                        const QLineEdit* nameEdit,
                                        const QLineEdit* salaryEdit,
                                        const QLineEdit* deptEdit,

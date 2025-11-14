@@ -32,7 +32,7 @@ void EmployeeService::recalculateEmployeeHours() const {
     
     auto allAssignments = company->getAllTaskAssignments();
     for (const auto& assignment : allAssignments) {
-        auto [employeeId, projectId, taskId] = assignment.first;
+        const auto [employeeId, projectId, taskId] = assignment.first;
         int hours = assignment.second;
 
         std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
@@ -51,7 +51,7 @@ int EmployeeService::calculateTotalAssignedHours(int employeeId) const {
     auto allAssignments = company->getAllTaskAssignments();
     
     for (const auto& assignment : allAssignments) {
-        auto [empId, projectId, taskId] = assignment.first;
+        const auto [empId, projectId, taskId] = assignment.first;
         if (empId == employeeId) {
             totalHours += assignment.second;
         }

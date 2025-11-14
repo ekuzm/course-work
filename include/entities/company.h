@@ -64,6 +64,7 @@ class Company {
     void addProject(const Project& project);
     void removeProject(int projectId);
     const Project* getProject(int projectId) const;
+    Project* getProject(int projectId);
     std::vector<Project> getAllProjects() const;
 
     void addTaskToProject(int projectId, const Task& task);
