@@ -230,10 +230,10 @@ void MainWindow::addEmployee() {
 
     dialog.setFixedSize(maxSize);
 
-    connect(okButton, &QPushButton::clicked, [&]() {
+    connect(okButton, &QPushButton::clicked, [this, &dialog, nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs]() {
         try {
             if (!EmployeeDialogHandler::processAddEmployee(
-                    &dialog, currentCompany, nextEmployeeId, nameEdit,
+                    &dialog, this->currentCompany, this->nextEmployeeId, nameEdit,
                     salaryEdit, deptEdit, typeCombo, employmentRateCombo,
                     managerProject, devLanguage, devExperience, designerTool,
                     designerProjects, qaTestType, qaBugs)) {
@@ -366,10 +366,10 @@ void MainWindow::editEmployee() {
 
     dialog.setFixedSize(maxSize);
 
-    connect(okButton, &QPushButton::clicked, [&]() {
+    connect(okButton, &QPushButton::clicked, [this, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
         try {
             if (!EmployeeDialogHandler::processEditEmployee(
-                    &dialog, currentCompany, employeeId, nextEmployeeId,
+                    &dialog, this->currentCompany, employeeId, this->nextEmployeeId,
                     nameEdit, salaryEdit, deptEdit, employmentRateCombo,
                     managerProject, devLanguage, devExperience, designerTool,
                     designerProjects, qaTestType, qaBugs, currentType)) {
@@ -618,7 +618,7 @@ void MainWindow::addProject() {
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
 
-    connect(okButton, &QPushButton::clicked, [&]() {
+    connect(okButton, &QPushButton::clicked, [this, &dialog, &fields]() {
         try {
             auto projectName = fields.nameEdit->text().trimmed();
             if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
@@ -648,7 +648,7 @@ void MainWindow::addProject() {
                     0, kMaxEstimatedHours, "Estimated hours", &dialog))
                 return;
 
-            auto existingProjects = currentCompany->getAllProjects();
+            auto existingProjects = this->currentCompany->getAllProjects();
             for (const auto& project : existingProjects) {
                 if (project.getName().toLower() == projectName.toLower()) {
                     QMessageBox::warning(
@@ -662,17 +662,17 @@ void MainWindow::addProject() {
                 }
             }
 
-            int projectId = nextProjectId;
-            nextProjectId++;
+            int projectId = this->nextProjectId;
+            this->nextProjectId++;
             Project project(projectId, projectName,
                             fields.descEdit->toPlainText().trimmed(),
                             selectedPhase, fields.startDate->date(),
                             fields.endDate->date(), projectBudget, clientName,
                             estimatedHours);
 
-            currentCompany->addProject(project);
-            auto projects = currentCompany->getAllProjects();
-            nextProjectId =
+            this->currentCompany->addProject(project);
+            auto projects = this->currentCompany->getAllProjects();
+            this->nextProjectId =
                 IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
             refreshAllData();
             autoSave();
@@ -728,7 +728,7 @@ void MainWindow::editProject() {
     auto* okButton = new QPushButton("OK");
     form->addRow(okButton);
 
-    connect(okButton, &QPushButton::clicked, [&]() {
+    connect(okButton, &QPushButton::clicked, [this, &dialog, projectId, &fields]() {
         try {
             auto projectName = fields.nameEdit->text().trimmed();
             if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
@@ -759,7 +759,7 @@ void MainWindow::editProject() {
                 return;
 
             if (!checkDuplicateProjectOnEdit(projectName, projectId,
-                                             currentCompany)) {
+                                             this->currentCompany)) {
                 QMessageBox::warning(
                     &dialog, "Duplicate Error",
                     "A project with this name already exists!\n\n"
@@ -773,7 +773,7 @@ void MainWindow::editProject() {
                 return;
             }
 
-            const Project* oldProject = currentCompany->getProject(projectId);
+            const Project* oldProject = this->currentCompany->getProject(projectId);
             if (!oldProject) {
                 QMessageBox::warning(&dialog, "Error", "Project not found!");
                 return;
@@ -833,12 +833,12 @@ void MainWindow::editProject() {
             double savedEmployeeCosts = oldProject->getEmployeeCosts();
 
             std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
-            auto allEmployees = currentCompany->getAllEmployees();
+            auto allEmployees = this->currentCompany->getAllEmployees();
             for (const auto& emp : allEmployees) {
                 if (!emp) continue;
                 for (const auto& task : savedTasks) {
                     auto taskId = task.getId();
-                    auto hours = currentCompany->getEmployeeTaskHours(
+                    auto hours = this->currentCompany->getEmployeeTaskHours(
                         emp->getId(), projectId, taskId);
                     if (hours > 0) {
                         savedTaskAssignments.push_back(std::make_tuple(
@@ -862,24 +862,21 @@ void MainWindow::editProject() {
                 updatedProject.addEmployeeCost(savedEmployeeCosts);
             }
 
-            currentCompany->removeProject(projectId);
-            currentCompany->addProject(updatedProject);
+            this->currentCompany->removeProject(projectId);
+            this->currentCompany->addProject(updatedProject);
 
             for (const auto& assignment : savedTaskAssignments) {
-                int empId = std::get<0>(assignment);
-                int projId = std::get<1>(assignment);
-                int taskId = std::get<2>(assignment);
-                int hours = std::get<3>(assignment);
+                const auto& [empId, projId, taskId, hours] = assignment;
                 try {
-                    currentCompany->restoreTaskAssignment(empId, projId, taskId,
+                    this->currentCompany->restoreTaskAssignment(empId, projId, taskId,
                                                           hours);
                 } catch (const std::exception&) {
                     continue;
                 }
             }
 
-            auto projects = currentCompany->getAllProjects();
-            nextProjectId =
+            auto projects = this->currentCompany->getAllProjects();
+            this->nextProjectId =
                 IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
             refreshAllData();
             autoSave();
@@ -924,9 +921,9 @@ void MainWindow::deleteProject() {
         QMessageBox::Yes | QMessageBox::No);
     if (userChoice == QMessageBox::Yes) {
         try {
-            currentCompany->removeProject(projectId);
-            auto projects = currentCompany->getAllProjects();
-            nextProjectId =
+            this->currentCompany->removeProject(projectId);
+            auto projects = this->currentCompany->getAllProjects();
+            this->nextProjectId =
                 IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
             refreshAllData();
             autoSave();
@@ -1208,7 +1205,7 @@ void MainWindow::addProjectTask() {
     auto* okButton = new QPushButton("Add Task");
     form->addRow(okButton);
 
-    connect(okButton, &QPushButton::clicked, [&]() {
+    connect(okButton, &QPushButton::clicked, [this, &dialog, projectId, taskNameEdit, taskTypeCombo, taskEstHoursEdit, priorityEdit]() {
         try {
             auto taskName = taskNameEdit->text().trimmed();
             if (!ValidationHelper::validateNonEmpty(taskName, "Task name",
@@ -1229,7 +1226,7 @@ void MainWindow::addProjectTask() {
 
             if (!TaskDialogHelper::validateAndAddTask(
                     taskName, taskTypeCombo->currentText(), taskEst, priority,
-                    projectId, currentCompany, &dialog)) {
+                    projectId, this->currentCompany, &dialog)) {
                 return;
             }
 
@@ -1382,12 +1379,12 @@ void MainWindow::assignEmployeeToTask() {
     auto* okButton = new QPushButton("Assign");
     form->addRow(okButton);
 
-    connect(okButton, &QPushButton::clicked, [&]() {
+    connect(okButton, &QPushButton::clicked, [this, &dialog, projectId, taskCombo, employeeCombo, hoursEdit, tasks]() {
         try {
             int taskId = taskCombo->currentData().toInt();
             int employeeId = employeeCombo->currentData().toInt();
 
-            auto employee = currentCompany->getEmployee(employeeId);
+            auto employee = this->currentCompany->getEmployee(employeeId);
             if (!employee) {
                 QMessageBox::warning(&dialog, "Error", "Employee not found!");
                 return;
@@ -1417,7 +1414,7 @@ void MainWindow::assignEmployeeToTask() {
                                                "Hours per week", &dialog))
                 return;
 
-            currentCompany->assignEmployeeToTask(employeeId, projectId, taskId,
+            this->currentCompany->assignEmployeeToTask(employeeId, projectId, taskId,
                                                  hours);
             refreshAllData();
             autoSave();
@@ -1430,7 +1427,7 @@ void MainWindow::assignEmployeeToTask() {
                     break;
                 }
             }
-            if (auto emp = currentCompany->getEmployee(employeeId)) {
+            if (auto emp = this->currentCompany->getEmployee(employeeId)) {
                 employeeName = emp->getName();
             }
 

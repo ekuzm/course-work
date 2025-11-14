@@ -887,10 +887,11 @@ void FileManager::saveTaskAssignments(const Company& company,
 
     fileStream << assignments.size() << "\n";
     for (const auto& assignment : assignments) {
-        fileStream << std::get<0>(assignment) << "\n";
-        fileStream << std::get<1>(assignment) << "\n";
-        fileStream << std::get<2>(assignment) << "\n";
-        fileStream << std::get<3>(assignment) << "\n";
+        const auto [empId, projId, taskId, hours] = assignment;
+        fileStream << empId << "\n";
+        fileStream << projId << "\n";
+        fileStream << taskId << "\n";
+        fileStream << hours << "\n";
     }
 
     fileStream.flush();

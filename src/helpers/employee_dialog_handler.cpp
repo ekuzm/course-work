@@ -259,19 +259,19 @@ bool EmployeeDialogHandler::processEditEmployee(
     } else {
         
         for (const auto& assignment : savedTaskAssignments) {
-            int projId = std::get<1>(assignment);
-            int taskId = std::get<2>(assignment);
-            int hours = std::get<3>(assignment);
+            const auto [empId, projId, taskId, hours] = assignment;
             try {
                 company->restoreTaskAssignment(employeeId, projId, taskId, hours);
-            } catch (const std::exception&) {
+            } catch (const std::exception& e) {
+                (void)e;
             }
         }
     }
 
     try {
         updatedEmployee->setIsActive(savedIsActive);
-    } catch (const EmployeeException&) {
+    } catch (const EmployeeException& e) {
+        (void)e;
         if (!savedIsActive && updatedEmployee->getCurrentWeeklyHours() > 0) {
             try {
                 int currentHours = updatedEmployee->getCurrentWeeklyHours();

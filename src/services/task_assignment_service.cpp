@@ -525,7 +525,9 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
             int excess = totalScaledHours - capacity;
             
             std::ranges::sort(assignmentsData, [](const auto& a, const auto& b) {
-                return std::get<3>(a) > std::get<3>(b);
+                const auto& [projectIdA, taskIdA, oldHoursA, adjustedHoursA] = a;
+                const auto& [projectIdB, taskIdB, oldHoursB, adjustedHoursB] = b;
+                return adjustedHoursA > adjustedHoursB;
             });
             
             for (auto& assignment : assignmentsData) {
@@ -564,10 +566,10 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         
         int totalHours = 0;
         auto allAssignments = company->getAllTaskAssignments();
-        for (const auto& assignment : allAssignments) {
-            const auto [empId, projId, tId] = assignment.first;
+        for (const auto& [key, hours] : allAssignments) {
+            const auto [empId, projId, tId] = key;
             if (empId == employeeId) {
-                totalHours += assignment.second;
+                totalHours += hours;
             }
         }
         
