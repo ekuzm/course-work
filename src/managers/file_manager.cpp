@@ -454,11 +454,7 @@ std::shared_ptr<Employee> FileManager::loadEmployeeFromStream(
     
     if (employee) {
         employeeStatusesFromFile[baseData.id] = baseData.isActive;
-        try {
-            employee->setIsActive(baseData.isActive);
-        } catch (const EmployeeException& e) {
-            (void)e;
-        }
+        employee->setIsActive(baseData.isActive);
     }
     
     return employee;
@@ -753,39 +749,19 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                 }
                 
                 if (lineContent.find("PROJECT_ID:") == 0) {
-                    try {
-                        projectId = std::stoi(lineContent.substr(11));
-                    } catch (const std::exception& e) {
-                        (void)e;
-                    }
+                    projectId = std::stoi(lineContent.substr(11));
                 } else if (lineContent.find("TASK_ID:") == 0) {
-                    try {
-                        taskId = std::stoi(lineContent.substr(8));
-                    } catch (const std::exception& e) {
-                        (void)e;
-                    }
+                    taskId = std::stoi(lineContent.substr(8));
                 } else if (lineContent.find("NAME:") == 0) {
                     taskName = QString::fromStdString(lineContent.substr(5));
                 } else if (lineContent.find("TYPE:") == 0) {
                     taskType = QString::fromStdString(lineContent.substr(5));
                 } else if (lineContent.find("ESTIMATED_HOURS:") == 0) {
-                    try {
-                        estimatedHours = std::stoi(lineContent.substr(16));
-                    } catch (const std::exception& e) {
-                        (void)e;
-                    }
+                    estimatedHours = std::stoi(lineContent.substr(16));
                 } else if (lineContent.find("ALLOCATED_HOURS:") == 0) {
-                    try {
-                        allocatedHours = std::stoi(lineContent.substr(16));
-                    } catch (const std::exception& e) {
-                        (void)e;
-                    }
+                    allocatedHours = std::stoi(lineContent.substr(16));
                 } else if (lineContent.find("PRIORITY:") == 0) {
-                    try {
-                        priority = std::stoi(lineContent.substr(9));
-                    } catch (const std::exception& e) {
-                        (void)e;
-                    }
+                    priority = std::stoi(lineContent.substr(9));
                 } else if (lineContent.find("PHASE:") == 0) {
                     phase = QString::fromStdString(lineContent.substr(6));
                 } else if (lineContent.find("ASSIGNMENTS_COUNT:") == 0) {
