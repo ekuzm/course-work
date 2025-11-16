@@ -167,8 +167,7 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
     return html;
 }
 
-namespace {
-    QString getEmployeeBadgeClass(const QString& employeeType) {
+static QString getEmployeeBadgeClass(const QString& employeeType) {
         if (employeeType == "Manager") return "badge-management";
         if (employeeType == "Developer") return "badge-development";
         if (employeeType == "Designer") return "badge-design";
@@ -176,7 +175,7 @@ namespace {
         return "badge-info";
     }
     
-    QString getTaskBadgeClass(const QString& taskType) {
+static QString getTaskBadgeClass(const QString& taskType) {
         if (taskType == "Management") return "badge-management";
         if (taskType == "Development") return "badge-development";
         if (taskType == "Design") return "badge-design";
@@ -184,7 +183,7 @@ namespace {
         return "badge-info";
     }
     
-    bool employeeHasTaskAssignments(const Company* company, int employeeId,
+static bool employeeHasTaskAssignments(const Company* company, int employeeId,
                                     int projectId,
                                     const std::vector<Task>& tasks) {
         for (const auto& task : tasks) {
@@ -196,7 +195,7 @@ namespace {
         return false;
     }
     
-    void collectProjectEmployees(const Company* company, int projectId,
+static void collectProjectEmployees(const Company* company, int projectId,
                                  const std::vector<Task>& tasks,
                                  std::vector<std::shared_ptr<Employee>>& projectEmployees) {
         auto allEmployees = company->getAllEmployees();
@@ -216,7 +215,7 @@ namespace {
         }
     }
     
-    int calculateProjectHoursForEmployee(const Company* company,
+static int calculateProjectHoursForEmployee(const Company* company,
                                          int employeeId, int projectId,
                                          const std::vector<Task>& tasks) {
         int projectHours = 0;
@@ -227,7 +226,7 @@ namespace {
         return projectHours;
     }
     
-    QString generateProjectMetricsHtml(const Project& project) {
+static QString generateProjectMetricsHtml(const Project& project) {
         int totalEstimated = project.getEstimatedHours();
         int totalAllocated = project.getAllocatedHours();
         int needed = totalEstimated - totalAllocated;
@@ -299,7 +298,7 @@ namespace {
         return html;
     }
     
-    QString generateTeamMembersHtml(const Company* company, int projectId,
+static QString generateTeamMembersHtml(const Company* company, int projectId,
                                     const std::vector<Task>& tasks,
                                     const std::vector<std::shared_ptr<Employee>>& projectEmployees) {
         QString html = R"(<div class="section">)";
@@ -352,7 +351,7 @@ namespace {
         return html;
     }
     
-    QString generateProjectTasksHtml(const std::vector<Task>& tasks) {
+static QString generateProjectTasksHtml(const std::vector<Task>& tasks) {
         QString html;
         html +=
             R"(<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">)";
@@ -392,7 +391,7 @@ namespace {
         return html;
     }
     
-    QString generateTasksHtml(const std::vector<Task>& tasks) {
+static QString generateTasksHtml(const std::vector<Task>& tasks) {
         QString html = R"(<div class="section">)";
         html += QString(R"(<div class="section-title">Tasks (%1)</div>)")
                     .arg(tasks.size());
@@ -437,7 +436,6 @@ namespace {
         html += R"(</div>)";
         return html;
     }
-}
 
 QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project,
                                                       const Company* company) {

@@ -25,9 +25,7 @@ static double calculateEmployeeCost(double monthlySalary, int hours) {
     return calculateHourlyRate(monthlySalary) * hours;
 }
 
-namespace {
-    
-    struct BuildEmployeePoolParams {
+struct BuildEmployeePoolParams {
         const std::vector<std::shared_ptr<Employee>>& employeesList;
         const QString& projectPhase;
         const QString& taskType;
@@ -37,7 +35,7 @@ namespace {
         const std::map<int, int>& employeeUsage;
     };
     
-    struct AssignEmployeeToTaskParams {
+struct AssignEmployeeToTaskParams {
         int projectId;
         int& remaining;
         double& currentEmployeeCosts;
@@ -46,7 +44,7 @@ namespace {
         std::map<std::tuple<int, int, int>, int>& taskAssignments;
     };
     
-    void buildActiveEmployeesList(const std::vector<std::shared_ptr<Employee>>& allEmployees,
+static void buildActiveEmployeesList(const std::vector<std::shared_ptr<Employee>>& allEmployees,
                                   std::vector<std::shared_ptr<Employee>>& employeesList) {
         for (const auto& emp : allEmployees) {
             if (emp && emp->getIsActive()) {
@@ -55,7 +53,7 @@ namespace {
         }
     }
     
-    int compareEmployeesForSorting(const std::shared_ptr<Employee>& a,
+static int compareEmployeesForSorting(const std::shared_ptr<Employee>& a,
                                     const std::shared_ptr<Employee>& b,
                                     const std::map<int, int>& employeeUsage) {
         if (!a || !b) return 0;
@@ -93,7 +91,7 @@ namespace {
         return 0;
     }
     
-    [[noreturn]] void throwAvailabilityException(const std::shared_ptr<Employee>& employee, int toAssign) {
+[[noreturn]] static void throwAvailabilityException(const std::shared_ptr<Employee>& employee, int toAssign) {
         auto availableHours = employee->getAvailableHours();
         auto currentHours = employee->getCurrentWeeklyHours();
         auto capacity = employee->getWeeklyHoursCapacity();
@@ -114,7 +112,7 @@ namespace {
                 .arg(toAssign));
     }
     
-    bool roleMatchesSDLCStage(const QString& employeePosition,
+static bool roleMatchesSDLCStage(const QString& employeePosition,
                               const QString& projectPhase) {
         if (projectPhase == "Analysis" || projectPhase == "Planning") {
             return employeePosition == "Manager";
@@ -131,7 +129,7 @@ namespace {
         return true;
     }
     
-    void updateTaskAndProjectCosts(std::shared_ptr<Project> projPtr,
+static void updateTaskAndProjectCosts(std::shared_ptr<Project> projPtr,
                                    int taskId,
                                    int oldHours,
                                    int newHours,
@@ -160,7 +158,7 @@ namespace {
         }
     }
     
-    QString getRequiredEmployeeType(const QString& taskType) {
+static QString getRequiredEmployeeType(const QString& taskType) {
         static const std::map<QString, QString> typeMapping = {
             {"Management", "Manager"},
             {"Development", "Developer"},
@@ -173,7 +171,7 @@ namespace {
         return "Unknown";
     }
     
-    void validateBudgetConstraints(const std::shared_ptr<Employee>& employee,
+static void validateBudgetConstraints(const std::shared_ptr<Employee>& employee,
                                    const std::shared_ptr<Project>& projPtr,
                                    int toAssign,
                                    double employeeHourlyRate,
@@ -232,7 +230,6 @@ namespace {
                     .arg(remainingBudget, 0, 'f', 2));
         }
     }
-}
 
 static bool matchesEmployeeId(const std::shared_ptr<Employee>& employee,
                               int employeeId) {
@@ -329,8 +326,7 @@ void Company::addEmployee(std::shared_ptr<Employee> employee) {
     employees.add(employee);
 }
 
-namespace {
-    void removeEmployeeTaskAssignmentsFromProjects(
+static void removeEmployeeTaskAssignmentsFromProjects(
         int employeeId,
         const std::vector<int>& assignedProjects,
         const ProjectContainer& projects,
@@ -348,7 +344,6 @@ namespace {
                 projPtr->recomputeTotalsFromTasks();
             }
         }
-}
 
 void Company::removeEmployee(int employeeId) {
     std::shared_ptr<Employee> employee = employees.find(employeeId);
@@ -494,8 +489,7 @@ std::vector<Task> Company::getProjectTasks(int projectId) const {
     return {};
 }
 
-namespace {
-    std::pair<int, double> calculateTaskAllocatedHours(
+static std::pair<int, double> calculateTaskAllocatedHours(
         int projectId, int taskId,
         const std::vector<std::shared_ptr<Employee>>& allEmployees,
         const std::map<std::tuple<int, int, int>, int>& taskAssignments) {
@@ -519,7 +513,7 @@ namespace {
         return {totalAllocated, taskCost};
     }
     
-    void reduceExcessHours(
+static void reduceExcessHours(
         std::vector<std::tuple<int, int, int, int>>& assignmentsData,
         int& excess,
         int& totalScaledHours) {
@@ -543,7 +537,7 @@ namespace {
         }
     }
     
-    void adjustAssignmentsToCapacity(
+static void adjustAssignmentsToCapacity(
         std::vector<std::tuple<int, int, int, int>>& assignmentsData,
         int capacity,
         int& totalScaledHours) {
@@ -571,7 +565,7 @@ namespace {
     }
     }
     
-    void updateTaskAssignmentsFromData(
+static void updateTaskAssignmentsFromData(
         int employeeId,
         const std::vector<std::tuple<int, int, int, int>>& assignmentsData,
         std::map<std::tuple<int, int, int>, int>& taskAssignments,
@@ -592,7 +586,7 @@ namespace {
         }
     }
     
-    void updateEmployeeHoursAfterScaling(
+static void updateEmployeeHoursAfterScaling(
         const std::shared_ptr<Employee>& employee,
         const std::map<std::tuple<int, int, int>, int>& taskAssignments,
         int employeeId) {
@@ -640,7 +634,7 @@ namespace {
         }
     }
     
-    void scaleAssignmentsToCapacity(
+static void scaleAssignmentsToCapacity(
         std::vector<std::tuple<int, int, int, int*>>& assignments,
         double scaleFactor,
         int capacity,
@@ -659,7 +653,7 @@ namespace {
         }
     }
     
-    void collectScaledAssignments(
+static void collectScaledAssignments(
         int employeeId,
         double scaleFactor,
         const std::map<std::tuple<int, int, int>, int>& taskAssignments,
@@ -679,7 +673,7 @@ namespace {
 }
     }
     
-    void processEmployeeAssignments(
+static void processEmployeeAssignments(
         [[maybe_unused]] int employeeId,
         std::vector<std::tuple<int, int, int, int*>>& assignments,
         int capacity,
@@ -697,14 +691,14 @@ namespace {
         }
     }
     
-    bool employeeRoleMatchesSDLC(const std::shared_ptr<Employee>& employee,
+static bool employeeRoleMatchesSDLC(const std::shared_ptr<Employee>& employee,
                                 const QString& projectPhase) {
         if (!employee) return false;
         QString pos = employee->getPosition();
         return roleMatchesSDLCStage(pos, projectPhase);
     }
     
-    bool employeeTaskTypeMatches(const std::shared_ptr<Employee>& employee,
+static bool employeeTaskTypeMatches(const std::shared_ptr<Employee>& employee,
                                  const QString& taskType) {
         if (!employee) return false;
         QString employeeType = employee->getEmployeeType();
@@ -721,7 +715,7 @@ namespace {
     return false;
 }
 
-    void buildEmployeePool(
+static void buildEmployeePool(
         const BuildEmployeePoolParams& params,
         std::vector<std::shared_ptr<Employee>>& pool) {
         for (const auto& employee : params.employeesList) {
@@ -751,7 +745,7 @@ namespace {
         }
     }
     
-    void assignEmployeeToTaskInPool(
+static void assignEmployeeToTaskInPool(
         const std::shared_ptr<Employee>& poolEmployee,
         Task& task,
         AssignEmployeeToTaskParams& params) {
@@ -814,10 +808,8 @@ bool taskTypeMatchesEmployeeType(const QString& taskType,
     return false;
 }
 
-}
 
-namespace {
-    void validateTaskAssignment(const std::shared_ptr<Employee>& employee,
+static void validateTaskAssignment(const std::shared_ptr<Employee>& employee,
                                 [[maybe_unused]] const std::shared_ptr<Project>& projPtr,
                                 const Task& task,
                                 int hours,
@@ -850,7 +842,6 @@ namespace {
                         .arg(requiredType));
             }
     }
-}
 
 void Company::assignEmployeeToTask(int employeeId, int projectId, int taskId,
                                    int hours) {

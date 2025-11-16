@@ -99,8 +99,7 @@ bool EmployeeDialogHandler::processAddEmployee(
     return true;
 }
 
-namespace {
-    bool checkBasicFieldChanges(const std::shared_ptr<Employee>& oldEmployee,
+static bool checkBasicFieldChanges(const std::shared_ptr<Employee>& oldEmployee,
                                 const QString& name, double salary,
                                 const QString& department,
                                 double newEmploymentRate) {
@@ -110,7 +109,7 @@ namespace {
                oldEmployee->getEmploymentRate() != newEmploymentRate;
     }
     
-    bool checkManagerChanges(const std::shared_ptr<Employee>& oldEmployee,
+static bool checkManagerChanges(const std::shared_ptr<Employee>& oldEmployee,
                              QComboBox* managerProject) {
         const auto* manager = dynamic_cast<const Manager*>(oldEmployee.get());
         if (!manager) {
@@ -120,7 +119,7 @@ namespace {
         return manager->getManagedProjectId() != newProjectId;
     }
     
-    bool checkDeveloperChanges(const std::shared_ptr<Employee>& oldEmployee,
+static bool checkDeveloperChanges(const std::shared_ptr<Employee>& oldEmployee,
                                QLineEdit* devLanguage,
                                QLineEdit* devExperience) {
         const auto* developer = dynamic_cast<const Developer*>(oldEmployee.get());
@@ -133,7 +132,7 @@ namespace {
                qAbs(developer->getYearsOfExperience() - newExperience) > 0.01;
     }
     
-    bool checkDesignerChanges(const std::shared_ptr<Employee>& oldEmployee,
+static bool checkDesignerChanges(const std::shared_ptr<Employee>& oldEmployee,
                                QLineEdit* designerTool,
                                QLineEdit* designerProjects) {
         const auto* designer = dynamic_cast<const Designer*>(oldEmployee.get());
@@ -146,7 +145,7 @@ namespace {
                designer->getNumberOfProjects() != newProjects;
     }
     
-    bool checkQAChanges(const std::shared_ptr<Employee>& oldEmployee,
+static bool checkQAChanges(const std::shared_ptr<Employee>& oldEmployee,
                         QLineEdit* qaTestType, QLineEdit* qaBugs) {
         const auto* qa = dynamic_cast<const QA*>(oldEmployee.get());
         if (!qa) {
@@ -158,7 +157,7 @@ namespace {
                qa->getBugsFound() != newBugs;
     }
     
-    bool checkTypeSpecificChanges(const std::shared_ptr<Employee>& oldEmployee,
+static bool checkTypeSpecificChanges(const std::shared_ptr<Employee>& oldEmployee,
                                   const QString& currentType,
                                   QComboBox* managerProject,
                                   QLineEdit* devLanguage,
@@ -179,7 +178,7 @@ namespace {
         return false;
     }
     
-    void collectTaskAssignmentsForEmployee(
+static void collectTaskAssignmentsForEmployee(
         Company* company, int employeeId,
         const std::vector<int>& assignedProjects,
         std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) {
@@ -196,7 +195,7 @@ namespace {
         }
     }
     
-    void restoreEmployeeState(
+static void restoreEmployeeState(
         const std::shared_ptr<Employee>& updatedEmployee,
         const std::vector<int>& savedProjectHistory,
         const std::vector<int>& savedAssignedProjects,
@@ -219,7 +218,6 @@ namespace {
             }
         }
     }
-}
 
 bool EmployeeDialogHandler::processEditEmployee(
     QDialog* dialog, Company* company, int employeeId, int& nextEmployeeId,

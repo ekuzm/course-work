@@ -44,8 +44,7 @@ QString DisplayHelper::formatProjectInfo(
     return projectNames.isEmpty() ? "-" : projectNames.join(", ");
 }
 
-namespace {
-    void addManagedProjectIfNeeded(
+static void addManagedProjectIfNeeded(
     const std::shared_ptr<const Employee>& employee,
         std::vector<int>& projectIds) {
         auto manager = std::dynamic_pointer_cast<const Manager>(employee);
@@ -65,7 +64,7 @@ namespace {
         }
     }
 
-    void collectTaskNamesFromProject(
+static void collectTaskNamesFromProject(
         int projectId,
         const Company* currentCompany,
         QStringList& taskInfoList) {
@@ -84,7 +83,6 @@ namespace {
                 }
             }
         }
-}
 
 QString DisplayHelper::formatTaskInfo(
     const std::shared_ptr<const Employee>& employee,
@@ -101,8 +99,7 @@ QString DisplayHelper::formatTaskInfo(
     return taskInfoList.isEmpty() ? "-" : taskInfoList.join(", ");
 }
 
-namespace {
-    void populateEmployeeRow(QTableWidget* employeeTable, size_t index,
+static void populateEmployeeRow(QTableWidget* employeeTable, size_t index,
                              const std::shared_ptr<Employee>& employee,
                              const Company* currentCompany,
                              MainWindow* mainWindow) {
@@ -129,7 +126,7 @@ namespace {
         }
     }
     
-    void setInactiveEmployeeStyle(QTableWidget* employeeTable, size_t index) {
+static void setInactiveEmployeeStyle(QTableWidget* employeeTable, size_t index) {
         for (int col = 0; col < employeeTable->columnCount(); ++col) {
             QTableWidgetItem* item = employeeTable->item(index, col);
             if (item) {
@@ -137,7 +134,6 @@ namespace {
             }
         }
     }
-}
 
 void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
                                      const Company* currentCompany,
