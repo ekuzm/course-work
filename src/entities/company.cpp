@@ -966,7 +966,7 @@ void Company::recalculateTaskAllocatedHours() {
         for (auto& task : tasks) {
             auto taskId = task.getId();
             
-            auto [totalAllocated, taskCost] = calculateTaskAllocatedHours(
+            const auto [totalAllocated, taskCost] = calculateTaskAllocatedHours(
                 projectId, taskId, getAllEmployees(), taskAssignments);
             task.setAllocatedHours(totalAllocated);
             projectTotalCosts += taskCost;
@@ -1016,10 +1016,10 @@ void Company::autoAssignEmployeesToProject(int projectId) {
 
     std::vector<size_t> taskIndices(tasks.size());
     std::iota(taskIndices.begin(), taskIndices.end(), 0);
-    std::sort(taskIndices.begin(), taskIndices.end(),
-              [&tasks](size_t a, size_t b) {
-                  return compareTaskPriority(tasks[a], tasks[b]) < 0;
-              });
+    std::ranges::sort(taskIndices,
+                      [&tasks](size_t a, size_t b) {
+                          return compareTaskPriority(tasks[a], tasks[b]) < 0;
+                      });
 
     auto allEmployees = getAllEmployees();
     std::vector<std::shared_ptr<Employee>> employeesList;
@@ -1051,11 +1051,11 @@ void Company::autoAssignEmployeesToProject(int projectId) {
         };
         buildEmployeePool(poolParams, pool);
         
-        std::sort(pool.begin(), pool.end(),
-                  [&employeeUsage](const std::shared_ptr<Employee>& a,
-                                   const std::shared_ptr<Employee>& b) {
-                      return compareEmployeesForSorting(a, b, employeeUsage) < 0;
-                  });
+        std::ranges::sort(pool,
+                          [&employeeUsage](const std::shared_ptr<Employee>& a,
+                                           const std::shared_ptr<Employee>& b) {
+                              return compareEmployeesForSorting(a, b, employeeUsage) < 0;
+                          });
         
         AssignEmployeeToTaskParams assignParams{
             projectId, remaining, currentEmployeeCosts, remainingBudget,

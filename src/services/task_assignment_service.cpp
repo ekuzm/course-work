@@ -66,7 +66,7 @@ bool TaskAssignmentService::taskTypeMatchesEmployeeType(const QString& taskType,
 
 void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, int taskId,
                                                  int hours) {
-    std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
+    auto employee = company->getEmployee(employeeId);
     if (!employee) throw CompanyException("Employee not found");
     if (!employee->getIsActive())
         throw CompanyException("Cannot assign inactive employee");
@@ -257,7 +257,7 @@ int TaskAssignmentService::getEmployeeTaskHours(int employeeId, int projectId,
 }
 
 int TaskAssignmentService::getEmployeeProjectHours(int employeeId, int projectId) const {
-    std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
+    auto employee = company->getEmployee(employeeId);
     if (!employee || !employee->isAssignedToProject(projectId)) {
         return 0;
     }
@@ -307,7 +307,7 @@ void TaskAssignmentService::updateTaskAndProjectCosts(Project* projPtr, int task
 
 void TaskAssignmentService::restoreTaskAssignment(int employeeId, int projectId, int taskId,
                                                    int hours) {
-    std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
+    auto employee = company->getEmployee(employeeId);
     if (!employee) return;  
 
     Project* projPtr = company->getMutableProject(projectId);
@@ -366,14 +366,14 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
     
     auto allAssignments = company->getAllTaskAssignments();
     for (const auto& [key, hours] : allAssignments) {
-        const auto [employeeId, projectId, taskId] = key;
+        const auto& [employeeId, projectId, taskId] = key;
         
         employeeAssignments[employeeId].emplace_back(projectId, taskId, hours, 0);
     }
     
     
     for (auto& [employeeId, assignments] : employeeAssignments) {
-        std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
+        auto employee = company->getEmployee(employeeId);
         if (!employee) continue;
         
         const int capacity = employee->getWeeklyHoursCapacity();
@@ -381,7 +381,7 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
         
         int totalHours = 0;
         for (const auto& assignment : assignments) {
-            const auto [projectId, taskId, oldHours, newHours] = assignment;
+            const auto& [projectId, taskId, oldHours, newHours] = assignment;
             totalHours += oldHours;
         }
         
@@ -474,7 +474,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         return;
     }
 
-    std::shared_ptr<Employee> employee = company->getEmployee(employeeId);
+    auto employee = company->getEmployee(employeeId);
     if (!employee) {
         return;
     }
@@ -542,7 +542,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
 
     
     for (const auto& assignment : assignmentsData) {
-        const auto [projectId, taskId, oldHours, newHours] = assignment;
+        const auto& [projectId, taskId, oldHours, newHours] = assignment;
         
         if (newHours > 0) {
             company->setTaskAssignment(employeeId, projectId, taskId, newHours);
@@ -564,7 +564,7 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
         int totalHours = 0;
         auto allAssignments = company->getAllTaskAssignments();
         for (const auto& [key, hours] : allAssignments) {
-            const auto [empId, projId, tId] = key;
+            const auto& [empId, projId, tId] = key;
             if (empId == employeeId) {
                 totalHours += hours;
             }
@@ -685,10 +685,10 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     std::vector<size_t> taskIndices(tasks.size());
     std::iota(taskIndices.begin(), taskIndices.end(), 0);
 
-    std::sort(taskIndices.begin(), taskIndices.end(),
-              [&tasks](size_t a, size_t b) {
-                  return compareTaskPriority(tasks[a], tasks[b]) < 0;
-              });
+    std::ranges::sort(taskIndices,
+                      [&tasks](size_t a, size_t b) {
+                          return compareTaskPriority(tasks[a], tasks[b]) < 0;
+                      });
 
     auto allEmployees = company->getAllEmployees();
     std::vector<std::shared_ptr<Employee>> employeesList;
@@ -752,12 +752,12 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
             }
         }
 
-        std::sort(pool.begin(), pool.end(),
-                  [&employeeUsage](const std::shared_ptr<Employee>& a,
-                                   const std::shared_ptr<Employee>& b) {
-                      return compareEmployeesForSorting(a, b, employeeUsage) <
-                             0;
-                  });
+        std::ranges::sort(pool,
+                          [&employeeUsage](const std::shared_ptr<Employee>& a,
+                                           const std::shared_ptr<Employee>& b) {
+                              return compareEmployeesForSorting(a, b, employeeUsage) <
+                                     0;
+                          });
 
         for (const auto& poolEmployee : pool) {
             if (remaining <= 0) break;
@@ -807,7 +807,7 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     int totalAssignedHours = 0;
     for (const auto& [employeeId, hours] : employeeUsage) {
         totalAssignedHours += hours;
-        std::shared_ptr<Employee> emp = company->getEmployee(employeeId);
+        auto emp = company->getEmployee(employeeId);
         if (emp) {
             totalNewCosts += CostCalculationService::calculateEmployeeCost(emp->getSalary(), hours);
         }
