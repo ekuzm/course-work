@@ -111,8 +111,29 @@ class MainWindow : public QMainWindow {
     void handleAddTaskDialog(int projectId, QDialog& dialog, const QLineEdit* taskNameEdit, const QComboBox* taskTypeCombo, const QLineEdit* taskEstHoursEdit, const QLineEdit* priorityEdit);
     void handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, const QComboBox* taskCombo, const QComboBox* employeeCombo, const QLineEdit* hoursEdit, const std::vector<Task>& tasks);
     void removeEmployeeFromProjectTasks(int employeeId, int projectId, Project* mutableProject, double employeeHourlyRate);
-    void collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments);
+    void collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) const;
     void handleEmployeeActiveAssignments(int employeeId, const std::shared_ptr<Employee>& employee);
+    
+    // Helper functions for handleEditProjectDialog
+    struct ProjectEditData {
+        QString projectName;
+        double projectBudget;
+        QString selectedPhase;
+        QString clientName;
+        int estimatedHours;
+        QString newName;
+        QString newDescription;
+        QString newPhase;
+        QDate newStartDate;
+        QDate newEndDate;
+        QString newClientName;
+    };
+    
+    bool validateProjectEditFields(QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields, ProjectEditData& data);
+    bool checkProjectChanges(const Project* oldProject, const ProjectEditData& data);
+    bool validatePhaseTransition(QDialog& dialog, const QString& currentPhase, const QString& newPhase);
+    void updateProjectWithChanges(int projectId, const ProjectEditData& data, const ProjectDialogHelper::ProjectDialogFields& fields, const Project* oldProject);
+    void showProjectUpdateSuccess(QDialog& dialog, const ProjectEditData& data);
 
     static void setupTableWidget(QTableWidget* table,
                                  const QStringList& headers,

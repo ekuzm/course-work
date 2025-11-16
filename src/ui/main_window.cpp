@@ -678,43 +678,145 @@ void MainWindow::editProject() {
     dialog.exec();
 }
 
+bool MainWindow::validateProjectEditFields(QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields, ProjectEditData& data) {
+    data.projectName = fields.nameEdit->text().trimmed();
+    if (!ValidationHelper::validateNonEmpty(data.projectName, "Project name", &dialog))
+        return false;
+
+    if (!ValidationHelper::validateDouble(
+            fields.budgetEdit->text().trimmed(), data.projectBudget, 0.0,
+            kMaxBudget, "Budget", &dialog))
+        return false;
+
+    data.selectedPhase = fields.phaseCombo->currentText();
+    data.clientName = fields.clientNameEdit->text().trimmed();
+
+    if (!ValidationHelper::validateNonEmpty(data.clientName, "Client name", &dialog))
+        return false;
+
+    if (!ValidationHelper::validateDateRange(
+            fields.startDate->date(), fields.endDate->date(), &dialog))
+        return false;
+
+    if (!ValidationHelper::validateInt(
+            fields.estimatedHoursEdit->text().trimmed(), data.estimatedHours,
+            0, kMaxEstimatedHours, "Estimated hours", &dialog))
+        return false;
+
+    data.newName = fields.nameEdit->text().trimmed();
+    data.newDescription = fields.descEdit->toPlainText().trimmed();
+    data.newPhase = fields.phaseCombo->currentText();
+    data.newStartDate = fields.startDate->date();
+    data.newEndDate = fields.endDate->date();
+    data.newClientName = fields.clientNameEdit->text().trimmed();
+
+    return true;
+}
+
+bool MainWindow::checkProjectChanges(const Project* oldProject, const ProjectEditData& data) {
+    return oldProject->getName() != data.newName ||
+           oldProject->getDescription() != data.newDescription ||
+           oldProject->getPhase() != data.newPhase ||
+           oldProject->getStartDate() != data.newStartDate ||
+           oldProject->getEndDate() != data.newEndDate ||
+           oldProject->getBudget() != data.projectBudget ||
+           oldProject->getClientName() != data.newClientName ||
+           oldProject->getEstimatedHours() != data.estimatedHours;
+}
+
+bool MainWindow::validatePhaseTransition(QDialog& dialog, const QString& currentPhase, const QString& newPhase) {
+    if (currentPhase == newPhase) {
+        return true;
+    }
+
+    auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
+    auto newPhaseOrder = Project::getPhaseOrder(newPhase);
+
+    if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
+        newPhaseOrder < currentPhaseOrder) {
+        QMessageBox::warning(
+            &dialog, "Phase Validation Error",
+            QString("Cannot set phase to '%1' because current "
+                    "phase '%2' is already later in the project "
+                    "lifecycle.\n\n"
+                    "Phase order: Analysis → Planning → Design → "
+                    "Development → Testing → Deployment → "
+                    "Maintenance → Completed\n\n"
+                    "You can only move forward in the project "
+                    "lifecycle, not backward.")
+                .arg(newPhase, currentPhase));
+        return false;
+    }
+    return true;
+}
+
+void MainWindow::updateProjectWithChanges(int projectId, const ProjectEditData& data, const ProjectDialogHelper::ProjectDialogFields& fields, const Project* oldProject) {
+    std::vector<Task> savedTasks = oldProject->getTasks();
+    double savedEmployeeCosts = oldProject->getEmployeeCosts();
+
+    std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
+    collectTaskAssignments(projectId, savedTasks, savedTaskAssignments);
+
+    Project updatedProject(projectId, fields.nameEdit->text().trimmed(),
+                           fields.descEdit->toPlainText().trimmed(),
+                           fields.phaseCombo->currentText(),
+                           fields.startDate->date(),
+                           fields.endDate->date(), data.projectBudget,
+                           data.clientName, data.estimatedHours);
+
+    for (const auto& task : savedTasks) {
+        updatedProject.addTask(task);
+    }
+
+    if (savedEmployeeCosts > 0.0) {
+        updatedProject.addEmployeeCost(savedEmployeeCosts);
+    }
+
+    this->currentCompany->removeProject(projectId);
+    this->currentCompany->addProject(updatedProject);
+
+    for (const auto& assignment : savedTaskAssignments) {
+        const auto& [empId, projId, taskId, hours] = assignment;
+        try {
+            this->currentCompany->restoreTaskAssignment(empId, projId, taskId, hours);
+        } catch (const std::exception&) {
+            continue;
+        }
+    }
+
+    auto projects = this->currentCompany->getAllProjects();
+    this->nextProjectId =
+        IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
+}
+
+void MainWindow::showProjectUpdateSuccess(QDialog& dialog, const ProjectEditData& data) {
+    QMessageBox::information(
+        &dialog, "Success",
+        "Project updated successfully!\n\n"
+        "Name: " +
+            data.projectName +
+            "\n"
+            "Phase: " +
+            data.selectedPhase +
+            "\n"
+            "Budget: $" +
+            QString::number(data.projectBudget, 'f', 2));
+    dialog.accept();
+}
+
 void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields) {
     try {
-        auto projectName = fields.nameEdit->text().trimmed();
-        if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
-                                                &dialog))
+        ProjectEditData data;
+        if (!validateProjectEditFields(dialog, fields, data)) {
             return;
+        }
 
-        double projectBudget = 0.0;
-        if (!ValidationHelper::validateDouble(
-                fields.budgetEdit->text().trimmed(), projectBudget, 0.0,
-                kMaxBudget, "Budget", &dialog))
-            return;
-
-        auto selectedPhase = fields.phaseCombo->currentText();
-        auto clientName = fields.clientNameEdit->text().trimmed();
-
-        if (!ValidationHelper::validateNonEmpty(clientName, "Client name",
-                                                &dialog))
-            return;
-
-        if (!ValidationHelper::validateDateRange(
-                fields.startDate->date(), fields.endDate->date(), &dialog))
-            return;
-
-        int estimatedHours = 0;
-        if (!ValidationHelper::validateInt(
-                fields.estimatedHoursEdit->text().trimmed(), estimatedHours,
-                0, kMaxEstimatedHours, "Estimated hours", &dialog))
-            return;
-
-        if (!checkDuplicateProjectOnEdit(projectName, projectId,
-                                         this->currentCompany)) {
+        if (!checkDuplicateProjectOnEdit(data.projectName, projectId, this->currentCompany)) {
             QMessageBox::warning(
                 &dialog, "Duplicate Error",
                 "A project with this name already exists!\n\n"
                 "Project name: \"" +
-                    projectName +
+                    data.projectName +
                     "\"\n"
                     "Project ID: " +
                     QString::number(projectId) +
@@ -729,26 +831,7 @@ void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const P
             return;
         }
 
-        auto newName = fields.nameEdit->text().trimmed();
-        auto newDescription = fields.descEdit->toPlainText().trimmed();
-        auto newPhase = fields.phaseCombo->currentText();
-        auto newStartDate = fields.startDate->date();
-        auto newEndDate = fields.endDate->date();
-        
-        bool hasChanges = false;
-        if (auto newClientName = fields.clientNameEdit->text().trimmed();
-            oldProject->getName() != newName ||
-            oldProject->getDescription() != newDescription ||
-            oldProject->getPhase() != newPhase ||
-            oldProject->getStartDate() != newStartDate ||
-            oldProject->getEndDate() != newEndDate ||
-            oldProject->getBudget() != projectBudget ||
-            oldProject->getClientName() != newClientName ||
-            oldProject->getEstimatedHours() != estimatedHours) {
-            hasChanges = true;
-        }
-
-        if (!hasChanges) {
+        if (!checkProjectChanges(oldProject, data)) {
             QMessageBox::information(
                 &dialog, "No Changes",
                 "No changes were made to the project.\n\n"
@@ -756,84 +839,18 @@ void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const P
             return;
         }
 
-        if (auto currentPhase = oldProject->getPhase(); currentPhase != newPhase) {
-            auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
-            auto newPhaseOrder = Project::getPhaseOrder(newPhase);
-
-            if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
-                newPhaseOrder < currentPhaseOrder) {
-                QMessageBox::warning(
-                    &dialog, "Phase Validation Error",
-                    QString("Cannot set phase to '%1' because current "
-                            "phase '%2' is already later in the project "
-                            "lifecycle.\n\n"
-                            "Phase order: Analysis → Planning → Design → "
-                            "Development → Testing → Deployment → "
-                            "Maintenance → Completed\n\n"
-                            "You can only move forward in the project "
-                            "lifecycle, not backward.")
-                        .arg(newPhase, currentPhase));
-                return;
-            }
+        if (!validatePhaseTransition(dialog, oldProject->getPhase(), data.newPhase)) {
+            return;
         }
 
-        std::vector<Task> savedTasks = oldProject->getTasks();
-        double savedEmployeeCosts = oldProject->getEmployeeCosts();
-
-        std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
-        collectTaskAssignments(projectId, savedTasks, savedTaskAssignments);
-
-        Project updatedProject(projectId, fields.nameEdit->text().trimmed(),
-                               fields.descEdit->toPlainText().trimmed(),
-                               fields.phaseCombo->currentText(),
-                               fields.startDate->date(),
-                               fields.endDate->date(), projectBudget,
-                               clientName, estimatedHours);
-
-        for (const auto& task : savedTasks) {
-            updatedProject.addTask(task);
-        }
-
-        if (savedEmployeeCosts > 0.0) {
-            updatedProject.addEmployeeCost(savedEmployeeCosts);
-        }
-
-        this->currentCompany->removeProject(projectId);
-        this->currentCompany->addProject(updatedProject);
-
-        for (const auto& assignment : savedTaskAssignments) {
-            const auto& [empId, projId, taskId, hours] = assignment;
-            try {
-                this->currentCompany->restoreTaskAssignment(empId, projId, taskId,
-                                                      hours);
-            } catch (const std::exception&) {
-                continue;
-            }
-        }
-
-        auto projects = this->currentCompany->getAllProjects();
-        this->nextProjectId =
-            IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
+        updateProjectWithChanges(projectId, data, fields, oldProject);
         refreshAllData();
         autoSave();
-        QMessageBox::information(
-            &dialog, "Success",
-            "Project updated successfully!\n\n"
-            "Name: " +
-                projectName +
-                "\n"
-                "Phase: " +
-                selectedPhase +
-                "\n"
-                "Budget: $" +
-                QString::number(projectBudget, 'f', 2));
-        dialog.accept();
+        showProjectUpdateSuccess(dialog, data);
     } catch (const CompanyException& e) {
-        ExceptionHandler::handleCompanyException(e, &dialog,
-                                                 "edit project");
+        ExceptionHandler::handleCompanyException(e, &dialog, "edit project");
     } catch (const FileManagerException& e) {
-        ExceptionHandler::handleFileManagerException(e, &dialog,
-                                                     "project update");
+        ExceptionHandler::handleFileManagerException(e, &dialog, "project update");
     } catch (const std::exception& e) {
         ExceptionHandler::handleGenericException(e, &dialog);
     }
@@ -1319,7 +1336,7 @@ void MainWindow::assignEmployeeToTask() {
     refreshProjectDetailView();
 }
 
-void MainWindow::collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) {
+void MainWindow::collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) const {
     auto allEmployees = this->currentCompany->getAllEmployees();
     for (const auto& emp : allEmployees) {
         if (!emp) continue;
