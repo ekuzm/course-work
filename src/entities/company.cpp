@@ -93,7 +93,7 @@ namespace {
         return 0;
     }
     
-    void throwAvailabilityException(const std::shared_ptr<Employee>& employee, int toAssign) {
+    [[noreturn]] void throwAvailabilityException(const std::shared_ptr<Employee>& employee, int toAssign) {
         auto availableHours = employee->getAvailableHours();
         auto currentHours = employee->getCurrentWeeklyHours();
         auto capacity = employee->getWeeklyHoursCapacity();
@@ -578,7 +578,8 @@ namespace {
         const std::shared_ptr<Employee>& employee,
         const ProjectContainer& projects) {
         int totalHours = 0;
-        for (const auto& [projectId, taskId, oldHours, hoursPtr] : assignments) {
+        for (const auto& assignment : assignments) {
+            const auto& [projectId, taskId, oldHours, hoursPtr] = assignment;
             totalHours += oldHours;
         }
         
@@ -680,7 +681,7 @@ namespace {
         task.addAllocatedHours(toAssign);
         params.employeeUsage[employeeId] += toAssign;
         
-        auto key = std::make_tuple(employeeId, params.projectId, task.getId());
+        const auto key = std::make_tuple(employeeId, params.projectId, task.getId());
         params.taskAssignments[key] += toAssign;
         params.currentEmployeeCosts += assignmentCost;
         params.remainingBudget -= assignmentCost;
@@ -1038,7 +1039,7 @@ void Company::autoAssignEmployeesToProject(int projectId) {
         double projectEstimatedHours = projPtr->getEstimatedHours();
         double maxAffordableHourlyRate = 0.0;
         if (projectEstimatedHours > 0) {
-            double averageBudgetPerHour = projectBudget / projectEstimatedHours;
+            auto averageBudgetPerHour = projectBudget / projectEstimatedHours;
             maxAffordableHourlyRate = averageBudgetPerHour * 0.7;
         }
         
