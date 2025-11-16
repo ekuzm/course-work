@@ -18,6 +18,216 @@
 
 Q_LOGGING_CATEGORY(taskAssignmentService, "task.assignment.service")
 
+namespace {
+    QString getRequiredEmployeeType(const QString& taskType) {
+        if (taskType == "Management") return "Manager";
+        if (taskType == "Development") return "Developer";
+        if (taskType == "Design") return "Designer";
+        return "QA";
+    }
+    
+    void updateTaskAndProjectCosts(Project* projPtr, int taskId,
+                                  int oldHours, int newHours,
+                                  std::shared_ptr<Employee> employee) {
+        if (!projPtr || !employee) return;
+        
+        std::vector<Task>& tasks = projPtr->getTasks();
+        for (auto& task : tasks) {
+            if (task.getId() == taskId) {
+                int currentAllocated = task.getAllocatedHours();
+                int diff = newHours - oldHours;
+                int newAllocated = currentAllocated + diff;
+                if (newAllocated < 0) {
+                    newAllocated = 0;
+                }
+                task.setAllocatedHours(newAllocated);
+                
+                
+                if (const auto costDiff = CostCalculationService::calculateEmployeeCost(employee->getSalary(), newHours) -
+                                CostCalculationService::calculateEmployeeCost(employee->getSalary(), oldHours); costDiff < 0) {
+                    projPtr->removeEmployeeCost(-costDiff);
+                } else {
+                    projPtr->addEmployeeCost(costDiff);
+                }
+                break;
+            }
+        }
+    }
+    
+    void validateEmployeeAssignment(const std::shared_ptr<Employee>& employee,
+                                    int hours, const Task& task,
+                                    const QString& projectPhase) {
+        if (!employee->getIsActive()) {
+            throw CompanyException("Cannot assign inactive employee");
+        }
+        
+        if (hours > task.getEstimatedHours()) {
+            throw CompanyException(QString("Cannot assign %1 hours: task "
+                                           "has only %2 estimated hours")
+                                       .arg(hours)
+                                       .arg(task.getEstimatedHours()));
+        }
+        
+        auto employeePosition = employee->getPosition();
+        if (!TaskAssignmentService::roleMatchesSDLCStage(employeePosition, projectPhase)) {
+            throw CompanyException(QString("Employee role '%1' does not "
+                                           "match project SDLC stage '%2'")
+                                       .arg(employeePosition)
+                                       .arg(projectPhase));
+        }
+        
+        auto taskType = task.getType();
+        auto employeeType = employee->getEmployeeType();
+        if (!TaskAssignmentService::taskTypeMatchesEmployeeType(taskType, employeeType)) {
+            QString requiredType = getRequiredEmployeeType(taskType);
+            throw CompanyException(
+                QString("Employee type '%1' does not match task type '%2'.\n"
+                        "Task type '%2' requires employee type '%3'.")
+                    .arg(employeeType)
+                    .arg(taskType)
+                    .arg(requiredType));
+        }
+        
+        int needed = task.getEstimatedHours() - task.getAllocatedHours();
+        if (needed <= 0) {
+            throw CompanyException("Task already fully allocated");
+        }
+    }
+    
+    void validateEmployeeAvailability(const std::shared_ptr<Employee>& employee,
+                                      int toAssign) {
+        if (!employee->isAvailable(toAssign)) {
+            auto availableHours = employee->getAvailableHours();
+            auto currentHours = employee->getCurrentWeeklyHours();
+            auto capacity = employee->getWeeklyHoursCapacity();
+            throw CompanyException(
+                QString("Not enough available hours to assign %1 hours.\n\n"
+                        "Employee: %2\n"
+                        "Weekly capacity: %3h\n"
+                        "Currently used: %4h (across all projects)\n"
+                        "Available: %5h\n"
+                        "Requested: %6h\n\n"
+                        "The employee cannot exceed their weekly capacity "
+                        "of %3h.")
+                    .arg(toAssign)
+                    .arg(employee->getName())
+                    .arg(capacity)
+                    .arg(currentHours)
+                    .arg(availableHours)
+                    .arg(toAssign));
+        }
+    }
+    
+    void validateMonthlySalaryBudget(const std::shared_ptr<Employee>& employee,
+                                     Project* projPtr) {
+        if (employee->getSalary() > projPtr->getBudget()) {
+            throw CompanyException(
+                QString("Cannot assign employee: monthly salary exceeds "
+                        "project budget.\n"
+                        "Employee monthly salary: $%1\n"
+                        "Project budget: $%2\n"
+                        "Employee is too expensive for this project budget.")
+                    .arg(employee->getSalary(), 0, 'f', 2)
+                    .arg(projPtr->getBudget(), 0, 'f', 2));
+        }
+    }
+    
+    void validateHourlyRateBudget(const std::shared_ptr<Employee>& employee,
+                                  Project* projPtr) {
+        double employeeHourlyRate =
+            CostCalculationService::calculateHourlyRate(employee->getSalary());
+        
+        const double projectEstimatedHours = projPtr->getEstimatedHours();
+        if (projectEstimatedHours <= 0) {
+            return;
+        }
+        
+        double averageBudgetPerHour =
+            projPtr->getBudget() / projectEstimatedHours;
+        double maxAffordableHourlyRate = averageBudgetPerHour * kMaxAffordableHourlyRateMultiplier;
+        
+        if (employeeHourlyRate > maxAffordableHourlyRate) {
+            throw CompanyException(
+                QString("Employee hourly rate is too high for this "
+                        "project.\n"
+                        "Employee hourly rate: $%1/hour\n"
+                        "Max affordable hourly rate (70%% of budget "
+                        "avg): $%2/hour\n"
+                        "Project budget: $%3\n"
+                        "Project estimated hours: %4h\n"
+                        "Average budget per hour: $%5/hour")
+                    .arg(employeeHourlyRate, 0, 'f', 2)
+                    .arg(maxAffordableHourlyRate, 0, 'f', 2)
+                    .arg(projPtr->getBudget(), 0, 'f', 2)
+                    .arg(projectEstimatedHours)
+                    .arg(averageBudgetPerHour, 0, 'f', 2));
+        }
+    }
+    
+    void validateAssignmentCostBudget(const std::shared_ptr<Employee>& employee,
+                                      int toAssign, Project* projPtr) {
+        double employeeHourlyRate =
+            CostCalculationService::calculateHourlyRate(employee->getSalary());
+        double assignmentCost =
+            CostCalculationService::calculateEmployeeCost(employee->getSalary(), toAssign);
+        double currentEmployeeCosts = projPtr->getEmployeeCosts();
+        double remainingBudget = projPtr->getBudget() - currentEmployeeCosts;
+        
+        if (currentEmployeeCosts + assignmentCost > projPtr->getBudget()) {
+            throw CompanyException(
+                QString("Cannot assign employee: cost would exceed project "
+                        "budget.\n"
+                        "Employee hourly rate: $%1/hour\n"
+                        "Assignment cost (%2h): $%3\n"
+                        "Current employee costs: $%4\n"
+                        "Project budget: $%5\n"
+                        "Remaining budget: $%6")
+                    .arg(employeeHourlyRate, 0, 'f', 2)
+                    .arg(toAssign)
+                    .arg(assignmentCost, 0, 'f', 2)
+                    .arg(currentEmployeeCosts, 0, 'f', 2)
+                    .arg(projPtr->getBudget(), 0, 'f', 2)
+                    .arg(remainingBudget, 0, 'f', 2));
+        }
+    }
+    
+    void validateBudgetConstraints(const std::shared_ptr<Employee>& employee,
+                                   int toAssign, Project* projPtr) {
+        validateMonthlySalaryBudget(employee, projPtr);
+        validateHourlyRateBudget(employee, projPtr);
+        validateAssignmentCostBudget(employee, toAssign, projPtr);
+    }
+    
+    void applyTaskAssignment(const std::shared_ptr<Employee>& employee,
+                             int employeeId, int projectId, int taskId,
+                             int toAssign, Project* projPtr) {
+        employee->addWeeklyHours(toAssign);
+        employee->addAssignedProject(projectId);
+        
+        std::vector<Task>& tasks = projPtr->getTasks();
+        for (auto& task : tasks) {
+            if (task.getId() == taskId) {
+                task.addAllocatedHours(toAssign);
+                break;
+            }
+        }
+        
+        double assignmentCost =
+            CostCalculationService::calculateEmployeeCost(employee->getSalary(), toAssign);
+        projPtr->addEmployeeCost(assignmentCost);
+        projPtr->recomputeTotalsFromTasks();
+    }
+    
+    Task* findTaskById(std::vector<Task>& tasks, int taskId) {
+        for (auto& task : tasks) {
+            if (task.getId() == taskId) {
+                return &task;
+            }
+        }
+        return nullptr;
+    }
+}
+
 TaskAssignmentService::TaskAssignmentService(Company* company) : company(company) {
     if (!company) {
         throw CompanyException("Company cannot be null");
@@ -68,8 +278,6 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
                                                  int hours) {
     auto employee = company->getEmployee(employeeId);
     if (!employee) throw CompanyException("Employee not found");
-    if (!employee->getIsActive())
-        throw CompanyException("Cannot assign inactive employee");
 
     SafeValue<int> safeHours(hours, 1, kMaxHoursPerWeek);
     if (!safeHours.isValidValue()) {
@@ -89,166 +297,23 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
     }
 
     std::vector<Task>& tasks = projPtr->getTasks();
-    bool found = false;
-    for (auto& task : tasks) {
-        if (task.getId() == taskId) {
-            if (hours > task.getEstimatedHours()) {
-                throw CompanyException(QString("Cannot assign %1 hours: task "
-                                               "has only %2 estimated hours")
-                                           .arg(hours)
-                                           .arg(task.getEstimatedHours()));
-            }
+    Task* task = findTaskById(tasks, taskId);
+    if (!task) throw CompanyException("Task not found");
 
-            auto employeePosition = employee->getPosition();
-            if (bool roleMatches =
-                roleMatchesSDLCStage(employeePosition, projectPhase);
-                !roleMatches) {
-                throw CompanyException(QString("Employee role '%1' does not "
-                                               "match project SDLC stage '%2'")
-                                           .arg(employeePosition)
-                                           .arg(projectPhase));
-            }
-
-            auto taskType = task.getType();
-            auto employeeType = employee->getEmployeeType();
-            if (bool taskTypeMatches =
-                taskTypeMatchesEmployeeType(taskType, employeeType);
-                !taskTypeMatches) {
-                QString requiredType;
-                if (taskType == "Management") {
-                    requiredType = "Manager";
-                } else if (taskType == "Development") {
-                    requiredType = "Developer";
-                } else if (taskType == "Design") {
-                    requiredType = "Designer";
-                } else {
-                    requiredType = "QA";
-                }
-                throw CompanyException(
-                    QString(
-                        "Employee type '%1' does not match task type '%2'.\n"
-                        "Task type '%2' requires employee type '%3'.")
-                        .arg(employeeType)
-                        .arg(taskType)
-                        .arg(requiredType));
-            }
-
-            
-            int needed = task.getEstimatedHours() - task.getAllocatedHours();
-            if (needed <= 0)
-                throw CompanyException("Task already fully allocated");
-
-            
-            
-            
-            int newHoursToAssign = hours;
-            
-            if (newHoursToAssign <= 0) {
-                
-                return;
-            }
-
-            
-            int toAssign =
-                needed < newHoursToAssign ? needed : newHoursToAssign;
-
-            if (!employee->isAvailable(toAssign)) {
-                auto availableHours = employee->getAvailableHours();
-                auto currentHours = employee->getCurrentWeeklyHours();
-                auto capacity = employee->getWeeklyHoursCapacity();
-                throw CompanyException(
-                    QString("Not enough available hours to assign %1 hours.\n\n"
-                            "Employee: %2\n"
-                            "Weekly capacity: %3h\n"
-                            "Currently used: %4h (across all projects)\n"
-                            "Available: %5h\n"
-                            "Requested: %6h\n\n"
-                            "The employee cannot exceed their weekly capacity "
-                            "of %3h.")
-                        .arg(toAssign)
-                        .arg(employee->getName())
-                        .arg(capacity)
-                        .arg(currentHours)
-                        .arg(availableHours)
-                        .arg(toAssign));
-            }
-
-            double employeeHourlyRate =
-                CostCalculationService::calculateHourlyRate(employee->getSalary());
-            double assignmentCost =
-                CostCalculationService::calculateEmployeeCost(employee->getSalary(), toAssign);
-            double currentEmployeeCosts = projPtr->getEmployeeCosts();
-            double remainingBudget =
-                projPtr->getBudget() - currentEmployeeCosts;
-
-            if (employee->getSalary() > projPtr->getBudget()) {
-                throw CompanyException(
-                    QString(
-                        "Cannot assign employee: monthly salary exceeds "
-                        "project budget.\n"
-                        "Employee monthly salary: $%1\n"
-                        "Project budget: $%2\n"
-                        "Employee is too expensive for this project budget.")
-                        .arg(employee->getSalary(), 0, 'f', 2)
-                        .arg(projPtr->getBudget(), 0, 'f', 2));
-            }
-
-            if (double projectEstimatedHours = projPtr->getEstimatedHours();
-                projectEstimatedHours > 0) {
-                double averageBudgetPerHour =
-                    projPtr->getBudget() / projectEstimatedHours;
-                double maxAffordableHourlyRate = averageBudgetPerHour * kMaxAffordableHourlyRateMultiplier;
-
-                if (employeeHourlyRate > maxAffordableHourlyRate) {
-                    throw CompanyException(
-                        QString("Employee hourly rate is too high for this "
-                                "project.\n"
-                                "Employee hourly rate: $%1/hour\n"
-                                "Max affordable hourly rate (70%% of budget "
-                                "avg): $%2/hour\n"
-                                "Project budget: $%3\n"
-                                "Project estimated hours: %4h\n"
-                                "Average budget per hour: $%5/hour")
-                            .arg(employeeHourlyRate, 0, 'f', 2)
-                            .arg(maxAffordableHourlyRate, 0, 'f', 2)
-                            .arg(projPtr->getBudget(), 0, 'f', 2)
-                            .arg(projectEstimatedHours)
-                            .arg(averageBudgetPerHour, 0, 'f', 2));
-                }
-            }
-
-            if (currentEmployeeCosts + assignmentCost > projPtr->getBudget()) {
-                throw CompanyException(
-                    QString("Cannot assign employee: cost would exceed project "
-                            "budget.\n"
-                            "Employee hourly rate: $%1/hour\n"
-                            "Assignment cost (%2h): $%3\n"
-                            "Current employee costs: $%4\n"
-                            "Project budget: $%5\n"
-                            "Remaining budget: $%6")
-                        .arg(employeeHourlyRate, 0, 'f', 2)
-                        .arg(toAssign)
-                        .arg(assignmentCost, 0, 'f', 2)
-                        .arg(currentEmployeeCosts, 0, 'f', 2)
-                        .arg(projPtr->getBudget(), 0, 'f', 2)
-                        .arg(remainingBudget, 0, 'f', 2));
-            }
-
-            employee->addWeeklyHours(toAssign);
-            employee->addAssignedProject(projectId);
-            task.addAllocatedHours(toAssign);
-
-            
-            company->addTaskAssignment(employeeId, projectId, taskId, toAssign);
-
-            projPtr->addEmployeeCost(assignmentCost);
-
-            projPtr->recomputeTotalsFromTasks();
-            found = true;
-            break;
-        }
+    validateEmployeeAssignment(employee, hours, *task, projectPhase);
+    
+    int needed = task->getEstimatedHours() - task->getAllocatedHours();
+    int toAssign = needed < hours ? needed : hours;
+    
+    if (toAssign <= 0) {
+        return;
     }
-    if (!found) throw CompanyException("Task not found");
+
+    validateEmployeeAvailability(employee, toAssign);
+    validateBudgetConstraints(employee, toAssign, projPtr);
+    
+    applyTaskAssignment(employee, employeeId, projectId, taskId, toAssign, projPtr);
+    company->addTaskAssignment(employeeId, projectId, taskId, toAssign);
 }
 
 int TaskAssignmentService::getEmployeeTaskHours(int employeeId, int projectId,
@@ -275,34 +340,6 @@ int TaskAssignmentService::getEmployeeProjectHours(int employeeId, int projectId
     }
 
     return totalHours;
-}
-
-void TaskAssignmentService::updateTaskAndProjectCosts(Project* projPtr, int taskId,
-                                                      int oldHours, int newHours,
-                                                      std::shared_ptr<Employee> employee) {
-    if (!projPtr || !employee) return;
-    
-    std::vector<Task>& tasks = projPtr->getTasks();
-    for (auto& task : tasks) {
-        if (task.getId() == taskId) {
-            int currentAllocated = task.getAllocatedHours();
-            int diff = newHours - oldHours;
-            int newAllocated = currentAllocated + diff;
-            if (newAllocated < 0) {
-                newAllocated = 0;
-            }
-            task.setAllocatedHours(newAllocated);
-            
-            
-            if (double costDiff = CostCalculationService::calculateEmployeeCost(employee->getSalary(), newHours) -
-                            CostCalculationService::calculateEmployeeCost(employee->getSalary(), oldHours); costDiff < 0) {
-                projPtr->removeEmployeeCost(-costDiff);
-            } else {
-                projPtr->addEmployeeCost(costDiff);
-            }
-            break;
-        }
-    }
 }
 
 void TaskAssignmentService::restoreTaskAssignment(int employeeId, int projectId, int taskId,
@@ -359,64 +396,73 @@ void TaskAssignmentService::removeEmployeeTaskAssignments(int employeeId) {
     }
 }
 
-void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
-    
-    
-    std::map<int, std::vector<std::tuple<int, int, int, int>>> employeeAssignments;
-    
-    auto allAssignments = company->getAllTaskAssignments();
-    for (const auto& [key, hours] : allAssignments) {
-        const auto& [employeeId, projectId, taskId] = key;
-        
-        employeeAssignments[employeeId].emplace_back(projectId, taskId, hours, 0);
+namespace {
+    void collectEmployeeAssignments(
+        Company* company,
+        std::map<int, std::vector<std::tuple<int, int, int, int>>>& employeeAssignments) {
+        auto allAssignments = company->getAllTaskAssignments();
+        for (const auto& [key, hours] : allAssignments) {
+            const auto& [employeeId, projectId, taskId] = key;
+            employeeAssignments[employeeId].emplace_back(projectId, taskId, hours, 0);
+        }
     }
     
+    int calculateTotalHours(const std::vector<std::tuple<int, int, int, int>>& assignments) {
+        int totalHours = 0;
+        for (const auto& assignment : assignments) {
+            const auto& [projectId, taskId, oldHours, newHours] = assignment;
+            totalHours += oldHours;
+        }
+        return totalHours;
+    }
+    
+    void scaleAndUpdateAssignments(
+        Company* company, int employeeId,
+        std::vector<std::tuple<int, int, int, int>>& assignments,
+        int capacity, double scaleFactor,
+        const std::shared_ptr<Employee>& employee) {
+        for (auto& assignment : assignments) {
+            auto& [projectId, taskId, oldHours, newHours] = assignment;
+            newHours = static_cast<int>(std::round(oldHours * scaleFactor));
+            
+            if (newHours < 0) newHours = 0;
+            if (newHours > capacity) newHours = capacity;
+            
+            company->setTaskAssignment(employeeId, projectId, taskId, newHours);
+            
+            auto projPtr = company->getMutableProject(projectId);
+            updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
+        }
+    }
+}
+
+void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
+    std::map<int, std::vector<std::tuple<int, int, int, int>>> employeeAssignments;
+    collectEmployeeAssignments(company, employeeAssignments);
     
     for (auto& [employeeId, assignments] : employeeAssignments) {
         auto employee = company->getEmployee(employeeId);
         if (!employee) continue;
         
         const int capacity = employee->getWeeklyHoursCapacity();
+        int totalHours = calculateTotalHours(assignments);
         
-        
-        int totalHours = 0;
-        for (const auto& assignment : assignments) {
-            const auto& [projectId, taskId, oldHours, newHours] = assignment;
-            totalHours += oldHours;
+        if (totalHours <= capacity || totalHours <= 0) {
+            continue;
         }
         
-        
-        if (totalHours > capacity && totalHours > 0) {
-            const auto scaleFactor = static_cast<double>(capacity) / totalHours;
-            
-            for (auto& assignment : assignments) {
-                auto& [projectId, taskId, oldHours, newHours] = assignment;
-                newHours = static_cast<int>(std::round(oldHours * scaleFactor));
-                
-                if (newHours < 0) newHours = 0;
-                if (newHours > capacity) newHours = capacity;  
-                
-                
-                company->setTaskAssignment(employeeId, projectId, taskId, newHours);
-                
-                
-                auto projPtr = company->getMutableProject(projectId);
-                updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
-            }
-        }
+        const auto scaleFactor = static_cast<double>(capacity) / totalHours;
+        scaleAndUpdateAssignments(company, employeeId, assignments, capacity, scaleFactor, employee);
     }
 }
 
-void TaskAssignmentService::recalculateTaskAllocatedHours() {
-    
-    fixTaskAssignmentsToCapacity();
-    
-    
-    auto allProjects = company->getAllProjects();
-    for (const auto& project : allProjects) {
-        Project* mutableProject = company->getMutableProject(project.getId());
-        if (mutableProject) {
-            // Clear existing costs
+namespace {
+    void clearProjectCosts(Company* company) {
+        auto allProjects = company->getAllProjects();
+        for (const auto& project : allProjects) {
+            Project* mutableProject = company->getMutableProject(project.getId());
+            if (!mutableProject) continue;
+            
             double currentCosts = mutableProject->getEmployeeCosts();
             if (currentCosts > 0) {
                 mutableProject->removeEmployeeCost(currentCosts);
@@ -424,74 +470,76 @@ void TaskAssignmentService::recalculateTaskAllocatedHours() {
         }
     }
     
+    void calculateTaskAllocatedHours(Company* company, int projectId,
+                                     const std::vector<Task>& tasks,
+                                     std::vector<Task>& mutableTasks,
+                                     double& projectTotalCosts) {
+        auto allEmployees = company->getAllEmployees();
+        
+        for (size_t i = 0; i < tasks.size(); ++i) {
+            int taskId = tasks[i].getId();
+            int totalAllocated = 0;
+            
+            for (const auto& employee : allEmployees) {
+                if (!employee || !employee->isAssignedToProject(projectId)) {
+                    continue;
+                }
+                
+                int hours = company->getTaskAssignment(employee->getId(), projectId, taskId);
+                if (hours > 0) {
+                    totalAllocated += hours;
+                    double cost = CostCalculationService::calculateEmployeeCost(
+                        employee->getSalary(), hours);
+                    projectTotalCosts += cost;
+                }
+            }
+            
+            mutableTasks[i].setAllocatedHours(totalAllocated);
+        }
+    }
     
-    
-    for (const auto& project : allProjects) {
+    void recalculateProjectHours(Company* company, const Project& project) {
         Project* mutableProject = company->getMutableProject(project.getId());
-        if (!mutableProject) continue;
+        if (!mutableProject) return;
         
         int projectId = project.getId();
         std::vector<Task>& tasks = mutableProject->getTasks();
         double projectTotalCosts = 0.0;
         
-        for (auto& task : tasks) {
-            int taskId = task.getId();
-            
-            
-            int totalAllocated = 0;
-            auto allEmployees = company->getAllEmployees();
-            
-            for (const auto& employee : allEmployees) {
-                if (employee && employee->isAssignedToProject(projectId)) {
-                    
-                    int hours = company->getTaskAssignment(employee->getId(), projectId, taskId);
-                    if (hours > 0) {
-                        totalAllocated += hours;
-                        
-                        
-                        double cost = CostCalculationService::calculateEmployeeCost(employee->getSalary(), hours);
-                        projectTotalCosts += cost;
-                    }
-                }
-            }
-            
-            
-            task.setAllocatedHours(totalAllocated);
-        }
-        
+        calculateTaskAllocatedHours(company, projectId, tasks, tasks, projectTotalCosts);
         
         if (projectTotalCosts > 0) {
             mutableProject->addEmployeeCost(projectTotalCosts);
         }
         
-        
         mutableProject->recomputeTotalsFromTasks();
     }
 }
 
-void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
-    if (scaleFactor <= 0) {
-        return;
-    }
-
-    auto employee = company->getEmployee(employeeId);
-    if (!employee) {
-        return;
-    }
-
-    const int capacity = employee->getWeeklyHoursCapacity();
-
+void TaskAssignmentService::recalculateTaskAllocatedHours() {
+    fixTaskAssignmentsToCapacity();
+    clearProjectCosts(company);
     
-    std::vector<std::tuple<int, int, int, int>> assignmentsData;
-    int totalScaledHours = 0;
-    
-    auto allAssignments = company->getAllTaskAssignments();
-    for (const auto& assignment : allAssignments) {
-        const auto [empId, projectId, taskId] = assignment.first;
-        if (empId == employeeId) {
+    auto allProjects = company->getAllProjects();
+    for (const auto& project : allProjects) {
+        recalculateProjectHours(company, project);
+    }
+}
+
+namespace {
+    void collectScaledAssignmentsForEmployee(
+        Company* company, int employeeId, double scaleFactor,
+        std::vector<std::tuple<int, int, int, int>>& assignmentsData,
+        int& totalScaledHours) {
+        auto allAssignments = company->getAllTaskAssignments();
+        for (const auto& assignment : allAssignments) {
+            const auto [empId, projectId, taskId] = assignment.first;
+            if (empId != employeeId) {
+                continue;
+            }
+            
             const int oldHours = assignment.second;
             auto scaledHours = static_cast<int>(std::round(oldHours * scaleFactor));
-            
             if (scaledHours < 0) {
                 scaledHours = 0;
             }
@@ -500,9 +548,14 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
             totalScaledHours += scaledHours;
         }
     }
-
     
-    if (!assignmentsData.empty() && totalScaledHours > capacity) {
+    void adjustAssignmentsToCapacity(
+        std::vector<std::tuple<int, int, int, int>>& assignmentsData,
+        int capacity, int& totalScaledHours) {
+        if (assignmentsData.empty() || totalScaledHours <= capacity) {
+            return;
+        }
+        
         const auto adjustFactor = static_cast<double>(capacity) / totalScaledHours;
         totalScaledHours = 0;
         
@@ -517,48 +570,55 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
             totalScaledHours += adjustedHours;
         }
         
+        if (totalScaledHours <= capacity) {
+            return;
+        }
         
-        if (!assignmentsData.empty() && totalScaledHours > capacity) {
-            int excess = totalScaledHours - capacity;
-            
-            std::ranges::sort(assignmentsData, [](const auto& a, const auto& b) {
-                const auto& [projectIdA, taskIdA, oldHoursA, adjustedHoursA] = a;
-                const auto& [projectIdB, taskIdB, oldHoursB, adjustedHoursB] = b;
-                return adjustedHoursA > adjustedHoursB;
-            });
-            
-            for (auto& assignment : assignmentsData) {
-                if (excess <= 0) break;
-                auto& [projectId, taskId, oldHours, adjustedHours] = assignment;
-                if (adjustedHours > 0) {
-                    int reduction = std::min(excess, adjustedHours);
-                    adjustedHours = adjustedHours - reduction;
-                    totalScaledHours -= reduction;
-                    excess -= reduction;
-                }
+        int excess = totalScaledHours - capacity;
+        std::ranges::sort(assignmentsData, [](const auto& a, const auto& b) {
+            const auto& [projectIdA, taskIdA, oldHoursA, adjustedHoursA] = a;
+            const auto& [projectIdB, taskIdB, oldHoursB, adjustedHoursB] = b;
+            return adjustedHoursA > adjustedHoursB;
+        });
+        
+        for (auto& assignment : assignmentsData) {
+            if (excess <= 0) break;
+            auto& [projectId, taskId, oldHours, adjustedHours] = assignment;
+            if (adjustedHours <= 0) {
+                continue;
             }
+            
+            int reduction = std::min(excess, adjustedHours);
+            adjustedHours = adjustedHours - reduction;
+            totalScaledHours -= reduction;
+            excess -= reduction;
         }
     }
-
     
-    for (const auto& assignment : assignmentsData) {
-        const auto& [projectId, taskId, oldHours, newHours] = assignment;
+    void updateTaskAssignmentsFromScaledData(
+        Company* company, int employeeId,
+        const std::vector<std::tuple<int, int, int, int>>& assignmentsData,
+        const std::shared_ptr<Employee>& employee) {
+        for (const auto& assignment : assignmentsData) {
+            const auto& [projectId, taskId, oldHours, newHours] = assignment;
+            
+            if (newHours > 0) {
+                company->setTaskAssignment(employeeId, projectId, taskId, newHours);
+            } else {
+                company->removeTaskAssignment(employeeId, projectId, taskId);
+            }
+
+            Project* projPtr = company->getMutableProject(projectId);
+            updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
+        }
+    }
+    
+    void updateEmployeeHoursAfterScaling(
+        const std::shared_ptr<Employee>& employee, Company* company, int employeeId) {
+        if (!employee->getIsActive()) {
+            return;
+        }
         
-        if (newHours > 0) {
-            company->setTaskAssignment(employeeId, projectId, taskId, newHours);
-        } else {
-            company->removeTaskAssignment(employeeId, projectId, taskId);
-        }
-
-        Project* projPtr = company->getMutableProject(projectId);
-        updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
-    }
-
-    
-    recalculateTaskAllocatedHours();
-
-    
-    if (employee->getIsActive()) {
         const int currentCapacity = employee->getWeeklyHoursCapacity();
         
         int totalHours = 0;
@@ -570,12 +630,9 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
             }
         }
         
-        
         if (totalHours > currentCapacity) {
             totalHours = currentCapacity;
         }
-        
-        
         
         if (int currentHours = employee->getCurrentWeeklyHours(); currentHours > 0) {
             try {
@@ -585,23 +642,50 @@ void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double 
             }
         }
         
+        if (totalHours <= 0) {
+            return;
+        }
         
-        if (totalHours > 0) {
-            try {
-                employee->addWeeklyHours(totalHours);
-            } catch (const EmployeeException& e) {
-                qCWarning(taskAssignmentService) << "Failed to add weekly hours:" << e.what();
+        try {
+            employee->addWeeklyHours(totalHours);
+        } catch (const EmployeeException& e) {
+            qCWarning(taskAssignmentService) << "Failed to add weekly hours:" << e.what();
+            if (totalHours > currentCapacity) {
                 try {
-                    if (totalHours > currentCapacity) {
-                        employee->addWeeklyHours(currentCapacity);
-                    }
+                    employee->addWeeklyHours(currentCapacity);
                 } catch (const EmployeeException& e2) {
                     qCWarning(taskAssignmentService) << "Failed to add weekly hours (fallback):" << e2.what();
                 }
             }
         }
     }
-    // Employee hours updated
+}
+
+void TaskAssignmentService::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
+    if (scaleFactor <= 0) {
+        return;
+    }
+
+    auto employee = company->getEmployee(employeeId);
+    if (!employee) {
+        return;
+    }
+
+    const int capacity = employee->getWeeklyHoursCapacity();
+    std::vector<std::tuple<int, int, int, int>> assignmentsData;
+    int totalScaledHours = 0;
+    
+    collectScaledAssignmentsForEmployee(company, employeeId, scaleFactor,
+                                        assignmentsData, totalScaledHours);
+    
+    if (assignmentsData.empty()) {
+        return;
+    }
+    
+    adjustAssignmentsToCapacity(assignmentsData, capacity, totalScaledHours);
+    updateTaskAssignmentsFromScaledData(company, employeeId, assignmentsData, employee);
+    recalculateTaskAllocatedHours();
+    updateEmployeeHoursAfterScaling(employee, company, employeeId);
 }
 
 static int compareTaskPriority(const Task& taskA, const Task& taskB) {
@@ -669,6 +753,189 @@ static int compareEmployeesForSorting(const std::shared_ptr<Employee>& a,
     return 0;
 }
 
+namespace {
+    std::vector<size_t> prepareTaskIndices(const std::vector<Task>& tasks) {
+        std::vector<size_t> taskIndices(tasks.size());
+        std::iota(taskIndices.begin(), taskIndices.end(), 0);
+        
+        std::ranges::sort(taskIndices,
+                  [&tasks](size_t a, size_t b) {
+                      return compareTaskPriority(tasks[a], tasks[b]) < 0;
+                  });
+        return taskIndices;
+    }
+    
+    std::vector<std::shared_ptr<Employee>> buildActiveEmployeesList(Company* company) {
+        std::vector<std::shared_ptr<Employee>> employeesList;
+        auto allEmployees = company->getAllEmployees();
+        for (const auto& emp : allEmployees) {
+            if (emp && emp->getIsActive()) {
+                employeesList.push_back(emp);
+            }
+        }
+        return employeesList;
+    }
+    
+    bool isEmployeeEligibleForTask(const std::shared_ptr<Employee>& employee,
+                                    const QString& projectPhase,
+                                    const QString& taskType,
+                                    double projectBudget,
+                                    double maxAffordableHourlyRate,
+                                    double projectEstimatedHours) {
+        if (!employee) return false;
+        if (!employeeRoleMatchesSDLC(employee, projectPhase)) return false;
+        if (!employeeTaskTypeMatches(employee, taskType)) return false;
+        if (employee->getSalary() > projectBudget) return false;
+        
+        if (projectEstimatedHours > 0) {
+            double employeeHourlyRate =
+                CostCalculationService::calculateHourlyRate(employee->getSalary());
+            if (employeeHourlyRate > maxAffordableHourlyRate) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    int getTrulyAvailableHours(const std::shared_ptr<Employee>& employee,
+                               const std::map<int, int>& employeeUsage) {
+        int available = employee->getAvailableHours();
+        int employeeId = employee->getId();
+        int alreadyUsed = 0;
+        if (auto it = employeeUsage.find(employeeId); it != employeeUsage.end()) {
+            alreadyUsed = it->second;
+        }
+        return available - alreadyUsed;
+    }
+    
+    std::vector<std::shared_ptr<Employee>> buildEmployeePool(
+        const std::vector<std::shared_ptr<Employee>>& employeesList,
+        const QString& projectPhase, const QString& taskType,
+        double projectBudget, double maxAffordableHourlyRate,
+        double projectEstimatedHours,
+        const std::map<int, int>& employeeUsage) {
+        std::vector<std::shared_ptr<Employee>> pool;
+        for (const auto& employee : employeesList) {
+            if (!isEmployeeEligibleForTask(employee, projectPhase, taskType,
+                                          projectBudget, maxAffordableHourlyRate,
+                                          projectEstimatedHours)) {
+                continue;
+            }
+            
+            int trulyAvailable = getTrulyAvailableHours(employee, employeeUsage);
+            if (trulyAvailable > 0) {
+                pool.push_back(employee);
+            }
+        }
+        return pool;
+    }
+    
+    int calculateToAssignHours(int remaining, int trulyAvailable,
+                               int maxAffordableHours) {
+        int toAssign = remaining;
+        if (trulyAvailable < toAssign) {
+            toAssign = trulyAvailable;
+        }
+        if (maxAffordableHours > 0 && maxAffordableHours < toAssign) {
+            toAssign = maxAffordableHours;
+        }
+        return toAssign;
+    }
+    
+    void assignEmployeeToTaskInPool(
+        const std::shared_ptr<Employee>& poolEmployee,
+        Task& task, int projectId, int& remaining,
+        double& currentEmployeeCosts, double& remainingBudget,
+        std::map<int, int>& employeeUsage, Company* company) {
+        int employeeId = poolEmployee->getId();
+        int trulyAvailable = getTrulyAvailableHours(poolEmployee, employeeUsage);
+        if (trulyAvailable <= 0) {
+            return;
+        }
+
+        const double hourlyRate = CostCalculationService::calculateHourlyRate(
+            poolEmployee->getSalary());
+        int maxAffordableHours = 0;
+        if (hourlyRate > 0 && remainingBudget > 0) {
+            maxAffordableHours = static_cast<int>(remainingBudget / hourlyRate);
+        }
+
+        int toAssign = calculateToAssignHours(remaining, trulyAvailable, maxAffordableHours);
+        if (toAssign <= 0) {
+            return;
+        }
+
+        double assignmentCost =
+            CostCalculationService::calculateEmployeeCost(poolEmployee->getSalary(), toAssign);
+        Project* projPtr = company->getMutableProject(projectId);
+        if (!projPtr || currentEmployeeCosts + assignmentCost > projPtr->getBudget()) {
+            return;
+        }
+
+        poolEmployee->addWeeklyHours(toAssign);
+        poolEmployee->addAssignedProject(projectId);
+        task.addAllocatedHours(toAssign);
+        employeeUsage[employeeId] += toAssign;
+
+        company->addTaskAssignment(employeeId, projectId, task.getId(), toAssign);
+        currentEmployeeCosts += assignmentCost;
+        remainingBudget -= assignmentCost;
+        remaining -= toAssign;
+    }
+    
+    void processTaskAssignment(
+        Task& task, int projectId, const QString& projectPhase,
+        double projectBudget, double projectEstimatedHours,
+        const std::vector<std::shared_ptr<Employee>>& employeesList,
+        std::map<int, int>& employeeUsage,
+        double& currentEmployeeCosts, double& remainingBudget,
+        Company* company, Project* projPtr) {
+        int remaining = task.getEstimatedHours() - task.getAllocatedHours();
+        if (remaining <= 0) {
+            return;
+        }
+
+        double averageBudgetPerHour = 0.0;
+        if (projectEstimatedHours > 0) {
+            averageBudgetPerHour = projectBudget / projectEstimatedHours;
+        }
+        double maxAffordableHourlyRate = averageBudgetPerHour * 0.7;
+        auto taskType = task.getType();
+
+        std::vector<std::shared_ptr<Employee>> pool = buildEmployeePool(
+            employeesList, projectPhase, taskType, projectBudget,
+            maxAffordableHourlyRate, projectEstimatedHours, employeeUsage);
+
+        std::ranges::sort(pool,
+                  [&employeeUsage](const std::shared_ptr<Employee>& a,
+                                   const std::shared_ptr<Employee>& b) {
+                      return compareEmployeesForSorting(a, b, employeeUsage) < 0;
+                  });
+
+        for (const auto& poolEmployee : pool) {
+            if (remaining <= 0) break;
+            assignEmployeeToTaskInPool(poolEmployee, task, projectId, remaining,
+                                      currentEmployeeCosts, remainingBudget,
+                                      employeeUsage, company);
+        }
+    }
+    
+    void calculateAndApplyTotalCosts(Project* projPtr,
+                                     const std::map<int, int>& employeeUsage,
+                                     Company* company) {
+        double totalNewCosts = 0.0;
+        for (const auto& [employeeId, hours] : employeeUsage) {
+            auto emp = company->getEmployee(employeeId);
+            if (emp) {
+                totalNewCosts += CostCalculationService::calculateEmployeeCost(
+                    emp->getSalary(), hours);
+            }
+        }
+        projPtr->addEmployeeCost(totalNewCosts);
+        projPtr->recomputeTotalsFromTasks();
+    }
+}
+
 void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     Project* projPtr = company->getMutableProject(projectId);
     if (!projPtr) throw CompanyException("Project not found");
@@ -682,138 +949,23 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     std::vector<Task>& tasks = projPtr->getTasks();
     if (tasks.empty()) throw CompanyException("No tasks in project");
 
-    std::vector<size_t> taskIndices(tasks.size());
-    std::iota(taskIndices.begin(), taskIndices.end(), 0);
-
-    std::ranges::sort(taskIndices,
-              [&tasks](size_t a, size_t b) {
-                  return compareTaskPriority(tasks[a], tasks[b]) < 0;
-              });
-
-    auto allEmployees = company->getAllEmployees();
-    std::vector<std::shared_ptr<Employee>> employeesList;
-    for (const auto& emp : allEmployees) {
-        if (emp && emp->getIsActive()) {
-            employeesList.push_back(emp);
-        }
-    }
-
+    std::vector<size_t> taskIndices = prepareTaskIndices(tasks);
+    std::vector<std::shared_ptr<Employee>> employeesList = buildActiveEmployeesList(company);
     std::map<int, int> employeeUsage;
 
     auto currentEmployeeCosts = projPtr->getEmployeeCosts();
     auto remainingBudget = projPtr->getBudget() - currentEmployeeCosts;
+    double projectBudget = projPtr->getBudget();
+    double projectEstimatedHours = projPtr->getEstimatedHours();
 
     for (const auto taskIndex : taskIndices) {
         Task& task = tasks[taskIndex];
-        int remaining = task.getEstimatedHours() - task.getAllocatedHours();
-
-        if (remaining <= 0) continue;
-
-        std::vector<std::shared_ptr<Employee>> pool;
-        double projectBudget = projPtr->getBudget();
-        double projectEstimatedHours = projPtr->getEstimatedHours();
-        double averageBudgetPerHour = 0.0;
-        if (projectEstimatedHours > 0) {
-            averageBudgetPerHour = projectBudget / projectEstimatedHours;
-        }
-        double maxAffordableHourlyRate = averageBudgetPerHour * 0.7;
-
-        auto taskType = task.getType();
-
-        for (const auto& employee : employeesList) {
-            if (!employee) continue;
-            if (!employeeRoleMatchesSDLC(employee, projectPhase)) continue;
-
-            if (!employeeTaskTypeMatches(employee, taskType)) {
-                continue;
-            }
-
-            if (employee->getSalary() > projectBudget) {
-                continue;
-            }
-
-            if (projectEstimatedHours > 0) {
-                double employeeHourlyRate =
-                    CostCalculationService::calculateHourlyRate(employee->getSalary());
-                if (employeeHourlyRate > maxAffordableHourlyRate) {
-                    continue;
-                }
-            }
-
-            int available = employee->getAvailableHours();
-            int employeeId = employee->getId();
-            int alreadyUsed = 0;
-            if (auto it = employeeUsage.find(employeeId); it != employeeUsage.end()) {
-                alreadyUsed = it->second;
-            }
-            int trulyAvailable = available - alreadyUsed;
-            if (trulyAvailable > 0) {
-                pool.push_back(employee);
-            }
-        }
-
-        std::ranges::sort(pool,
-                  [&employeeUsage](const std::shared_ptr<Employee>& a,
-                                   const std::shared_ptr<Employee>& b) {
-                      return compareEmployeesForSorting(a, b, employeeUsage) <
-                             0;
-                  });
-
-        for (const auto& poolEmployee : pool) {
-            if (remaining <= 0) break;
-            int employeeId = poolEmployee->getId();
-
-            int trulyAvailable = poolEmployee->getAvailableHours();
-            if (auto it = employeeUsage.find(employeeId); it != employeeUsage.end()) {
-                trulyAvailable -= it->second;
-            }
-            if (trulyAvailable <= 0) continue;
-
-            const double hourlyRate = CostCalculationService::calculateHourlyRate(poolEmployee->getSalary());
-            int maxAffordableHours = 0;
-            if (hourlyRate > 0 && remainingBudget > 0) {
-                maxAffordableHours =
-                    static_cast<int>(remainingBudget / hourlyRate);
-            }
-
-            int toAssign = remaining;
-            if (trulyAvailable < toAssign) {
-                toAssign = trulyAvailable;
-            }
-            if (maxAffordableHours < toAssign) {
-                toAssign = maxAffordableHours;
-            }
-            if (toAssign <= 0) continue;
-
-            double assignmentCost =
-                CostCalculationService::calculateEmployeeCost(poolEmployee->getSalary(), toAssign);
-            if (currentEmployeeCosts + assignmentCost > projPtr->getBudget()) {
-                continue;
-            }
-
-            poolEmployee->addWeeklyHours(toAssign);
-            poolEmployee->addAssignedProject(projectId);
-            task.addAllocatedHours(toAssign);
-            employeeUsage[employeeId] += toAssign;
-
-            company->addTaskAssignment(employeeId, projectId, task.getId(), toAssign);
-            currentEmployeeCosts += assignmentCost;
-            remainingBudget -= assignmentCost;
-            remaining -= toAssign;
-        }
+        processTaskAssignment(task, projectId, projectPhase, projectBudget,
+                             projectEstimatedHours, employeesList, employeeUsage,
+                             currentEmployeeCosts, remainingBudget, company, projPtr);
     }
 
-    double totalNewCosts = 0.0;
-    int totalAssignedHours = 0;
-    for (const auto& [employeeId, hours] : employeeUsage) {
-        totalAssignedHours += hours;
-        auto emp = company->getEmployee(employeeId);
-        if (emp) {
-            totalNewCosts += CostCalculationService::calculateEmployeeCost(emp->getSalary(), hours);
-        }
-    }
-    projPtr->addEmployeeCost(totalNewCosts);
-    projPtr->recomputeTotalsFromTasks();
+    calculateAndApplyTotalCosts(projPtr, employeeUsage, company);
 }
 
 bool TaskAssignmentService::validateAssignment(std::shared_ptr<Employee> employee,

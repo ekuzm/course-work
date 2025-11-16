@@ -13,6 +13,60 @@
 
 std::map<int, bool> FileManager::employeeStatusesFromFile;
 
+namespace {
+    void parseTaskField(const std::string& lineContent, int& projectId, int& taskId,
+                       QString& taskName, QString& taskType,
+                       int& estimatedHours, int& allocatedHours,
+                       int& priority, QString& phase) {
+        if (lineContent.find("PROJECT_ID:") == 0) {
+            projectId = std::stoi(lineContent.substr(11));
+        } else if (lineContent.find("TASK_ID:") == 0) {
+            taskId = std::stoi(lineContent.substr(8));
+        } else if (lineContent.find("NAME:") == 0) {
+            taskName = QString::fromStdString(lineContent.substr(5));
+        } else if (lineContent.find("TYPE:") == 0) {
+            taskType = QString::fromStdString(lineContent.substr(5));
+        } else if (lineContent.find("ESTIMATED_HOURS:") == 0) {
+            estimatedHours = std::stoi(lineContent.substr(16));
+        } else if (lineContent.find("ALLOCATED_HOURS:") == 0) {
+            allocatedHours = std::stoi(lineContent.substr(16));
+        } else if (lineContent.find("PRIORITY:") == 0) {
+            priority = std::stoi(lineContent.substr(9));
+        } else if (lineContent.find("PHASE:") == 0) {
+            phase = QString::fromStdString(lineContent.substr(6));
+        }
+    }
+    
+    void parseAssignmentLine(const std::string& lineContent,
+                             std::vector<std::pair<int, int>>& assignments,
+                             int& assignmentsRead, int assignmentsCount,
+                             bool& readingAssignments) {
+        size_t empPos = lineContent.find("EMPLOYEE_ID:");
+        size_t hoursPos = lineContent.find("HOURS:");
+        
+        if (empPos == std::string::npos || hoursPos == std::string::npos) {
+            return;
+        }
+        
+        int employeeId = 0;
+        int hours = 0;
+        try {
+            employeeId = std::stoi(lineContent.substr(empPos + 12));
+            hours = std::stoi(lineContent.substr(hoursPos + 6));
+        } catch (const std::exception&) {
+            return;
+        }
+        
+        if (employeeId > 0 && hours > 0) {
+            assignments.push_back(std::make_pair(employeeId, hours));
+            assignmentsRead++;
+            if (assignmentsRead >= assignmentsCount) {
+                readingAssignments = false;
+            }
+        }
+    }
+}
+
 int FileManager::parseIntFromStream(std::ifstream& fileStream,
                                     const QString& fieldName) {
     std::string lineContent;
@@ -572,10 +626,12 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
                 auto taskHours = company.getEmployeeTaskHours(
                     emp->getId(), project.getId(), task.getId());
                 
-                if (taskHours > 0) {
-                    assignments.push_back(
-                        std::make_pair(emp->getId(), taskHours));
+                if (taskHours <= 0) {
+                    continue;
                 }
+                
+                assignments.push_back(
+                    std::make_pair(emp->getId(), taskHours));
             }
 
             allTasks.push_back(std::make_tuple(
@@ -748,23 +804,10 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                     break;
                 }
                 
-                if (lineContent.find("PROJECT_ID:") == 0) {
-                    projectId = std::stoi(lineContent.substr(11));
-                } else if (lineContent.find("TASK_ID:") == 0) {
-                    taskId = std::stoi(lineContent.substr(8));
-                } else if (lineContent.find("NAME:") == 0) {
-                    taskName = QString::fromStdString(lineContent.substr(5));
-                } else if (lineContent.find("TYPE:") == 0) {
-                    taskType = QString::fromStdString(lineContent.substr(5));
-                } else if (lineContent.find("ESTIMATED_HOURS:") == 0) {
-                    estimatedHours = std::stoi(lineContent.substr(16));
-                } else if (lineContent.find("ALLOCATED_HOURS:") == 0) {
-                    allocatedHours = std::stoi(lineContent.substr(16));
-                } else if (lineContent.find("PRIORITY:") == 0) {
-                    priority = std::stoi(lineContent.substr(9));
-                } else if (lineContent.find("PHASE:") == 0) {
-                    phase = QString::fromStdString(lineContent.substr(6));
-                } else if (lineContent.find("ASSIGNMENTS_COUNT:") == 0) {
+                parseTaskField(lineContent, projectId, taskId, taskName, taskType,
+                              estimatedHours, allocatedHours, priority, phase);
+                
+                if (lineContent.find("ASSIGNMENTS_COUNT:") == 0) {
                     try {
                         assignmentsCount = std::stoi(lineContent.substr(18));
                         readingAssignments = assignmentsCount > 0;
@@ -772,58 +815,40 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
                     } catch (const std::exception&) {
                         assignmentsCount = 0;
                     }
-                } else if (readingAssignments && lineContent.find("ASSIGNMENTS:") == 0) {
-                    (void)0;
-                } else if (readingAssignments && lineContent.find("  [") == 0) {
-                    size_t empPos = lineContent.find("EMPLOYEE_ID:");
-                    size_t hoursPos = lineContent.find("HOURS:");
-                    
-                    if (empPos != std::string::npos && hoursPos != std::string::npos) {
-                        int employeeId = 0;
-                        int hours = 0;
-                        try {
-                            employeeId = std::stoi(lineContent.substr(empPos + 12));
-                            hours = std::stoi(lineContent.substr(hoursPos + 6));
-                        } catch (const std::exception&) {
-                            lineIndex++;
-                            continue;
-                        }
-                        
-                        if (employeeId > 0 && hours > 0) {
-                            assignments.push_back(std::make_pair(employeeId, hours));
-                            assignmentsRead++;
-                            if (assignmentsRead >= assignmentsCount) {
-                                readingAssignments = false;
-                            }
-                        }
-                    }
+                }
+                
+                if (readingAssignments && lineContent.find("  [") == 0) {
+                    parseAssignmentLine(lineContent, assignments, assignmentsRead,
+                                       assignmentsCount, readingAssignments);
                 }
                 
                 lineIndex++;
             }
             
-            if (projectId > 0 && taskId > 0 && !taskName.isEmpty()) {
-                try {
-                    Task task(taskId, taskName, taskType, estimatedHours, priority);
-                    task.setPhase(phase);
-                    task.setAllocatedHours(allocatedHours);
-                    company.addTaskToProject(projectId, task);
-                    
-                    for (const auto& assignment : assignments) {
-                        const auto& [empId, hours] = assignment;
+            if (projectId <= 0 || taskId <= 0 || taskName.isEmpty()) {
+                continue;
+            }
+            
+            try {
+                Task task(taskId, taskName, taskType, estimatedHours, priority);
+                task.setPhase(phase);
+                task.setAllocatedHours(allocatedHours);
+                company.addTaskToProject(projectId, task);
+                
+                for (const auto& assignment : assignments) {
+                    const auto& [empId, hours] = assignment;
+                    try {
+                        company.assignEmployeeToTask(empId, projectId, taskId, hours);
+                    } catch (const std::exception&) {
                         try {
-                            company.assignEmployeeToTask(empId, projectId, taskId, hours);
+                            company.restoreTaskAssignment(empId, projectId, taskId, hours);
                         } catch (const std::exception&) {
-                            try {
-                                company.restoreTaskAssignment(empId, projectId, taskId, hours);
-                            } catch (const std::exception&) {
-                                continue;
-                            }
+                            continue;
                         }
                     }
-                } catch (const std::exception&) {
-                    continue;
                 }
+            } catch (const std::exception&) {
+                continue;
             }
         }
     }
@@ -852,11 +877,13 @@ void FileManager::saveTaskAssignments(const Company& company,
                 int taskHours = company.getEmployeeTaskHours(
                     emp->getId(), projectId, task.getId());
                 
-                if (taskHours > 0) {
-                    assignments.push_back(
-                        std::make_tuple(emp->getId(), projectId,
-                                        task.getId(), taskHours));
+                if (taskHours <= 0) {
+                    continue;
                 }
+                
+                assignments.push_back(
+                    std::make_tuple(emp->getId(), projectId,
+                                    task.getId(), taskHours));
             }
         }
     }

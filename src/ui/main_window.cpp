@@ -111,19 +111,26 @@ int MainWindow::getSelectedEmployeeId() const {
 }
 
 int MainWindow::getSelectedProjectId() const {
-    if (projectTable != nullptr) {
-        int rowIndex = projectTable->currentRow();
-        if (rowIndex >= 0) {
-            const QTableWidgetItem* tableItem = projectTable->item(rowIndex, 0);
-            if (tableItem != nullptr) {
-                bool conversionSuccess = false;
-                int projectId = tableItem->text().toInt(&conversionSuccess);
-                if (conversionSuccess) {
-                    return projectId;
-                }
-            }
-        }
+    if (projectTable == nullptr) {
+        return -1;
     }
+    
+    int rowIndex = projectTable->currentRow();
+    if (rowIndex < 0) {
+        return -1;
+    }
+    
+    const QTableWidgetItem* tableItem = projectTable->item(rowIndex, 0);
+    if (tableItem == nullptr) {
+        return -1;
+    }
+    
+    bool conversionSuccess = false;
+    int projectId = tableItem->text().toInt(&conversionSuccess);
+    if (conversionSuccess) {
+        return projectId;
+    }
+    return -1;
 
     if (projectDetailContainer != nullptr &&
         projectDetailContainer->isVisible() && detailedProjectId >= 0) {
@@ -321,13 +328,19 @@ void MainWindow::editEmployee() {
         managerProject->addItem(proj.getName(), proj.getId());
     }
 
-    if (const auto* manager = dynamic_cast<const Manager*>(employee.get())) {
-        if (int currentProjectId = manager->getManagedProjectId(); currentProjectId > 0) {
-            auto index = managerProject->findData(currentProjectId);
-            if (index >= 0) {
-                managerProject->setCurrentIndex(index);
-            }
-        }
+    const auto* manager = dynamic_cast<const Manager*>(employee.get());
+    if (!manager) {
+        return;
+    }
+    
+    int currentProjectId = manager->getManagedProjectId();
+    if (currentProjectId <= 0) {
+        return;
+    }
+    
+    auto index = managerProject->findData(currentProjectId);
+    if (index >= 0) {
+        managerProject->setCurrentIndex(index);
     }
 
     mainLayout->addStretch();

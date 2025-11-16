@@ -38,8 +38,6 @@ class TaskAssignmentService {
                                             const QString& employeeType);
 
    private:
-    static void updateTaskAndProjectCosts(Project* projPtr, int taskId, int oldHours,
-                                          int newHours, std::shared_ptr<Employee> employee);
     bool validateAssignment(std::shared_ptr<Employee> employee,
                            std::shared_ptr<Project> project, const Task& task,
                            int hours) const;
