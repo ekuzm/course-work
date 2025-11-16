@@ -106,13 +106,13 @@ void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company,
     if (!hasAssignedEmployees(company, projectId)) {
         Project* projPtr = company->getProject(projectId);
         if (projPtr) {
-            std::vector<Task>& projectTasks = projPtr->getTasks();
-            for (auto& t : projectTasks) {
-                if (t.getAllocatedHours() > 0) {
-                    t.setAllocatedHours(0);
-                }
+        std::vector<Task>& projectTasks = projPtr->getTasks();
+        for (auto& t : projectTasks) {
+            if (t.getAllocatedHours() > 0) {
+                t.setAllocatedHours(0);
             }
-            projPtr->recomputeTotalsFromTasks();
+        }
+        projPtr->recomputeTotalsFromTasks();
         }
     }
 }

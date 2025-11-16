@@ -45,7 +45,7 @@ QString DisplayHelper::formatProjectInfo(
 
 namespace {
     void addManagedProjectIfNeeded(
-        const std::shared_ptr<const Employee>& employee,
+    const std::shared_ptr<const Employee>& employee,
         std::vector<int>& projectIds) {
         auto manager = std::dynamic_pointer_cast<const Manager>(employee);
         if (!manager) {
@@ -59,11 +59,11 @@ namespace {
         
         bool found = std::any_of(projectIds.begin(), projectIds.end(),
                                  [managedProjectId](int pid) { return pid == managedProjectId; });
-        if (!found) {
-            projectIds.push_back(managedProjectId);
+            if (!found) {
+                projectIds.push_back(managedProjectId);
         }
     }
-    
+
     void collectTaskNamesFromProject(
         int projectId,
         const Company* currentCompany,
@@ -73,16 +73,16 @@ namespace {
             return;
         }
         
-        auto tasks = currentCompany->getProjectTasks(projectId);
-        for (const auto& task : tasks) {
-            if (task.getAllocatedHours() > 0) {
-                QString taskName = task.getName();
-                if (!taskInfoList.contains(taskName)) {
-                    taskInfoList.append(taskName);
+            auto tasks = currentCompany->getProjectTasks(projectId);
+            for (const auto& task : tasks) {
+                if (task.getAllocatedHours() > 0) {
+                    QString taskName = task.getName();
+                    if (!taskInfoList.contains(taskName)) {
+                        taskInfoList.append(taskName);
+                    }
                 }
             }
         }
-    }
 }
 
 QString DisplayHelper::formatTaskInfo(

@@ -14,94 +14,6 @@
 #include "helpers/id_helper.h"
 #include "helpers/validation_helper.h"
 
-namespace {
-    bool hasBasicEmployeeChanges(
-        const std::shared_ptr<Employee>& oldEmployee,
-        const QString& name,
-        double salary,
-        const QString& department,
-        double newEmploymentRate) {
-        return oldEmployee->getName() != name ||
-               oldEmployee->getSalary() != salary ||
-               oldEmployee->getDepartment() != department ||
-               oldEmployee->getEmploymentRate() != newEmploymentRate;
-    }
-    
-    bool hasManagerSpecificChanges(
-        const std::shared_ptr<Employee>& oldEmployee,
-        QComboBox* managerProject) {
-        const auto* manager = dynamic_cast<const Manager*>(oldEmployee.get());
-        if (!manager) return false;
-        
-        int newProjectId = managerProject->currentData().toInt();
-        return manager->getManagedProjectId() != newProjectId;
-    }
-    
-    bool hasDeveloperSpecificChanges(
-        const std::shared_ptr<Employee>& oldEmployee,
-        QLineEdit* devLanguage,
-        QLineEdit* devExperience) {
-        const auto* developer = dynamic_cast<const Developer*>(oldEmployee.get());
-        if (!developer) return false;
-        
-        auto newLanguage = devLanguage->text().trimmed();
-        double newExperience = devExperience->text().toDouble();
-        return developer->getProgrammingLanguage() != newLanguage ||
-               qAbs(developer->getYearsOfExperience() - newExperience) > 0.01;
-    }
-    
-    bool hasDesignerSpecificChanges(
-        const std::shared_ptr<Employee>& oldEmployee,
-        QLineEdit* designerTool,
-        QLineEdit* designerProjects) {
-        const auto* designer = dynamic_cast<const Designer*>(oldEmployee.get());
-        if (!designer) return false;
-        
-        auto newTool = designerTool->text().trimmed();
-        int newProjects = designerProjects->text().toInt();
-        return designer->getDesignTool() != newTool ||
-               designer->getNumberOfProjects() != newProjects;
-    }
-    
-    bool hasQASpecificChanges(
-        const std::shared_ptr<Employee>& oldEmployee,
-        QLineEdit* qaTestType,
-        QLineEdit* qaBugs) {
-        const auto* qa = dynamic_cast<const QA*>(oldEmployee.get());
-        if (!qa) return false;
-        
-        auto newTestType = qaTestType->text().trimmed();
-        int newBugs = qaBugs->text().toInt();
-        return qa->getTestingType() != newTestType ||
-               qa->getBugsFound() != newBugs;
-    }
-    
-    bool checkEmployeeTypeSpecificChanges(
-        const std::shared_ptr<Employee>& oldEmployee,
-        const QString& currentType,
-        QComboBox* managerProject,
-        QLineEdit* devLanguage,
-        QLineEdit* devExperience,
-        QLineEdit* designerTool,
-        QLineEdit* designerProjects,
-        QLineEdit* qaTestType,
-        QLineEdit* qaBugs) {
-        if (currentType == "Manager") {
-            return hasManagerSpecificChanges(oldEmployee, managerProject);
-        }
-        if (currentType == "Developer") {
-            return hasDeveloperSpecificChanges(oldEmployee, devLanguage, devExperience);
-        }
-        if (currentType == "Designer") {
-            return hasDesignerSpecificChanges(oldEmployee, designerTool, designerProjects);
-        }
-        if (currentType == "QA") {
-            return hasQASpecificChanges(oldEmployee, qaTestType, qaBugs);
-        }
-        return false;
-    }
-}
-
 bool EmployeeDialogHandler::validateEmployeeFields(QDialog* dialog,
                                                    const QLineEdit* nameEdit,
                                                    const QLineEdit* salaryEdit,
@@ -234,15 +146,52 @@ bool EmployeeDialogHandler::processEditEmployee(
     }
 
     bool hasChanges = false;
-    double newEmploymentRate = employmentRateCombo->currentData().toDouble();
-    if (hasBasicEmployeeChanges(oldEmployee, name, salary, department, newEmploymentRate)) {
+
+    if (oldEmployee->getName() != name || oldEmployee->getSalary() != salary ||
+        oldEmployee->getDepartment() != department ||
+        oldEmployee->getEmploymentRate() !=
+            employmentRateCombo->currentData().toDouble()) {
         hasChanges = true;
     }
 
-    if (checkEmployeeTypeSpecificChanges(oldEmployee, currentType, managerProject,
-                                        devLanguage, devExperience, designerTool,
-                                        designerProjects, qaTestType, qaBugs)) {
-        hasChanges = true;
+    if (currentType == "Manager") {
+        if (const auto* manager =
+                dynamic_cast<const Manager*>(oldEmployee.get())) {
+            int newProjectId = managerProject->currentData().toInt();
+            if (manager->getManagedProjectId() != newProjectId) {
+                hasChanges = true;
+            }
+        }
+    } else if (currentType == "Developer") {
+        if (const auto* developer =
+                dynamic_cast<const Developer*>(oldEmployee.get())) {
+            auto newLanguage = devLanguage->text().trimmed();
+            double newExperience = devExperience->text().toDouble();
+            if (developer->getProgrammingLanguage() != newLanguage ||
+                qAbs(developer->getYearsOfExperience() - newExperience) >
+                    0.01) {
+                hasChanges = true;
+            }
+        }
+    } else if (currentType == "Designer") {
+        if (const auto* designer =
+                dynamic_cast<const Designer*>(oldEmployee.get())) {
+            auto newTool = designerTool->text().trimmed();
+            int newProjects = designerProjects->text().toInt();
+            if (designer->getDesignTool() != newTool ||
+                designer->getNumberOfProjects() != newProjects) {
+                hasChanges = true;
+            }
+        }
+    } else if (currentType == "QA") {
+        if (const auto* qa = dynamic_cast<const QA*>(oldEmployee.get())) {
+            auto newTestType = qaTestType->text().trimmed();
+            int newBugs = qaBugs->text().toInt();
+            if (qa->getTestingType() != newTestType ||
+                qa->getBugsFound() != newBugs) {
+                hasChanges = true;
+            }
+        }
     }
 
     if (!hasChanges) {
@@ -258,6 +207,7 @@ bool EmployeeDialogHandler::processEditEmployee(
     int savedCurrentWeeklyHours = oldEmployee->getCurrentWeeklyHours();
     bool savedIsActive = oldEmployee->getIsActive();
     double oldEmploymentRate = oldEmployee->getEmploymentRate();
+    double newEmploymentRate = employmentRateCombo->currentData().toDouble();
 
     
     double scaleFactor = 1.0;
