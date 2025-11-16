@@ -108,8 +108,11 @@ class MainWindow : public QMainWindow {
     void selectProjectRowById(int projectId);
     
     void handleEditProjectDialog(int projectId, QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields);
-    void handleAddTaskDialog(int projectId, QDialog& dialog, QLineEdit* taskNameEdit, QComboBox* taskTypeCombo, QLineEdit* taskEstHoursEdit, QLineEdit* priorityEdit);
-    void handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, QComboBox* taskCombo, QComboBox* employeeCombo, QLineEdit* hoursEdit, const std::vector<Task>& tasks);
+    void handleAddTaskDialog(int projectId, QDialog& dialog, const QLineEdit* taskNameEdit, const QComboBox* taskTypeCombo, const QLineEdit* taskEstHoursEdit, const QLineEdit* priorityEdit);
+    void handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, const QComboBox* taskCombo, const QComboBox* employeeCombo, const QLineEdit* hoursEdit, const std::vector<Task>& tasks);
+    void removeEmployeeFromProjectTasks(int employeeId, int projectId, Project* mutableProject, double employeeHourlyRate);
+    void collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments);
+    void handleEmployeeActiveAssignments(int employeeId, const std::shared_ptr<Employee>& employee);
 
     static void setupTableWidget(QTableWidget* table,
                                  const QStringList& headers,

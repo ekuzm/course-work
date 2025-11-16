@@ -4,6 +4,7 @@
 #include <cmath>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <ranges>
 #include <tuple>
 #include <vector>
@@ -313,8 +314,7 @@ void TaskAssignmentService::restoreTaskAssignment(int employeeId, int projectId,
     if (!projPtr) return;  
 
     std::vector<Task>& tasks = projPtr->getTasks();
-    for (size_t i = 0; i < tasks.size(); ++i) {
-        Task& task = tasks[i];
+    for (auto& task : tasks) {
         if (task.getId() == taskId) {
             
             const int newHours = hours - company->getTaskAssignment(employeeId, projectId, taskId);
@@ -682,10 +682,8 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     std::vector<Task>& tasks = projPtr->getTasks();
     if (tasks.empty()) throw CompanyException("No tasks in project");
 
-    std::vector<size_t> taskIndices;
-    for (size_t i = 0; i < tasks.size(); ++i) {
-        taskIndices.push_back(i);
-    }
+    std::vector<size_t> taskIndices(tasks.size());
+    std::iota(taskIndices.begin(), taskIndices.end(), 0);
 
     std::sort(taskIndices.begin(), taskIndices.end(),
               [&tasks](size_t a, size_t b) {
@@ -705,8 +703,7 @@ void TaskAssignmentService::autoAssignEmployeesToProject(int projectId) {
     auto currentEmployeeCosts = projPtr->getEmployeeCosts();
     auto remainingBudget = projPtr->getBudget() - currentEmployeeCosts;
 
-    for (size_t idx = 0; idx < taskIndices.size(); ++idx) {
-        size_t taskIndex = taskIndices[idx];
+    for (const auto taskIndex : taskIndices) {
         Task& task = tasks[taskIndex];
         int remaining = task.getEstimatedHours() - task.getAllocatedHours();
 

@@ -470,58 +470,7 @@ void MainWindow::fireEmployee() {
             return;
         }
 
-        const std::vector<int>& assignedProjects =
-            employee->getAssignedProjects();
-
-        for (int projectId : assignedProjects) {
-            Project* mutableProject = currentCompany->getProject(projectId);
-            if (mutableProject) {
-                auto tasks = currentCompany->getProjectTasks(projectId);
-                auto employeeHourlyRate = employee->getSalary() / 160.0;
-                double totalCostToRemove = 0.0;
-
-                for (auto& task : mutableProject->getTasks()) {
-                    auto taskId = task.getId();
-                    auto employeeTaskHours =
-                        currentCompany->getEmployeeTaskHours(
-                            employeeId, projectId, taskId);
-
-                    if (employeeTaskHours > 0) {
-                        auto currentAllocated = task.getAllocatedHours();
-                        int newAllocated =
-                            currentAllocated - employeeTaskHours;
-                        if (newAllocated < 0) {
-                            newAllocated = 0;
-                        }
-                        task.setAllocatedHours(newAllocated);
-
-                        double taskCost =
-                            employeeHourlyRate * employeeTaskHours;
-                        totalCostToRemove += taskCost;
-                    }
-                }
-
-                if (totalCostToRemove > 0) {
-                    double currentCosts =
-                        mutableProject->getEmployeeCosts();
-                    double costToRemove =
-                        std::min(totalCostToRemove, currentCosts);
-                    if (costToRemove > 0) {
-                        mutableProject->removeEmployeeCost(costToRemove);
-                    }
-                }
-
-                mutableProject->recomputeTotalsFromTasks();
-            }
-        }
-
-        auto currentHours = employee->getCurrentWeeklyHours();
-        employee->removeWeeklyHours(currentHours);
-
-        for (int projectId : assignedProjects) {
-            employee->addToProjectHistory(projectId);
-            employee->removeAssignedProject(projectId);
-        }
+        handleEmployeeActiveAssignments(employeeId, employee);
     }
 
     int userChoice = QMessageBox::question(
@@ -780,16 +729,15 @@ void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const P
             return;
         }
 
-        bool hasChanges = false;
-
         auto newName = fields.nameEdit->text().trimmed();
         auto newDescription = fields.descEdit->toPlainText().trimmed();
         auto newPhase = fields.phaseCombo->currentText();
         auto newStartDate = fields.startDate->date();
         auto newEndDate = fields.endDate->date();
-        auto newClientName = fields.clientNameEdit->text().trimmed();
-
-        if (oldProject->getName() != newName ||
+        
+        bool hasChanges = false;
+        if (auto newClientName = fields.clientNameEdit->text().trimmed();
+            oldProject->getName() != newName ||
             oldProject->getDescription() != newDescription ||
             oldProject->getPhase() != newPhase ||
             oldProject->getStartDate() != newStartDate ||
@@ -808,8 +756,7 @@ void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const P
             return;
         }
 
-        auto currentPhase = oldProject->getPhase();
-        if (currentPhase != newPhase) {
+        if (auto currentPhase = oldProject->getPhase(); currentPhase != newPhase) {
             auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
             auto newPhaseOrder = Project::getPhaseOrder(newPhase);
 
@@ -834,19 +781,7 @@ void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const P
         double savedEmployeeCosts = oldProject->getEmployeeCosts();
 
         std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
-        auto allEmployees = this->currentCompany->getAllEmployees();
-        for (const auto& emp : allEmployees) {
-            if (!emp) continue;
-            for (const auto& task : savedTasks) {
-                auto taskId = task.getId();
-                auto hours = this->currentCompany->getEmployeeTaskHours(
-                    emp->getId(), projectId, taskId);
-                if (hours > 0) {
-                    savedTaskAssignments.push_back(std::make_tuple(
-                        emp->getId(), projectId, taskId, hours));
-                }
-            }
-        }
+        collectTaskAssignments(projectId, savedTasks, savedTaskAssignments);
 
         Project updatedProject(projectId, fields.nameEdit->text().trimmed(),
                                fields.descEdit->toPlainText().trimmed(),
@@ -1204,7 +1139,7 @@ void MainWindow::addProjectTask() {
     dialog.exec();
 }
 
-void MainWindow::handleAddTaskDialog(int projectId, QDialog& dialog, QLineEdit* taskNameEdit, QComboBox* taskTypeCombo, QLineEdit* taskEstHoursEdit, QLineEdit* priorityEdit) {
+void MainWindow::handleAddTaskDialog(int projectId, QDialog& dialog, const QLineEdit* taskNameEdit, const QComboBox* taskTypeCombo, const QLineEdit* taskEstHoursEdit, const QLineEdit* priorityEdit) {
     try {
         auto taskName = taskNameEdit->text().trimmed();
         if (!ValidationHelper::validateNonEmpty(taskName, "Task name",
@@ -1384,7 +1319,73 @@ void MainWindow::assignEmployeeToTask() {
     refreshProjectDetailView();
 }
 
-void MainWindow::handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, QComboBox* taskCombo, QComboBox* employeeCombo, QLineEdit* hoursEdit, const std::vector<Task>& tasks) {
+void MainWindow::collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) {
+    auto allEmployees = this->currentCompany->getAllEmployees();
+    for (const auto& emp : allEmployees) {
+        if (!emp) continue;
+        for (const auto& task : savedTasks) {
+            auto taskId = task.getId();
+            auto hours = this->currentCompany->getEmployeeTaskHours(
+                emp->getId(), projectId, taskId);
+            if (hours > 0) {
+                savedTaskAssignments.push_back(std::make_tuple(
+                    emp->getId(), projectId, taskId, hours));
+            }
+        }
+    }
+}
+
+void MainWindow::handleEmployeeActiveAssignments(int employeeId, const std::shared_ptr<Employee>& employee) {
+    const std::vector<int>& assignedProjects = employee->getAssignedProjects();
+
+    for (int projectId : assignedProjects) {
+        Project* mutableProject = currentCompany->getProject(projectId);
+        if (mutableProject) {
+            auto employeeHourlyRate = employee->getSalary() / 160.0;
+            removeEmployeeFromProjectTasks(employeeId, projectId, mutableProject, employeeHourlyRate);
+            mutableProject->recomputeTotalsFromTasks();
+        }
+    }
+
+    auto currentHours = employee->getCurrentWeeklyHours();
+    employee->removeWeeklyHours(currentHours);
+
+    for (int projectId : assignedProjects) {
+        employee->addToProjectHistory(projectId);
+        employee->removeAssignedProject(projectId);
+    }
+}
+
+void MainWindow::removeEmployeeFromProjectTasks(int employeeId, int projectId, Project* mutableProject, double employeeHourlyRate) {
+    double totalCostToRemove = 0.0;
+
+    for (auto& task : mutableProject->getTasks()) {
+        auto taskId = task.getId();
+        auto employeeTaskHours = currentCompany->getEmployeeTaskHours(employeeId, projectId, taskId);
+
+        if (employeeTaskHours > 0) {
+            auto currentAllocated = task.getAllocatedHours();
+            int newAllocated = currentAllocated - employeeTaskHours;
+            if (newAllocated < 0) {
+                newAllocated = 0;
+            }
+            task.setAllocatedHours(newAllocated);
+
+            double taskCost = employeeHourlyRate * employeeTaskHours;
+            totalCostToRemove += taskCost;
+        }
+    }
+
+    if (totalCostToRemove > 0) {
+        double currentCosts = mutableProject->getEmployeeCosts();
+        double costToRemove = std::min(totalCostToRemove, currentCosts);
+        if (costToRemove > 0) {
+            mutableProject->removeEmployeeCost(costToRemove);
+        }
+    }
+}
+
+void MainWindow::handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, const QComboBox* taskCombo, const QComboBox* employeeCombo, const QLineEdit* hoursEdit, const std::vector<Task>& tasks) {
     try {
         int taskId = taskCombo->currentData().toInt();
         int employeeId = employeeCombo->currentData().toInt();
