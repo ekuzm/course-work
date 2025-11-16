@@ -1237,6 +1237,17 @@ void MainWindow::assignEmployeeToTask() {
         return;
     }
 
+    // Check employee availability before creating dialog to avoid memory leak
+    QComboBox tempEmployeeCombo;
+    int matchingCount = 0;
+    TaskAssignmentHelper::populateEmployeeCombo(
+        &tempEmployeeCombo, currentCompany, projectId, projectPhase, matchingCount);
+
+    if (tempEmployeeCombo.count() == 0) {
+        QMessageBox::warning(this, "Error", "No available employees found!");
+        return;
+    }
+
     QDialog dialog(this);
     dialog.setWindowTitle("Assign Employee to Task");
     dialog.setMinimumWidth(450);
@@ -1278,14 +1289,8 @@ void MainWindow::assignEmployeeToTask() {
         "QComboBox QAbstractItemView { background-color: white; color: black; "
         "selection-background-color: #0078d4; }");
 
-    int matchingCount = 0;
     TaskAssignmentHelper::populateEmployeeCombo(
         employeeCombo, currentCompany, projectId, projectPhase, matchingCount);
-
-    if (employeeCombo->count() == 0) {
-        QMessageBox::warning(this, "Error", "No available employees found!");
-        return;
-    }
 
     if (matchingCount == 0 && !projectPhase.isEmpty()) {
         QString expectedRole =
