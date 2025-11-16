@@ -962,15 +962,9 @@ void MainWindow::autoLoad() {
         }
     }
 
-    if (currentCompany) {
-        refreshEmployeeTable();
-        refreshProjectTable();
-        showStatistics();
-    } else {
-        refreshEmployeeTable();
-        refreshProjectTable();
-        showStatistics();
-    }
+    refreshEmployeeTable();
+    refreshProjectTable();
+    showStatistics();
 }
 
 void MainWindow::closeEvent(QCloseEvent* event) {
@@ -1282,6 +1276,15 @@ void MainWindow::assignEmployeeToTask() {
         return;
     }
 
+    const Project* project = currentCompany->getProject(projectId);
+    QString projectPhase = (project != nullptr) ? project->getPhase() : "";
+
+    if (projectPhase == "Completed") {
+        QMessageBox::warning(this, "Error",
+                             "Cannot assign employees to completed project.");
+        return;
+    }
+
     QDialog dialog(this);
     dialog.setWindowTitle("Assign Employee to Task");
     dialog.setMinimumWidth(450);
@@ -1292,15 +1295,6 @@ void MainWindow::assignEmployeeToTask() {
         "QLabel { color: black; }");
 
     auto* form = new QFormLayout(&dialog);
-
-    const Project* project = currentCompany->getProject(projectId);
-    QString projectPhase = (project != nullptr) ? project->getPhase() : "";
-
-    if (projectPhase == "Completed") {
-        QMessageBox::warning(this, "Error",
-                             "Cannot assign employees to completed project.");
-        return;
-    }
 
     auto* taskCombo = new QComboBox();
     taskCombo->setStyleSheet(
