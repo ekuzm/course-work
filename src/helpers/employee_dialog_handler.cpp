@@ -42,8 +42,8 @@ bool EmployeeDialogHandler::validateEmployeeFields(QDialog* dialog,
 }
 
 bool EmployeeDialogHandler::processAddEmployee(
-    QDialog* dialog, Company* company, int& nextEmployeeId, QLineEdit* nameEdit,
-    QLineEdit* salaryEdit, QLineEdit* deptEdit, QComboBox* typeCombo,
+    QDialog* dialog, Company* company, int& nextEmployeeId, const QLineEdit* nameEdit,
+    const QLineEdit* salaryEdit, const QLineEdit* deptEdit, QComboBox* typeCombo,
     QComboBox* employmentRateCombo, QComboBox* managerProject,
     QLineEdit* devLanguage, QLineEdit* devExperience, QLineEdit* designerTool,
     QLineEdit* designerProjects, QLineEdit* qaTestType, QLineEdit* qaBugs) {
@@ -101,7 +101,7 @@ bool EmployeeDialogHandler::processAddEmployee(
 
 bool EmployeeDialogHandler::processEditEmployee(
     QDialog* dialog, Company* company, int employeeId, int& nextEmployeeId,
-    QLineEdit* nameEdit, QLineEdit* salaryEdit, QLineEdit* deptEdit,
+    const QLineEdit* nameEdit, const QLineEdit* salaryEdit, const QLineEdit* deptEdit,
     QComboBox* employmentRateCombo, QComboBox* managerProject,
     QLineEdit* devLanguage, QLineEdit* devExperience, QLineEdit* designerTool,
     QLineEdit* designerProjects, QLineEdit* qaTestType, QLineEdit* qaBugs,

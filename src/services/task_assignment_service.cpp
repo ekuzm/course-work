@@ -89,8 +89,7 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
 
     std::vector<Task>& tasks = projPtr->getTasks();
     bool found = false;
-    for (size_t i = 0; i < tasks.size(); ++i) {
-        Task& task = tasks[i];
+    for (auto& task : tasks) {
         if (task.getId() == taskId) {
             if (hours > task.getEstimatedHours()) {
                 throw CompanyException(QString("Cannot assign %1 hours: task "
@@ -100,10 +99,9 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
             }
 
             auto employeePosition = employee->getPosition();
-            bool roleMatches =
-                roleMatchesSDLCStage(employeePosition, projectPhase);
-
-            if (!roleMatches) {
+            if (bool roleMatches =
+                    roleMatchesSDLCStage(employeePosition, projectPhase);
+                !roleMatches) {
                 throw CompanyException(QString("Employee role '%1' does not "
                                                "match project SDLC stage '%2'")
                                            .arg(employeePosition)
@@ -112,10 +110,9 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
 
             auto taskType = task.getType();
             auto employeeType = employee->getEmployeeType();
-            bool taskTypeMatches =
-                taskTypeMatchesEmployeeType(taskType, employeeType);
-
-            if (!taskTypeMatches) {
+            if (bool taskTypeMatches =
+                    taskTypeMatchesEmployeeType(taskType, employeeType);
+                !taskTypeMatches) {
                 QString requiredType;
                 if (taskType == "Management") {
                     requiredType = "Manager";
@@ -195,8 +192,8 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId, 
                         .arg(projPtr->getBudget(), 0, 'f', 2));
             }
 
-            double projectEstimatedHours = projPtr->getEstimatedHours();
-            if (projectEstimatedHours > 0) {
+            if (double projectEstimatedHours = projPtr->getEstimatedHours();
+                projectEstimatedHours > 0) {
                 double averageBudgetPerHour =
                     projPtr->getBudget() / projectEstimatedHours;
                 double maxAffordableHourlyRate = averageBudgetPerHour * kMaxAffordableHourlyRateMultiplier;
@@ -281,7 +278,7 @@ int TaskAssignmentService::getEmployeeProjectHours(int employeeId, int projectId
 
 void TaskAssignmentService::updateTaskAndProjectCosts(Project* projPtr, int taskId,
                                                       int oldHours, int newHours,
-                                                      std::shared_ptr<Employee> employee) const {
+                                                      std::shared_ptr<Employee> employee) {
     if (!projPtr || !employee) return;
     
     std::vector<Task>& tasks = projPtr->getTasks();

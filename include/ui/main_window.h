@@ -106,6 +106,10 @@ class MainWindow : public QMainWindow {
     void refreshProjectDetailView();
     void populateProjectTasksTable(const Project& project);
     void selectProjectRowById(int projectId);
+    
+    void handleEditProjectDialog(int projectId, QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields);
+    void handleAddTaskDialog(int projectId, QDialog& dialog, QLineEdit* taskNameEdit, QComboBox* taskTypeCombo, QLineEdit* taskEstHoursEdit, QLineEdit* priorityEdit);
+    void handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, QComboBox* taskCombo, QComboBox* employeeCombo, QLineEdit* hoursEdit, const std::vector<Task>& tasks);
 
     static void setupTableWidget(QTableWidget* table,
                                  const QStringList& headers,

@@ -10,14 +10,14 @@ class EmployeeDialogHandler {
    public:
     static bool processAddEmployee(
         QDialog* dialog, Company* company, int& nextEmployeeId,
-        QLineEdit* nameEdit, QLineEdit* salaryEdit, QLineEdit* deptEdit,
+        const QLineEdit* nameEdit, const QLineEdit* salaryEdit, const QLineEdit* deptEdit,
         QComboBox* typeCombo, QComboBox* employmentRateCombo,
         QComboBox* managerProject, QLineEdit* devLanguage,
         QLineEdit* devExperience, QLineEdit* designerTool,
         QLineEdit* designerProjects, QLineEdit* qaTestType, QLineEdit* qaBugs);
     static bool processEditEmployee(
         QDialog* dialog, Company* company, int employeeId, int& nextEmployeeId,
-        QLineEdit* nameEdit, QLineEdit* salaryEdit, QLineEdit* deptEdit,
+        const QLineEdit* nameEdit, const QLineEdit* salaryEdit, const QLineEdit* deptEdit,
         QComboBox* employmentRateCombo, QComboBox* managerProject,
         QLineEdit* devLanguage, QLineEdit* devExperience,
         QLineEdit* designerTool, QLineEdit* designerProjects,

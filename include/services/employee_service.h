@@ -13,7 +13,7 @@ class EmployeeService {
    public:
     explicit EmployeeService(Company* company);
 
-    void recalculateEmployeeHours() const;
+    void recalculateEmployeeHours();
     int calculateTotalAssignedHours(int employeeId) const;
 };
 

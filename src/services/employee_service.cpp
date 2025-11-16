@@ -12,7 +12,7 @@ EmployeeService::EmployeeService(Company* company) : company(company) {
     }
 }
 
-void EmployeeService::recalculateEmployeeHours() const {
+void EmployeeService::recalculateEmployeeHours() {
     
     auto employees = company->getAllEmployees();
     for (const auto& emp : employees) {

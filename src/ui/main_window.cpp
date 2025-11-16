@@ -459,15 +459,14 @@ void MainWindow::fireEmployee() {
     }
 
     if (employee->getCurrentWeeklyHours() > 0) {
-        int userChoice = QMessageBox::question(
-            this, "Confirm Fire",
-            QString("This employee has active assignments (%1 hours/week).\n\n"
-                    "Are you sure you want to fire this employee?\n\n"
-                    "This will remove all active assignments.")
-                .arg(employee->getCurrentWeeklyHours()),
-            QMessageBox::Yes | QMessageBox::No);
-
-        if (userChoice != QMessageBox::Yes) {
+        if (int userChoice = QMessageBox::question(
+                this, "Confirm Fire",
+                QString("This employee has active assignments (%1 hours/week).\n\n"
+                        "Are you sure you want to fire this employee?\n\n"
+                        "This will remove all active assignments.")
+                    .arg(employee->getCurrentWeeklyHours()),
+                QMessageBox::Yes | QMessageBox::No);
+            userChoice != QMessageBox::Yes) {
             return;
         }
 
@@ -475,49 +474,44 @@ void MainWindow::fireEmployee() {
             employee->getAssignedProjects();
 
         for (int projectId : assignedProjects) {
-            const Project* project = currentCompany->getProject(projectId);
-            if (project) {
+            Project* mutableProject = currentCompany->getProject(projectId);
+            if (mutableProject) {
                 auto tasks = currentCompany->getProjectTasks(projectId);
+                auto employeeHourlyRate = employee->getSalary() / 160.0;
+                double totalCostToRemove = 0.0;
 
-                Project* mutableProject =
-                    const_cast<Project*>(currentCompany->getProject(projectId));
-                if (mutableProject) {
-                    auto employeeHourlyRate = employee->getSalary() / 160.0;
-                    double totalCostToRemove = 0.0;
+                for (auto& task : mutableProject->getTasks()) {
+                    auto taskId = task.getId();
+                    auto employeeTaskHours =
+                        currentCompany->getEmployeeTaskHours(
+                            employeeId, projectId, taskId);
 
-                    for (auto& task : mutableProject->getTasks()) {
-                        auto taskId = task.getId();
-                        auto employeeTaskHours =
-                            currentCompany->getEmployeeTaskHours(
-                                employeeId, projectId, taskId);
-
-                        if (employeeTaskHours > 0) {
-                            auto currentAllocated = task.getAllocatedHours();
-                            int newAllocated =
-                                currentAllocated - employeeTaskHours;
-                            if (newAllocated < 0) {
-                                newAllocated = 0;
-                            }
-                            task.setAllocatedHours(newAllocated);
-
-                            double taskCost =
-                                employeeHourlyRate * employeeTaskHours;
-                            totalCostToRemove += taskCost;
+                    if (employeeTaskHours > 0) {
+                        auto currentAllocated = task.getAllocatedHours();
+                        int newAllocated =
+                            currentAllocated - employeeTaskHours;
+                        if (newAllocated < 0) {
+                            newAllocated = 0;
                         }
-                    }
+                        task.setAllocatedHours(newAllocated);
 
-                    if (totalCostToRemove > 0) {
-                        double currentCosts =
-                            mutableProject->getEmployeeCosts();
-                        double costToRemove =
-                            std::min(totalCostToRemove, currentCosts);
-                        if (costToRemove > 0) {
-                            mutableProject->removeEmployeeCost(costToRemove);
-                        }
+                        double taskCost =
+                            employeeHourlyRate * employeeTaskHours;
+                        totalCostToRemove += taskCost;
                     }
-
-                    mutableProject->recomputeTotalsFromTasks();
                 }
+
+                if (totalCostToRemove > 0) {
+                    double currentCosts =
+                        mutableProject->getEmployeeCosts();
+                    double costToRemove =
+                        std::min(totalCostToRemove, currentCosts);
+                    if (costToRemove > 0) {
+                        mutableProject->removeEmployeeCost(costToRemove);
+                    }
+                }
+
+                mutableProject->recomputeTotalsFromTasks();
             }
         }
 
@@ -729,181 +723,185 @@ void MainWindow::editProject() {
     form->addRow(okButton);
 
     connect(okButton, &QPushButton::clicked, [this, &dialog, projectId, &fields]() {
-        try {
-            auto projectName = fields.nameEdit->text().trimmed();
-            if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
-                                                    &dialog))
-                return;
-
-            double projectBudget = 0.0;
-            if (!ValidationHelper::validateDouble(
-                    fields.budgetEdit->text().trimmed(), projectBudget, 0.0,
-                    kMaxBudget, "Budget", &dialog))
-                return;
-
-            auto selectedPhase = fields.phaseCombo->currentText();
-            auto clientName = fields.clientNameEdit->text().trimmed();
-
-            if (!ValidationHelper::validateNonEmpty(clientName, "Client name",
-                                                    &dialog))
-                return;
-
-            if (!ValidationHelper::validateDateRange(
-                    fields.startDate->date(), fields.endDate->date(), &dialog))
-                return;
-
-            int estimatedHours = 0;
-            if (!ValidationHelper::validateInt(
-                    fields.estimatedHoursEdit->text().trimmed(), estimatedHours,
-                    0, kMaxEstimatedHours, "Estimated hours", &dialog))
-                return;
-
-            if (!checkDuplicateProjectOnEdit(projectName, projectId,
-                                             this->currentCompany)) {
-                QMessageBox::warning(
-                    &dialog, "Duplicate Error",
-                    "A project with this name already exists!\n\n"
-                    "Project name: \"" +
-                        projectName +
-                        "\"\n"
-                        "Project ID: " +
-                        QString::number(projectId) +
-                        "\n"
-                        "Please choose a different name.");
-                return;
-            }
-
-            const Project* oldProject = this->currentCompany->getProject(projectId);
-            if (!oldProject) {
-                QMessageBox::warning(&dialog, "Error", "Project not found!");
-                return;
-            }
-
-            bool hasChanges = false;
-
-            auto newName = fields.nameEdit->text().trimmed();
-            auto newDescription = fields.descEdit->toPlainText().trimmed();
-            auto newPhase = fields.phaseCombo->currentText();
-            auto newStartDate = fields.startDate->date();
-            auto newEndDate = fields.endDate->date();
-            auto newClientName = fields.clientNameEdit->text().trimmed();
-
-            if (oldProject->getName() != newName ||
-                oldProject->getDescription() != newDescription ||
-                oldProject->getPhase() != newPhase ||
-                oldProject->getStartDate() != newStartDate ||
-                oldProject->getEndDate() != newEndDate ||
-                oldProject->getBudget() != projectBudget ||
-                oldProject->getClientName() != newClientName ||
-                oldProject->getEstimatedHours() != estimatedHours) {
-                hasChanges = true;
-            }
-
-            if (!hasChanges) {
-                QMessageBox::information(
-                    &dialog, "No Changes",
-                    "No changes were made to the project.\n\n"
-                    "Please modify at least one field before saving.");
-                return;
-            }
-
-            auto currentPhase = oldProject->getPhase();
-            if (currentPhase != newPhase) {
-                auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
-                auto newPhaseOrder = Project::getPhaseOrder(newPhase);
-
-                if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
-                    newPhaseOrder < currentPhaseOrder) {
-                    QMessageBox::warning(
-                        &dialog, "Phase Validation Error",
-                        QString("Cannot set phase to '%1' because current "
-                                "phase '%2' is already later in the project "
-                                "lifecycle.\n\n"
-                                "Phase order: Analysis → Planning → Design → "
-                                "Development → Testing → Deployment → "
-                                "Maintenance → Completed\n\n"
-                                "You can only move forward in the project "
-                                "lifecycle, not backward.")
-                            .arg(newPhase, currentPhase));
-                    return;
-                }
-            }
-
-            std::vector<Task> savedTasks = oldProject->getTasks();
-            double savedEmployeeCosts = oldProject->getEmployeeCosts();
-
-            std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
-            auto allEmployees = this->currentCompany->getAllEmployees();
-            for (const auto& emp : allEmployees) {
-                if (!emp) continue;
-                for (const auto& task : savedTasks) {
-                    auto taskId = task.getId();
-                    auto hours = this->currentCompany->getEmployeeTaskHours(
-                        emp->getId(), projectId, taskId);
-                    if (hours > 0) {
-                        savedTaskAssignments.push_back(std::make_tuple(
-                            emp->getId(), projectId, taskId, hours));
-                    }
-                }
-            }
-
-            Project updatedProject(projectId, fields.nameEdit->text().trimmed(),
-                                   fields.descEdit->toPlainText().trimmed(),
-                                   fields.phaseCombo->currentText(),
-                                   fields.startDate->date(),
-                                   fields.endDate->date(), projectBudget,
-                                   clientName, estimatedHours);
-
-            for (const auto& task : savedTasks) {
-                updatedProject.addTask(task);
-            }
-
-            if (savedEmployeeCosts > 0.0) {
-                updatedProject.addEmployeeCost(savedEmployeeCosts);
-            }
-
-            this->currentCompany->removeProject(projectId);
-            this->currentCompany->addProject(updatedProject);
-
-            for (const auto& assignment : savedTaskAssignments) {
-                const auto& [empId, projId, taskId, hours] = assignment;
-                try {
-                    this->currentCompany->restoreTaskAssignment(empId, projId, taskId,
-                                                          hours);
-                } catch (const std::exception&) {
-                    continue;
-                }
-            }
-
-            auto projects = this->currentCompany->getAllProjects();
-            this->nextProjectId =
-                IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
-            refreshAllData();
-            autoSave();
-            QMessageBox::information(
-                &dialog, "Success",
-                "Project updated successfully!\n\n"
-                "Name: " +
-                    projectName +
-                    "\n"
-                    "Phase: " +
-                    selectedPhase +
-                    "\n"
-                    "Budget: $" +
-                    QString::number(projectBudget, 'f', 2));
-            dialog.accept();
-        } catch (const CompanyException& e) {
-            ExceptionHandler::handleCompanyException(e, &dialog,
-                                                     "edit project");
-        } catch (const FileManagerException& e) {
-            ExceptionHandler::handleFileManagerException(e, &dialog,
-                                                         "project update");
-        } catch (const std::exception& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
-        }
+        handleEditProjectDialog(projectId, dialog, fields);
     });
 
     dialog.exec();
+}
+
+void MainWindow::handleEditProjectDialog(int projectId, QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields) {
+    try {
+        auto projectName = fields.nameEdit->text().trimmed();
+        if (!ValidationHelper::validateNonEmpty(projectName, "Project name",
+                                                &dialog))
+            return;
+
+        double projectBudget = 0.0;
+        if (!ValidationHelper::validateDouble(
+                fields.budgetEdit->text().trimmed(), projectBudget, 0.0,
+                kMaxBudget, "Budget", &dialog))
+            return;
+
+        auto selectedPhase = fields.phaseCombo->currentText();
+        auto clientName = fields.clientNameEdit->text().trimmed();
+
+        if (!ValidationHelper::validateNonEmpty(clientName, "Client name",
+                                                &dialog))
+            return;
+
+        if (!ValidationHelper::validateDateRange(
+                fields.startDate->date(), fields.endDate->date(), &dialog))
+            return;
+
+        int estimatedHours = 0;
+        if (!ValidationHelper::validateInt(
+                fields.estimatedHoursEdit->text().trimmed(), estimatedHours,
+                0, kMaxEstimatedHours, "Estimated hours", &dialog))
+            return;
+
+        if (!checkDuplicateProjectOnEdit(projectName, projectId,
+                                         this->currentCompany)) {
+            QMessageBox::warning(
+                &dialog, "Duplicate Error",
+                "A project with this name already exists!\n\n"
+                "Project name: \"" +
+                    projectName +
+                    "\"\n"
+                    "Project ID: " +
+                    QString::number(projectId) +
+                    "\n"
+                    "Please choose a different name.");
+            return;
+        }
+
+        const Project* oldProject = this->currentCompany->getProject(projectId);
+        if (!oldProject) {
+            QMessageBox::warning(&dialog, "Error", "Project not found!");
+            return;
+        }
+
+        bool hasChanges = false;
+
+        auto newName = fields.nameEdit->text().trimmed();
+        auto newDescription = fields.descEdit->toPlainText().trimmed();
+        auto newPhase = fields.phaseCombo->currentText();
+        auto newStartDate = fields.startDate->date();
+        auto newEndDate = fields.endDate->date();
+        auto newClientName = fields.clientNameEdit->text().trimmed();
+
+        if (oldProject->getName() != newName ||
+            oldProject->getDescription() != newDescription ||
+            oldProject->getPhase() != newPhase ||
+            oldProject->getStartDate() != newStartDate ||
+            oldProject->getEndDate() != newEndDate ||
+            oldProject->getBudget() != projectBudget ||
+            oldProject->getClientName() != newClientName ||
+            oldProject->getEstimatedHours() != estimatedHours) {
+            hasChanges = true;
+        }
+
+        if (!hasChanges) {
+            QMessageBox::information(
+                &dialog, "No Changes",
+                "No changes were made to the project.\n\n"
+                "Please modify at least one field before saving.");
+            return;
+        }
+
+        auto currentPhase = oldProject->getPhase();
+        if (currentPhase != newPhase) {
+            auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
+            auto newPhaseOrder = Project::getPhaseOrder(newPhase);
+
+            if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
+                newPhaseOrder < currentPhaseOrder) {
+                QMessageBox::warning(
+                    &dialog, "Phase Validation Error",
+                    QString("Cannot set phase to '%1' because current "
+                            "phase '%2' is already later in the project "
+                            "lifecycle.\n\n"
+                            "Phase order: Analysis → Planning → Design → "
+                            "Development → Testing → Deployment → "
+                            "Maintenance → Completed\n\n"
+                            "You can only move forward in the project "
+                            "lifecycle, not backward.")
+                        .arg(newPhase, currentPhase));
+                return;
+            }
+        }
+
+        std::vector<Task> savedTasks = oldProject->getTasks();
+        double savedEmployeeCosts = oldProject->getEmployeeCosts();
+
+        std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
+        auto allEmployees = this->currentCompany->getAllEmployees();
+        for (const auto& emp : allEmployees) {
+            if (!emp) continue;
+            for (const auto& task : savedTasks) {
+                auto taskId = task.getId();
+                auto hours = this->currentCompany->getEmployeeTaskHours(
+                    emp->getId(), projectId, taskId);
+                if (hours > 0) {
+                    savedTaskAssignments.push_back(std::make_tuple(
+                        emp->getId(), projectId, taskId, hours));
+                }
+            }
+        }
+
+        Project updatedProject(projectId, fields.nameEdit->text().trimmed(),
+                               fields.descEdit->toPlainText().trimmed(),
+                               fields.phaseCombo->currentText(),
+                               fields.startDate->date(),
+                               fields.endDate->date(), projectBudget,
+                               clientName, estimatedHours);
+
+        for (const auto& task : savedTasks) {
+            updatedProject.addTask(task);
+        }
+
+        if (savedEmployeeCosts > 0.0) {
+            updatedProject.addEmployeeCost(savedEmployeeCosts);
+        }
+
+        this->currentCompany->removeProject(projectId);
+        this->currentCompany->addProject(updatedProject);
+
+        for (const auto& assignment : savedTaskAssignments) {
+            const auto& [empId, projId, taskId, hours] = assignment;
+            try {
+                this->currentCompany->restoreTaskAssignment(empId, projId, taskId,
+                                                      hours);
+            } catch (const std::exception&) {
+                continue;
+            }
+        }
+
+        auto projects = this->currentCompany->getAllProjects();
+        this->nextProjectId =
+            IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
+        refreshAllData();
+        autoSave();
+        QMessageBox::information(
+            &dialog, "Success",
+            "Project updated successfully!\n\n"
+            "Name: " +
+                projectName +
+                "\n"
+                "Phase: " +
+                selectedPhase +
+                "\n"
+                "Budget: $" +
+                QString::number(projectBudget, 'f', 2));
+        dialog.accept();
+    } catch (const CompanyException& e) {
+        ExceptionHandler::handleCompanyException(e, &dialog,
+                                                 "edit project");
+    } catch (const FileManagerException& e) {
+        ExceptionHandler::handleFileManagerException(e, &dialog,
+                                                     "project update");
+    } catch (const std::exception& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
 }
 
 void MainWindow::deleteProject() {
@@ -1206,50 +1204,54 @@ void MainWindow::addProjectTask() {
     form->addRow(okButton);
 
     connect(okButton, &QPushButton::clicked, [this, &dialog, projectId, taskNameEdit, taskTypeCombo, taskEstHoursEdit, priorityEdit]() {
-        try {
-            auto taskName = taskNameEdit->text().trimmed();
-            if (!ValidationHelper::validateNonEmpty(taskName, "Task name",
-                                                    &dialog))
-                return;
-
-            int taskEst = 0;
-            if (!ValidationHelper::validateInt(
-                    taskEstHoursEdit->text().trimmed(), taskEst, 1,
-                    kMaxEstimatedHours, "Estimated hours", &dialog))
-                return;
-
-            int priority = 0;
-            if (!ValidationHelper::validateInt(priorityEdit->text().trimmed(),
-                                               priority, 0, kMaxPriority,
-                                               "Priority", &dialog))
-                return;
-
-            if (!TaskDialogHelper::validateAndAddTask(
-                    taskName, taskTypeCombo->currentText(), taskEst, priority,
-                    projectId, this->currentCompany, &dialog)) {
-                return;
-            }
-
-            refreshAllData();
-            autoSave();
-            QMessageBox::information(
-                &dialog, "Success",
-                QString("Task added successfully!\n\n"
-                        "Task name: %1\n"
-                        "Type: %2\n"
-                        "Estimated hours: %3\n"
-                        "Priority: %4")
-                    .arg(taskName, taskTypeCombo->currentText(),
-                         QString::number(taskEst), QString::number(priority)));
-            dialog.accept();
-        } catch (const CompanyException& e) {
-            ExceptionHandler::handleCompanyException(e, &dialog, "add task");
-        } catch (const std::exception& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
-        }
+        handleAddTaskDialog(projectId, dialog, taskNameEdit, taskTypeCombo, taskEstHoursEdit, priorityEdit);
     });
 
     dialog.exec();
+}
+
+void MainWindow::handleAddTaskDialog(int projectId, QDialog& dialog, QLineEdit* taskNameEdit, QComboBox* taskTypeCombo, QLineEdit* taskEstHoursEdit, QLineEdit* priorityEdit) {
+    try {
+        auto taskName = taskNameEdit->text().trimmed();
+        if (!ValidationHelper::validateNonEmpty(taskName, "Task name",
+                                                &dialog))
+            return;
+
+        int taskEst = 0;
+        if (!ValidationHelper::validateInt(
+                taskEstHoursEdit->text().trimmed(), taskEst, 1,
+                kMaxEstimatedHours, "Estimated hours", &dialog))
+            return;
+
+        int priority = 0;
+        if (!ValidationHelper::validateInt(priorityEdit->text().trimmed(),
+                                           priority, 0, kMaxPriority,
+                                           "Priority", &dialog))
+            return;
+
+        if (!TaskDialogHelper::validateAndAddTask(
+                taskName, taskTypeCombo->currentText(), taskEst, priority,
+                projectId, this->currentCompany, &dialog)) {
+            return;
+        }
+
+        refreshAllData();
+        autoSave();
+        QMessageBox::information(
+            &dialog, "Success",
+            QString("Task added successfully!\n\n"
+                    "Task name: %1\n"
+                    "Type: %2\n"
+                    "Estimated hours: %3\n"
+                    "Priority: %4")
+                .arg(taskName, taskTypeCombo->currentText(),
+                     QString::number(taskEst), QString::number(priority)));
+        dialog.accept();
+    } catch (const CompanyException& e) {
+        ExceptionHandler::handleCompanyException(e, &dialog, "add task");
+    } catch (const std::exception& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
 }
 
 void MainWindow::assignEmployeeToTask() {
@@ -1380,76 +1382,80 @@ void MainWindow::assignEmployeeToTask() {
     form->addRow(okButton);
 
     connect(okButton, &QPushButton::clicked, [this, &dialog, projectId, taskCombo, employeeCombo, hoursEdit, tasks]() {
-        try {
-            int taskId = taskCombo->currentData().toInt();
-            int employeeId = employeeCombo->currentData().toInt();
-
-            auto employee = this->currentCompany->getEmployee(employeeId);
-            if (!employee) {
-                QMessageBox::warning(&dialog, "Error", "Employee not found!");
-                return;
-            }
-
-            auto availableHours = employee->getAvailableHours();
-            int maxHours = std::min(kMaxHoursPerWeek, availableHours);
-
-            if (maxHours <= 0) {
-                QMessageBox::warning(
-                    &dialog, "Error",
-                    QString("Employee '%1' has no available hours.\n\n"
-                            "Weekly capacity: %2h\n"
-                            "Currently used: %3h\n"
-                            "Available: %4h\n\n"
-                            "The employee cannot be assigned to more tasks.")
-                        .arg(employee->getName())
-                        .arg(employee->getWeeklyHoursCapacity())
-                        .arg(employee->getCurrentWeeklyHours())
-                        .arg(availableHours));
-                return;
-            }
-
-            int hours = 0;
-            if (!ValidationHelper::validateInt(hoursEdit->text().trimmed(),
-                                               hours, 1, maxHours,
-                                               "Hours per week", &dialog))
-                return;
-
-            this->currentCompany->assignEmployeeToTask(employeeId, projectId, taskId,
-                                                 hours);
-            refreshAllData();
-            autoSave();
-
-            QString taskName;
-            QString employeeName;
-            for (const auto& task : tasks) {
-                if (task.getId() == taskId) {
-                    taskName = task.getName();
-                    break;
-                }
-            }
-            if (auto emp = this->currentCompany->getEmployee(employeeId)) {
-                employeeName = emp->getName();
-            }
-
-            QMessageBox::information(
-                &dialog, "Success",
-                QString("Employee assigned to task successfully!\n\n"
-                        "Task: %1\n"
-                        "Employee: %2\n"
-                        "Hours per week: %3")
-                    .arg(taskName, employeeName, QString::number(hours)));
-            dialog.accept();
-        } catch (const CompanyException& e) {
-            ExceptionHandler::handleCompanyException(e, &dialog,
-                                                     "assign employee to task");
-        } catch (const std::exception& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
-        }
+        handleAssignEmployeeToTaskDialog(projectId, dialog, taskCombo, employeeCombo, hoursEdit, tasks);
     });
 
     dialog.exec();
     pendingTaskSelectionId = -1;
     refreshProjectDetailView();
+}
+
+void MainWindow::handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, QComboBox* taskCombo, QComboBox* employeeCombo, QLineEdit* hoursEdit, const std::vector<Task>& tasks) {
+    try {
+        int taskId = taskCombo->currentData().toInt();
+        int employeeId = employeeCombo->currentData().toInt();
+
+        auto employee = this->currentCompany->getEmployee(employeeId);
+        if (!employee) {
+            QMessageBox::warning(&dialog, "Error", "Employee not found!");
+            return;
+        }
+
+        auto availableHours = employee->getAvailableHours();
+        int maxHours = std::min(kMaxHoursPerWeek, availableHours);
+
+        if (maxHours <= 0) {
+            QMessageBox::warning(
+                &dialog, "Error",
+                QString("Employee '%1' has no available hours.\n\n"
+                        "Weekly capacity: %2h\n"
+                        "Currently used: %3h\n"
+                        "Available: %4h\n\n"
+                        "The employee cannot be assigned to more tasks.")
+                    .arg(employee->getName())
+                    .arg(employee->getWeeklyHoursCapacity())
+                    .arg(employee->getCurrentWeeklyHours())
+                    .arg(availableHours));
+            return;
+        }
+
+        int hours = 0;
+        if (!ValidationHelper::validateInt(hoursEdit->text().trimmed(),
+                                           hours, 1, maxHours,
+                                           "Hours per week", &dialog))
+            return;
+
+        this->currentCompany->assignEmployeeToTask(employeeId, projectId, taskId,
+                                             hours);
+        refreshAllData();
+        autoSave();
+
+        QString taskName;
+        QString employeeName;
+        for (const auto& task : tasks) {
+            if (task.getId() == taskId) {
+                taskName = task.getName();
+                break;
+            }
+        }
+        if (auto emp = this->currentCompany->getEmployee(employeeId)) {
+            employeeName = emp->getName();
+        }
+
+        QMessageBox::information(
+            &dialog, "Success",
+            QString("Employee assigned to task successfully!\n\n"
+                    "Task: %1\n"
+                    "Employee: %2\n"
+                    "Hours per week: %3")
+                .arg(taskName, employeeName, QString::number(hours)));
+        dialog.accept();
+    } catch (const CompanyException& e) {
+        ExceptionHandler::handleCompanyException(e, &dialog,
+                                                 "assign employee to task");
+    } catch (const std::exception& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
 }
 
 void MainWindow::autoAssignToProject(int projectId) {
