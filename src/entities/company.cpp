@@ -329,22 +329,33 @@ void Company::addEmployee(std::shared_ptr<Employee> employee) {
     employees.add(employee);
 }
 
+namespace {
+    void removeEmployeeTaskAssignmentsFromProjects(
+        int employeeId,
+        const std::vector<int>& assignedProjects,
+        const ProjectContainer& projects,
+        const Company& company,
+        std::map<std::tuple<int, int, int>, int>& taskAssignments) {
+        for (int projectId : assignedProjects) {
+            std::shared_ptr<Project> projPtr = projects.find(projectId);
+            if (!projPtr) continue;
+            
+            auto projectTasks = company.getProjectTasks(projectId);
+            for (const auto& task : projectTasks) {
+                auto key = std::make_tuple(employeeId, projectId, task.getId());
+                taskAssignments.erase(key);
+            }
+            projPtr->recomputeTotalsFromTasks();
+        }
+    }
+}
+
 void Company::removeEmployee(int employeeId) {
     std::shared_ptr<Employee> employee = employees.find(employeeId);
     if (employee) {
-        const std::vector<int>& assignedProjects =
-            employee->getAssignedProjects();
-        for (int projectId : assignedProjects) {
-            std::shared_ptr<Project> projPtr = projects.find(projectId);
-            if (projPtr) {
-                auto projectTasks = getProjectTasks(projectId);
-                for (const auto& task : projectTasks) {
-                    auto key = std::make_tuple(employeeId, projectId, task.getId());
-                    taskAssignments.erase(key);
-                }
-                projPtr->recomputeTotalsFromTasks();
-            }
-        }
+        const std::vector<int>& assignedProjects = employee->getAssignedProjects();
+        removeEmployeeTaskAssignmentsFromProjects(
+            employeeId, assignedProjects, projects, *this, taskAssignments);
     }
 
     auto it = taskAssignments.begin();
@@ -529,6 +540,103 @@ namespace {
             adjustedHours = adjustedHours - reduction;
             totalScaledHours -= reduction;
             excess -= reduction;
+        }
+    }
+    
+    void adjustAssignmentsToCapacity(
+        std::vector<std::tuple<int, int, int, int>>& assignmentsData,
+        int capacity,
+        int& totalScaledHours) {
+        if (totalScaledHours <= capacity) {
+            return;
+        }
+        
+        const auto adjustFactor = static_cast<double>(capacity) / totalScaledHours;
+        totalScaledHours = 0;
+        
+        for (auto& assignment : assignmentsData) {
+            auto& [projectId, taskId, oldHours, scaledHours] = assignment;
+            auto adjustedHours = static_cast<int>(std::round(scaledHours * adjustFactor));
+            
+            if (adjustedHours < 0) adjustedHours = 0;
+            if (adjustedHours > capacity) adjustedHours = capacity;
+            
+            scaledHours = adjustedHours;
+            totalScaledHours += adjustedHours;
+        }
+        
+        if (totalScaledHours > capacity) {
+            int excess = totalScaledHours - capacity;
+            reduceExcessHours(assignmentsData, excess, totalScaledHours);
+        }
+    }
+    
+    void updateTaskAssignmentsFromData(
+        int employeeId,
+        const std::vector<std::tuple<int, int, int, int>>& assignmentsData,
+        std::map<std::tuple<int, int, int>, int>& taskAssignments,
+        const ProjectContainer& projects,
+        const std::shared_ptr<Employee>& employee) {
+        for (const auto& assignment : assignmentsData) {
+            const auto& [projectId, taskId, oldHours, newHours] = assignment;
+            const auto key = std::make_tuple(employeeId, projectId, taskId);
+            
+            if (newHours > 0) {
+                taskAssignments[key] = newHours;
+            } else {
+                taskAssignments.erase(key);
+            }
+            
+            auto projPtr = projects.find(projectId);
+            updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
+        }
+    }
+    
+    void updateEmployeeHoursAfterScaling(
+        const std::shared_ptr<Employee>& employee,
+        const std::map<std::tuple<int, int, int>, int>& taskAssignments,
+        int employeeId) {
+        if (!employee->getIsActive()) {
+            return;
+        }
+        
+        const int currentCapacity = employee->getWeeklyHoursCapacity();
+        
+        int totalHours = 0;
+        for (const auto& [key, hours] : taskAssignments) {
+            const auto& [empId, projectId, taskId] = key;
+            if (empId == employeeId) {
+                totalHours += hours;
+            }
+        }
+        
+        if (totalHours > currentCapacity) {
+            totalHours = currentCapacity;
+        }
+        
+        if (int currentHours = employee->getCurrentWeeklyHours(); currentHours > 0) {
+            try {
+                employee->removeWeeklyHours(currentHours);
+            } catch (const EmployeeException& e) {
+                qCWarning(companyExceptions) << "Failed to remove weekly hours:" << e.what();
+            }
+        }
+        
+        if (totalHours > 0) {
+            try {
+                employee->addWeeklyHours(totalHours);
+            } catch (const EmployeeException& e) {
+                qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
+            }
+            
+            if (totalHours > currentCapacity) {
+                try {
+                    employee->addWeeklyHours(currentCapacity);
+                } catch (const EmployeeException& e) {
+                    // Log error but continue execution
+                    qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
+                }
+            }
         }
     }
     
@@ -1117,105 +1225,19 @@ void Company::scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
 
     int capacity = employee->getWeeklyHoursCapacity();
 
-    
     std::vector<std::tuple<int, int, int, int>> assignmentsData;
     int totalScaledHours = 0;
     
     collectScaledAssignments(employeeId, scaleFactor, taskAssignments, assignmentsData, totalScaledHours);
 
-    
     if (assignmentsData.empty()) {
         return;
     }
-    if (totalScaledHours > capacity) {
-        const auto adjustFactor = static_cast<double>(capacity) / totalScaledHours;
-        totalScaledHours = 0;
-        
-        for (auto& assignment : assignmentsData) {
-            auto& [projectId, taskId, oldHours, scaledHours] = assignment;
-            auto adjustedHours = static_cast<int>(std::round(scaledHours * adjustFactor));
-            
-            if (adjustedHours < 0) adjustedHours = 0;
-            if (adjustedHours > capacity) adjustedHours = capacity;
-            
-            scaledHours = adjustedHours;
-            totalScaledHours += adjustedHours;
-        }
-        
-        
-        if (totalScaledHours > capacity) {
-            int excess = totalScaledHours - capacity;
-            reduceExcessHours(assignmentsData, excess, totalScaledHours);
-        }
-    }
-
     
-    for (const auto& assignment : assignmentsData) {
-        const auto& [projectId, taskId, oldHours, newHours] = assignment;
-        const auto key = std::make_tuple(employeeId, projectId, taskId);
-        
-        
-        if (newHours > 0) {
-            taskAssignments[key] = newHours;
-        } else {
-            taskAssignments.erase(key);
-        }
-
-        
-        auto projPtr = projects.find(projectId);
-        updateTaskAndProjectCosts(projPtr, taskId, oldHours, newHours, employee);
-    }
-
-    
+    adjustAssignmentsToCapacity(assignmentsData, capacity, totalScaledHours);
+    updateTaskAssignmentsFromData(employeeId, assignmentsData, taskAssignments, projects, employee);
     recalculateTaskAllocatedHours();
-
-    
-    if (employee->getIsActive()) {
-        
-        const int currentCapacity = employee->getWeeklyHoursCapacity();
-        
-        
-        int totalHours = 0;
-        for (const auto& [key, hours] : taskAssignments) {
-            const auto& [empId, projectId, taskId] = key;
-            if (empId == employeeId) {
-                totalHours += hours;
-            }
-        }
-        
-        
-        if (totalHours > currentCapacity) {
-            totalHours = currentCapacity;
-        }
-        
-        
-        
-        if (int currentHours = employee->getCurrentWeeklyHours(); currentHours > 0) {
-            try {
-                employee->removeWeeklyHours(currentHours);
-            } catch (const EmployeeException& e) {
-                qCWarning(companyExceptions) << "Failed to remove weekly hours:" << e.what();
-            }
-        }
-        
-        
-        if (totalHours > 0) {
-            try {
-                employee->addWeeklyHours(totalHours);
-            } catch (const EmployeeException& e) {
-                qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
-            }
-            
-            if (totalHours > currentCapacity) {
-                try {
-                    employee->addWeeklyHours(currentCapacity);
-                } catch (const EmployeeException& e) {
-                    // Log error but continue execution
-                    qCWarning(companyExceptions) << "Failed to add weekly hours:" << e.what();
-                }
-            }
-        }
-    }
+    updateEmployeeHoursAfterScaling(employee, taskAssignments, employeeId);
 }
 
 int Company::getTaskAssignment(int employeeId, int projectId, int taskId) const {

@@ -125,7 +125,7 @@ void CompanyManager::addCompany(std::vector<Company*>& companies,
     auto* okButton = new QPushButton("Create");
     form->addRow(okButton);
 
-    QObject::connect(okButton, &QPushButton::clicked, [&]() {
+    QObject::connect(okButton, &QPushButton::clicked, [&dialog, &companies, &currentCompany, &currentCompanyIndex, nameEdit, industryEdit, locationEdit, yearEdit, selector]() {
         QString companyName = nameEdit->text().trimmed();
         QString companyIndustry = industryEdit->text().trimmed();
         QString companyLocation = locationEdit->text().trimmed();

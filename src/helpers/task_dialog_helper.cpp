@@ -49,7 +49,7 @@ void TaskDialogHelper::createAddTaskDialog(QDialog* dialog, QFormLayout* form,
 
 bool TaskDialogHelper::validateAndAddTask(const QString& taskName, const QString& taskType,
                                          int taskEst, int priority, int projectId,
-                                         const Company* company, QDialog* dialog) {
+                                         Company* company, QDialog* dialog) {
     if (!company || !dialog) return false;
 
     auto tasks = company->getProjectTasks(projectId);
@@ -73,7 +73,7 @@ bool TaskDialogHelper::validateAndAddTask(const QString& taskName, const QString
 
     int nextId = proj->getNextTaskId();
     Task task(nextId, taskName, taskType, taskEst, priority);
-    const_cast<Company*>(company)->addTaskToProject(projectId, task);
+    company->addTaskToProject(projectId, task);
     return true;
 }
 

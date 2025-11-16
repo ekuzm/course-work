@@ -43,43 +43,58 @@ QString DisplayHelper::formatProjectInfo(
     return projectNames.isEmpty() ? "-" : projectNames.join(", ");
 }
 
+namespace {
+    void addManagedProjectIfNeeded(
+        const std::shared_ptr<const Employee>& employee,
+        std::vector<int>& projectIds) {
+        auto manager = std::dynamic_pointer_cast<const Manager>(employee);
+        if (!manager) {
+            return;
+        }
+        
+        int managedProjectId = manager->getManagedProjectId();
+        if (managedProjectId < 0) {
+            return;
+        }
+        
+        bool found = std::any_of(projectIds.begin(), projectIds.end(),
+                                 [managedProjectId](int pid) { return pid == managedProjectId; });
+        if (!found) {
+            projectIds.push_back(managedProjectId);
+        }
+    }
+    
+    void collectTaskNamesFromProject(
+        int projectId,
+        const Company* currentCompany,
+        QStringList& taskInfoList) {
+        const auto* project = currentCompany->getProject(projectId);
+        if (!project) {
+            return;
+        }
+        
+        auto tasks = currentCompany->getProjectTasks(projectId);
+        for (const auto& task : tasks) {
+            if (task.getAllocatedHours() > 0) {
+                QString taskName = task.getName();
+                if (!taskInfoList.contains(taskName)) {
+                    taskInfoList.append(taskName);
+                }
+            }
+        }
+    }
+}
+
 QString DisplayHelper::formatTaskInfo(
     const std::shared_ptr<const Employee>& employee,
     const Company* currentCompany) {
     QStringList taskInfoList;
-
     std::vector<int> projectIds = employee->getAssignedProjects();
-
-    if (auto manager = std::dynamic_pointer_cast<const Manager>(employee)) {
-        int managedProjectId = manager->getManagedProjectId();
-        if (managedProjectId >= 0) {
-            bool found = false;
-            for (int pid : projectIds) {
-                if (pid == managedProjectId) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                projectIds.push_back(managedProjectId);
-            }
-        }
-    }
-
+    
+    addManagedProjectIfNeeded(employee, projectIds);
+    
     for (int projectId : projectIds) {
-        const auto* project = currentCompany->getProject(projectId);
-        if (project) {
-            auto tasks = currentCompany->getProjectTasks(projectId);
-
-            for (const auto& task : tasks) {
-                if (task.getAllocatedHours() > 0) {
-                    QString taskName = task.getName();
-                    if (!taskInfoList.contains(taskName)) {
-                        taskInfoList.append(taskName);
-                    }
-                }
-            }
-        }
+        collectTaskNamesFromProject(projectId, currentCompany, taskInfoList);
     }
 
     return taskInfoList.isEmpty() ? "-" : taskInfoList.join(", ");

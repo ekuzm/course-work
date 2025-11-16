@@ -4,12 +4,13 @@
 #include <exception>
 
 class BaseException : public std::exception {
-   protected:
+   private:
     QString message;
 
    public:
     explicit BaseException(QString msg);
     const char* what() const noexcept override;
+    QString getMessage() const { return message; }
 };
 
 class EmployeeException : public BaseException {

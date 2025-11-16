@@ -18,5 +18,5 @@ class TaskDialogHelper {
     static bool validateAndAddTask(const QString& taskName,
                                    const QString& taskType, int taskEst,
                                    int priority, int projectId,
-                                   const Company* company, QDialog* dialog);
+                                   Company* company, QDialog* dialog);
 };

@@ -898,8 +898,8 @@ QString MainWindow::getDataDirectory() {
     return AutoSaveLoader::getDataDirectory();
 }
 
-void MainWindow::autoSave() const {
-    AutoSaveLoader::autoSave(companies, const_cast<MainWindow*>(this));
+void MainWindow::autoSave() {
+    AutoSaveLoader::autoSave(companies, this);
 }
 
 void MainWindow::autoLoad() {
@@ -991,26 +991,22 @@ QWidget* MainWindow::createProjectActionButtons(int rowIndex) {
 
 void MainWindow::clearAllDataFiles() { FileHelper::clearAllDataFiles(this); }
 
-void MainWindow::refreshEmployeeTable() const {
-    MainWindow* self = const_cast<MainWindow*>(this);
-    DisplayHelper::displayEmployees(employeeTable, currentCompany, self);
+void MainWindow::refreshEmployeeTable() {
+    DisplayHelper::displayEmployees(employeeTable, currentCompany, this);
 }
 
-void MainWindow::refreshProjectTable() const {
-    MainWindow* self = const_cast<MainWindow*>(this);
-    DisplayHelper::displayProjects(projectTable, currentCompany, self);
+void MainWindow::refreshProjectTable() {
+    DisplayHelper::displayProjects(projectTable, currentCompany, this);
     if (projectDetailContainer != nullptr &&
         projectDetailContainer->isVisible()) {
-        MainWindow* self = const_cast<MainWindow*>(this);
-        self->refreshProjectDetailView();
+        refreshProjectDetailView();
     }
 }
 
-void MainWindow::showStatistics() const {
+void MainWindow::showStatistics() {
     DisplayHelper::showStatistics(statisticsText, currentCompany);
     if (statisticsChartWidget != nullptr) {
-        MainWindow* self = const_cast<MainWindow*>(this);
-        self->drawStatisticsChart(statisticsChartWidget);
+        drawStatisticsChart(statisticsChartWidget);
         statisticsChartWidget->update();
     }
 }
@@ -1030,10 +1026,9 @@ void MainWindow::drawStatisticsChart(QWidget* widget) {
     chartWidget->setData(currentCompany);
 }
 
-void MainWindow::refreshAllData() const {
+void MainWindow::refreshAllData() {
     if (currentCompany != nullptr) {
-        MainWindow* self = const_cast<MainWindow*>(this);
-        self->validateAndFixProjectAssignments(currentCompany);
+        validateAndFixProjectAssignments(currentCompany);
         
         currentCompany->recalculateTaskAllocatedHours();
     }
@@ -1044,8 +1039,7 @@ void MainWindow::refreshAllData() const {
 
     if (projectDetailContainer != nullptr &&
         projectDetailContainer->isVisible() && detailedProjectId >= 0) {
-        MainWindow* self = const_cast<MainWindow*>(this);
-        self->refreshProjectDetailView();
+        refreshProjectDetailView();
     }
 }
 

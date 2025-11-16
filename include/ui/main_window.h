@@ -51,12 +51,12 @@ class MainWindow : public QMainWindow {
     void deleteEmployee();
     void fireEmployee();
     void searchEmployee();
-    void refreshEmployeeTable() const;
+    void refreshEmployeeTable();
 
     void addProject();
     void editProject();
     void deleteProject();
-    void refreshProjectTable() const;
+    void refreshProjectTable();
     void openProjectDetails();
     void closeProjectDetails();
     void autoAssignDetailedProject();
@@ -67,8 +67,8 @@ class MainWindow : public QMainWindow {
     void autoAssignToProject(int projectId = -1);
     void viewProjectAssignments();
     void viewEmployeeHistory();
-    void showStatistics() const;
-    void refreshAllData() const;
+    void showStatistics();
+    void refreshAllData();
 
     void addCompany();
     void switchCompany();
@@ -89,7 +89,7 @@ class MainWindow : public QMainWindow {
 
     int getSelectedEmployeeId() const;
     int getSelectedProjectId() const;
-    void autoSave() const;
+    void autoSave();
     void autoLoad();
 
    public:
