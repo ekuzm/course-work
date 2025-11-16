@@ -34,12 +34,13 @@ void FileHelper::clearAllDataFiles(QWidget* parent) {
 
             for (const QString& dirName : dirs) {
                 QDir subDir(dataDirPath + "/" + dirName);
-                if (subDir.exists()) {
-                    subDir.setNameFilters(filters);
-                    subDir.setFilter(QDir::Files);
-                    for (const QString& fileName : subDir.entryList()) {
-                        subDir.remove(fileName);
-                    }
+                if (!subDir.exists()) {
+                    continue;
+                }
+                subDir.setNameFilters(filters);
+                subDir.setFilter(QDir::Files);
+                for (const QString& fileName : subDir.entryList()) {
+                    subDir.remove(fileName);
                 }
             }
 

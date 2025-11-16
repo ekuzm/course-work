@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <ranges>
 
 #include "entities/company.h"
 #include "helpers/display_helper.h"
@@ -166,6 +167,278 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
     return html;
 }
 
+namespace {
+    QString getEmployeeBadgeClass(const QString& employeeType) {
+        if (employeeType == "Manager") return "badge-management";
+        if (employeeType == "Developer") return "badge-development";
+        if (employeeType == "Designer") return "badge-design";
+        if (employeeType == "QA") return "badge-qa";
+        return "badge-info";
+    }
+    
+    QString getTaskBadgeClass(const QString& taskType) {
+        if (taskType == "Management") return "badge-management";
+        if (taskType == "Development") return "badge-development";
+        if (taskType == "Design") return "badge-design";
+        if (taskType == "QA") return "badge-qa";
+        return "badge-info";
+    }
+    
+    bool employeeHasTaskAssignments(const Company* company, int employeeId,
+                                    int projectId,
+                                    const std::vector<Task>& tasks) {
+        for (const auto& task : tasks) {
+            if (company->getEmployeeTaskHours(employeeId, projectId,
+                                              task.getId()) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+    void collectProjectEmployees(const Company* company, int projectId,
+                                 const std::vector<Task>& tasks,
+                                 std::vector<std::shared_ptr<Employee>>& projectEmployees) {
+        auto allEmployees = company->getAllEmployees();
+        for (const auto& emp : allEmployees) {
+            if (!emp) continue;
+            
+            bool isAssigned = emp->isAssignedToProject(projectId);
+            bool wasOnProject = std::ranges::find(emp->getProjectHistory(),
+                                                   projectId) !=
+                                emp->getProjectHistory().end();
+            bool hasTaskAssignments = employeeHasTaskAssignments(
+                company, emp->getId(), projectId, tasks);
+            
+            if (isAssigned || wasOnProject || hasTaskAssignments) {
+                projectEmployees.push_back(emp);
+            }
+        }
+    }
+    
+    int calculateProjectHoursForEmployee(const Company* company,
+                                         int employeeId, int projectId,
+                                         const std::vector<Task>& tasks) {
+        int projectHours = 0;
+        for (const auto& task : tasks) {
+            projectHours += company->getEmployeeTaskHours(
+                employeeId, projectId, task.getId());
+        }
+        return projectHours;
+    }
+    
+    QString generateProjectMetricsHtml(const Project& project) {
+        int totalEstimated = project.getEstimatedHours();
+        int totalAllocated = project.getAllocatedHours();
+        int needed = totalEstimated - totalAllocated;
+        double budgetUsed = project.getEmployeeCosts();
+        double budgetRemaining = project.getBudget() - budgetUsed;
+        double hoursPercent = totalEstimated > 0
+                                 ? (static_cast<double>(totalAllocated) /
+                                    totalEstimated * 100.0)
+                                 : 0.0;
+        double budgetPercent = project.getBudget() > 0
+                                  ? (budgetUsed / project.getBudget() * 100.0)
+                                  : 0.0;
+        
+        QString html = R"(<div class="section">)";
+        html += R"(<div class="section-title">Project Metrics</div>)";
+        html += R"(<div class="metrics-grid">)";
+        
+        html += QString(R"(
+        <div class="metric-card">
+            <div class="metric-label">Estimated Hours</div>
+            <div class="metric-value">%1h</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Allocated Hours</div>
+            <div class="metric-value">%2h</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Hours Needed</div>
+            <div class="metric-value">%3h</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Budget Used</div>
+            <div class="metric-value">$%4</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-label">Budget Remaining</div>
+            <div class="metric-value">$%5</div>
+        </div>
+    )")
+                        .arg(totalEstimated)
+                        .arg(totalAllocated)
+                        .arg(needed)
+                        .arg(budgetUsed, 0, 'f', 2)
+                        .arg(budgetRemaining, 0, 'f', 2);
+        
+        html += R"(</div>)";
+        html += QString(R"(
+        <div style="margin-top: 15px;">
+            <div style="font-size: 13px; color: #666; margin-bottom: 5px;">Hours Allocation: %1%</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: %1%;">%2h / %3h</div>
+            </div>
+        </div>
+        <div style="margin-top: 15px;">
+            <div style="font-size: 13px; color: #666; margin-bottom: 5px;">Budget Utilization: %4%</div>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: %4%;">$%5 / $%6</div>
+            </div>
+        </div>
+    )")
+                        .arg(hoursPercent, 0, 'f', 1)
+                        .arg(totalAllocated)
+                        .arg(totalEstimated)
+                        .arg(budgetPercent, 0, 'f', 1)
+                        .arg(budgetUsed, 0, 'f', 2)
+                        .arg(project.getBudget(), 0, 'f', 2);
+        
+        html += R"(</div>)";
+        return html;
+    }
+    
+    QString generateTeamMembersHtml(const Company* company, int projectId,
+                                    const std::vector<Task>& tasks,
+                                    const std::vector<std::shared_ptr<Employee>>& projectEmployees) {
+        QString html = R"(<div class="section">)";
+        html += QString(R"(<div class="section-title">Team Members (%1)</div>)")
+                    .arg(projectEmployees.size());
+        
+        if (projectEmployees.empty()) {
+            html += R"(<div class="empty-state">No employees assigned to this project yet.</div>)";
+        } else {
+            for (const auto& emp : projectEmployees) {
+                QString badgeClass = getEmployeeBadgeClass(emp->getEmployeeType());
+                int projectHours = calculateProjectHoursForEmployee(
+                    company, emp->getId(), projectId, tasks);
+                
+                double projectUtilization = 0.0;
+                if (emp->getWeeklyHoursCapacity() > 0) {
+                    projectUtilization = (static_cast<double>(projectHours) /
+                                          emp->getWeeklyHoursCapacity() * 100.0);
+                }
+                
+                bool isActive = emp->getIsActive();
+                QString statusText = isActive ? "" : " (Former Employee)";
+                QString statusStyle = isActive ? "" : " style=\"opacity: 0.7;\"";
+                
+                html += QString(R"(
+                <div class="employee-item"%10>
+                    <div class="employee-header">
+                        %1%9 <span class="task-badge %2">%3</span>
+                    </div>
+                    <div class="employee-details">
+                        Position: %4 | Salary: $%5 | Capacity: %6h/week | Used on this project: %7h/week (%8%) | Available: %11h/week
+                    </div>
+                </div>
+            )")
+                            .arg(emp->getName())
+                            .arg(badgeClass)
+                            .arg(emp->getEmployeeType())
+                            .arg(emp->getPosition())
+                            .arg(emp->getSalary(), 0, 'f', 2)
+                            .arg(emp->getWeeklyHoursCapacity())
+                            .arg(projectHours)
+                            .arg(projectUtilization, 0, 'f', 1)
+                            .arg(statusText)
+                            .arg(statusStyle)
+                            .arg(emp->getAvailableHours());
+            }
+        }
+        
+        html += R"(</div>)";
+        return html;
+    }
+    
+    QString generateProjectTasksHtml(const std::vector<Task>& tasks) {
+        QString html;
+        html +=
+            R"(<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">)";
+        html +=
+            R"(<div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600;">Tasks:</div>)";
+        
+        for (const auto& task : tasks) {
+            QString taskBadgeClass = getTaskBadgeClass(task.getType());
+            int taskRemaining = task.getEstimatedHours() - task.getAllocatedHours();
+            double taskProgress = task.getEstimatedHours() > 0
+                                      ? (static_cast<double>(task.getAllocatedHours()) /
+                                         task.getEstimatedHours() * 100.0)
+                                      : 0.0;
+            
+            html += QString(R"(
+                        <div class="task-item">
+                            <div class="task-header">
+                                %1 <span class="badge %2">%3</span>
+                            </div>
+                            <div class="task-details">
+                                Estimated: %5h | Allocated: %6h | Remaining: %7h | Priority: %8 | Progress: %9% | Phase: %4
+                            </div>
+                        </div>
+                    )")
+                            .arg(task.getName())
+                            .arg(taskBadgeClass)
+                            .arg(task.getType())
+                            .arg(task.getPhase())
+                            .arg(task.getEstimatedHours())
+                            .arg(task.getAllocatedHours())
+                            .arg(taskRemaining)
+                            .arg(task.getPriority())
+                            .arg(taskProgress, 0, 'f', 1);
+        }
+        
+        html += R"(</div>)";
+        return html;
+    }
+    
+    QString generateTasksHtml(const std::vector<Task>& tasks) {
+        QString html = R"(<div class="section">)";
+        html += QString(R"(<div class="section-title">Tasks (%1)</div>)")
+                    .arg(tasks.size());
+        
+        if (tasks.empty()) {
+            html += R"(<div class="empty-state">No tasks in this project yet.</div>)";
+        } else {
+            for (const auto& task : tasks) {
+                QString badgeClass = getTaskBadgeClass(task.getType());
+                int remaining = task.getEstimatedHours() - task.getAllocatedHours();
+                double taskPercent = task.getEstimatedHours() > 0
+                                         ? (static_cast<double>(task.getAllocatedHours()) /
+                                            task.getEstimatedHours() * 100.0)
+                                         : 0.0;
+                
+                html += QString(R"(
+                <div class="task-item">
+                    <div class="task-header">
+                        %1 <span class="task-badge %2">%3</span>
+                    </div>
+                    <div class="task-details">
+                        Estimated: %4h | Allocated: %5h | Remaining: %6h | Priority: %7 | Phase: %8
+                    </div>
+                    <div class="progress-bar" style="margin-top: 8px;">
+                        <div class="progress-fill" style="width: %9%;">%10% Complete</div>
+                    </div>
+                </div>
+            )")
+                            .arg(task.getName())
+                            .arg(badgeClass)
+                            .arg(task.getType())
+                            .arg(task.getEstimatedHours())
+                            .arg(task.getAllocatedHours())
+                            .arg(remaining)
+                            .arg(task.getPriority())
+                            .arg(task.getPhase())
+                            .arg(taskPercent, 0, 'f', 1)
+                            .arg(taskPercent, 0, 'f', 1);
+            }
+        }
+        
+        html += R"(</div>)";
+        return html;
+    }
+}
+
 QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project,
                                                       const Company* company) {
     if (!company) return "";
@@ -214,220 +487,13 @@ QString HtmlGenerator::generateProjectAssignmentsHtml(const Project& project,
                 .arg(project.getClientName())
                 .arg(project.getBudget(), 0, 'f', 2);
 
-    int totalEstimated = project.getEstimatedHours();
-    int totalAllocated = project.getAllocatedHours();
-    int needed = totalEstimated - totalAllocated;
-    double budgetUsed = project.getEmployeeCosts();
-    double budgetRemaining = project.getBudget() - budgetUsed;
-    double hoursPercent =
-        totalEstimated > 0
-            ? (static_cast<double>(totalAllocated) / totalEstimated * 100.0)
-            : 0.0;
-    double budgetPercent = project.getBudget() > 0
-                               ? (budgetUsed / project.getBudget() * 100.0)
-                               : 0.0;
-
-    html += R"(<div class="section">)";
-    html += R"(<div class="section-title">Project Metrics</div>)";
-    html += R"(<div class="metrics-grid">)";
-
-    html += QString(R"(
-        <div class="metric-card">
-            <div class="metric-label">Estimated Hours</div>
-            <div class="metric-value">%1h</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Allocated Hours</div>
-            <div class="metric-value">%2h</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Hours Needed</div>
-            <div class="metric-value">%3h</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Budget Used</div>
-            <div class="metric-value">$%4</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-label">Budget Remaining</div>
-            <div class="metric-value">$%5</div>
-        </div>
-    )")
-                .arg(totalEstimated)
-                .arg(totalAllocated)
-                .arg(needed)
-                .arg(budgetUsed, 0, 'f', 2)
-                .arg(budgetRemaining, 0, 'f', 2);
-
-    html += R"(</div>)";
-
-    html += QString(R"(
-        <div style="margin-top: 15px;">
-            <div style="font-size: 13px; color: #666; margin-bottom: 5px;">Hours Allocation: %1%</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: %1%;">%2h / %3h</div>
-            </div>
-        </div>
-        <div style="margin-top: 15px;">
-            <div style="font-size: 13px; color: #666; margin-bottom: 5px;">Budget Utilization: %4%</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: %4%;">$%5 / $%6</div>
-            </div>
-        </div>
-    )")
-                .arg(hoursPercent, 0, 'f', 1)
-                .arg(totalAllocated)
-                .arg(totalEstimated)
-                .arg(budgetPercent, 0, 'f', 1)
-                .arg(budgetUsed, 0, 'f', 2)
-                .arg(project.getBudget(), 0, 'f', 2);
-
-    html += R"(</div>)";
+    html += generateProjectMetricsHtml(project);
 
     auto tasks = company->getProjectTasks(project.getId());
-    auto allEmployees = company->getAllEmployees();
-
     std::vector<std::shared_ptr<Employee>> projectEmployees;
-    for (const auto& emp : allEmployees) {
-        if (!emp) continue;
-
-        bool isAssigned = emp->isAssignedToProject(project.getId());
-
-        bool wasOnProject = false;
-        const auto& projectHistory = emp->getProjectHistory();
-        if (std::ranges::find(projectHistory, project.getId()) !=
-            projectHistory.end()) {
-            wasOnProject = true;
-        }
-
-        bool hasTaskAssignments = false;
-        for (const auto& task : tasks) {
-            if (company->getEmployeeTaskHours(emp->getId(), project.getId(),
-                                              task.getId()) > 0) {
-                hasTaskAssignments = true;
-                break;
-            }
-        }
-
-        if (isAssigned || wasOnProject || hasTaskAssignments) {
-            projectEmployees.push_back(emp);
-        }
-    }
-
-    html += R"(<div class="section">)";
-    html += QString(R"(<div class="section-title">Team Members (%1)</div>)")
-                .arg(projectEmployees.size());
-
-    if (projectEmployees.empty()) {
-        html +=
-            R"(<div class="empty-state">No employees assigned to this project yet.</div>)";
-    } else {
-        for (const auto& emp : projectEmployees) {
-            QString badgeClass = "badge-info";
-            if (emp->getEmployeeType() == "Manager")
-                badgeClass = "badge-management";
-            else if (emp->getEmployeeType() == "Developer")
-                badgeClass = "badge-development";
-            else if (emp->getEmployeeType() == "Designer")
-                badgeClass = "badge-design";
-            else if (emp->getEmployeeType() == "QA")
-                badgeClass = "badge-qa";
-
-            int projectHours = 0;
-            for (const auto& task : tasks) {
-                projectHours += company->getEmployeeTaskHours(
-                    emp->getId(), project.getId(), task.getId());
-            }
-
-            double projectUtilization = 0.0;
-            if (emp->getWeeklyHoursCapacity() > 0) {
-                projectUtilization = (static_cast<double>(projectHours) /
-                                      emp->getWeeklyHoursCapacity() * 100.0);
-            }
-
-            bool isActive = emp->getIsActive();
-            QString statusText = isActive ? "" : " (Former Employee)";
-            QString statusStyle = isActive ? "" : " style=\"opacity: 0.7;\"";
-
-            html += QString(R"(
-                <div class="employee-item"%10>
-                    <div class="employee-header">
-                        %1%9 <span class="task-badge %2">%3</span>
-                    </div>
-                    <div class="employee-details">
-                        Position: %4 | Salary: $%5 | Capacity: %6h/week | Used on this project: %7h/week (%8%) | Available: %11h/week
-                    </div>
-                </div>
-            )")
-                        .arg(emp->getName())
-                        .arg(badgeClass)
-                        .arg(emp->getEmployeeType())
-                        .arg(emp->getPosition())
-                        .arg(emp->getSalary(), 0, 'f', 2)
-                        .arg(emp->getWeeklyHoursCapacity())
-                        .arg(projectHours)
-                        .arg(projectUtilization, 0, 'f', 1)
-                        .arg(statusText)
-                        .arg(statusStyle)
-                        .arg(emp->getAvailableHours());
-        }
-    }
-
-    html += R"(</div>)";
-
-    html += R"(<div class="section">)";
-    html += QString(R"(<div class="section-title">Tasks (%1)</div>)")
-                .arg(tasks.size());
-
-    if (tasks.empty()) {
-        html +=
-            R"(<div class="empty-state">No tasks in this project yet.</div>)";
-    } else {
-        for (const auto& task : tasks) {
-            QString badgeClass = "badge-info";
-            if (task.getType() == "Management")
-                badgeClass = "badge-management";
-            else if (task.getType() == "Development")
-                badgeClass = "badge-development";
-            else if (task.getType() == "Design")
-                badgeClass = "badge-design";
-            else if (task.getType() == "QA")
-                badgeClass = "badge-qa";
-
-            int remaining = task.getEstimatedHours() - task.getAllocatedHours();
-            double taskPercent =
-                task.getEstimatedHours() > 0
-                    ? (static_cast<double>(task.getAllocatedHours()) /
-                       task.getEstimatedHours() * 100.0)
-                    : 0.0;
-
-            html += QString(R"(
-                <div class="task-item">
-                    <div class="task-header">
-                        %1 <span class="task-badge %2">%3</span>
-                    </div>
-                    <div class="task-details">
-                        Estimated: %4h | Allocated: %5h | Remaining: %6h | Priority: %7 | Phase: %8
-                    </div>
-                    <div class="progress-bar" style="margin-top: 8px;">
-                        <div class="progress-fill" style="width: %9%;">%10% Complete</div>
-                    </div>
-                </div>
-            )")
-                        .arg(task.getName())
-                        .arg(badgeClass)
-                        .arg(task.getType())
-                        .arg(task.getEstimatedHours())
-                        .arg(task.getAllocatedHours())
-                        .arg(remaining)
-                        .arg(task.getPriority())
-                        .arg(task.getPhase())
-                        .arg(taskPercent, 0, 'f', 1)
-                        .arg(taskPercent, 0, 'f', 1);
-        }
-    }
-
-    html += R"(</div>)";
+    collectProjectEmployees(company, project.getId(), tasks, projectEmployees);
+    html += generateTeamMembersHtml(company, project.getId(), tasks, projectEmployees);
+    html += generateTasksHtml(tasks);
     html += R"(
         </body>
         </html>
@@ -669,52 +735,7 @@ QString HtmlGenerator::generateEmployeeHistoryHtml(
                         .arg(statusBadge);
 
             if (!tasks.empty()) {
-                html +=
-                    R"(<div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0;">)";
-                html +=
-                    R"(<div style="font-size: 13px; color: #666; margin-bottom: 8px; font-weight: 600;">Tasks:</div>)";
-
-                for (const auto& task : tasks) {
-                    QString taskBadgeClass = "badge-type";
-                    if (task.getType() == "Management")
-                        taskBadgeClass = "badge-management";
-                    else if (task.getType() == "Development")
-                        taskBadgeClass = "badge-development";
-                    else if (task.getType() == "Design")
-                        taskBadgeClass = "badge-design";
-                    else if (task.getType() == "QA")
-                        taskBadgeClass = "badge-qa";
-
-                    int taskRemaining =
-                        task.getEstimatedHours() - task.getAllocatedHours();
-                    double taskProgress =
-                        task.getEstimatedHours() > 0
-                            ? (static_cast<double>(task.getAllocatedHours()) /
-                               task.getEstimatedHours() * 100.0)
-                            : 0.0;
-
-                    html += QString(R"(
-                        <div class="task-item">
-                            <div class="task-header">
-                                %1 <span class="badge %2">%3</span>
-                            </div>
-                            <div class="task-details">
-                                Estimated: %5h | Allocated: %6h | Remaining: %7h | Priority: %8 | Progress: %9% | Phase: %4
-                            </div>
-                        </div>
-                    )")
-                                .arg(task.getName())
-                                .arg(taskBadgeClass)
-                                .arg(task.getType())
-                                .arg(task.getPhase())
-                                .arg(task.getEstimatedHours())
-                                .arg(task.getAllocatedHours())
-                                .arg(taskRemaining)
-                                .arg(task.getPriority())
-                                .arg(taskProgress, 0, 'f', 1);
-                }
-
-                html += R"(</div>)";
+                html += generateProjectTasksHtml(tasks);
             }
 
             html += R"(</div>)";

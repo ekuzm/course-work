@@ -99,6 +99,128 @@ bool EmployeeDialogHandler::processAddEmployee(
     return true;
 }
 
+namespace {
+    bool checkBasicFieldChanges(const std::shared_ptr<Employee>& oldEmployee,
+                                const QString& name, double salary,
+                                const QString& department,
+                                double newEmploymentRate) {
+        return oldEmployee->getName() != name ||
+               oldEmployee->getSalary() != salary ||
+               oldEmployee->getDepartment() != department ||
+               oldEmployee->getEmploymentRate() != newEmploymentRate;
+    }
+    
+    bool checkManagerChanges(const std::shared_ptr<Employee>& oldEmployee,
+                             QComboBox* managerProject) {
+        const auto* manager = dynamic_cast<const Manager*>(oldEmployee.get());
+        if (!manager) {
+            return false;
+        }
+        int newProjectId = managerProject->currentData().toInt();
+        return manager->getManagedProjectId() != newProjectId;
+    }
+    
+    bool checkDeveloperChanges(const std::shared_ptr<Employee>& oldEmployee,
+                               QLineEdit* devLanguage,
+                               QLineEdit* devExperience) {
+        const auto* developer = dynamic_cast<const Developer*>(oldEmployee.get());
+        if (!developer) {
+            return false;
+        }
+        auto newLanguage = devLanguage->text().trimmed();
+        double newExperience = devExperience->text().toDouble();
+        return developer->getProgrammingLanguage() != newLanguage ||
+               qAbs(developer->getYearsOfExperience() - newExperience) > 0.01;
+    }
+    
+    bool checkDesignerChanges(const std::shared_ptr<Employee>& oldEmployee,
+                               QLineEdit* designerTool,
+                               QLineEdit* designerProjects) {
+        const auto* designer = dynamic_cast<const Designer*>(oldEmployee.get());
+        if (!designer) {
+            return false;
+        }
+        auto newTool = designerTool->text().trimmed();
+        int newProjects = designerProjects->text().toInt();
+        return designer->getDesignTool() != newTool ||
+               designer->getNumberOfProjects() != newProjects;
+    }
+    
+    bool checkQAChanges(const std::shared_ptr<Employee>& oldEmployee,
+                        QLineEdit* qaTestType, QLineEdit* qaBugs) {
+        const auto* qa = dynamic_cast<const QA*>(oldEmployee.get());
+        if (!qa) {
+            return false;
+        }
+        auto newTestType = qaTestType->text().trimmed();
+        int newBugs = qaBugs->text().toInt();
+        return qa->getTestingType() != newTestType ||
+               qa->getBugsFound() != newBugs;
+    }
+    
+    bool checkTypeSpecificChanges(const std::shared_ptr<Employee>& oldEmployee,
+                                  const QString& currentType,
+                                  QComboBox* managerProject,
+                                  QLineEdit* devLanguage,
+                                  QLineEdit* devExperience,
+                                  QLineEdit* designerTool,
+                                  QLineEdit* designerProjects,
+                                  QLineEdit* qaTestType,
+                                  QLineEdit* qaBugs) {
+        if (currentType == "Manager") {
+            return checkManagerChanges(oldEmployee, managerProject);
+        } else if (currentType == "Developer") {
+            return checkDeveloperChanges(oldEmployee, devLanguage, devExperience);
+        } else if (currentType == "Designer") {
+            return checkDesignerChanges(oldEmployee, designerTool, designerProjects);
+        } else if (currentType == "QA") {
+            return checkQAChanges(oldEmployee, qaTestType, qaBugs);
+        }
+        return false;
+    }
+    
+    void collectTaskAssignmentsForEmployee(
+        Company* company, int employeeId,
+        const std::vector<int>& assignedProjects,
+        std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) {
+        for (int projectId : assignedProjects) {
+            auto tasks = company->getProjectTasks(projectId);
+            for (const auto& task : tasks) {
+                int hours = company->getEmployeeTaskHours(employeeId, projectId,
+                                                          task.getId());
+                if (hours > 0) {
+                    savedTaskAssignments.push_back(std::make_tuple(
+                        employeeId, projectId, task.getId(), hours));
+                }
+            }
+        }
+    }
+    
+    void restoreEmployeeState(
+        const std::shared_ptr<Employee>& updatedEmployee,
+        const std::vector<int>& savedProjectHistory,
+        const std::vector<int>& savedAssignedProjects,
+        bool savedIsActive) {
+        for (int projectId : savedProjectHistory) {
+            updatedEmployee->addToProjectHistory(projectId);
+        }
+        
+        for (int projectId : savedAssignedProjects) {
+            updatedEmployee->addAssignedProject(projectId);
+        }
+        
+        try {
+            updatedEmployee->setIsActive(savedIsActive);
+        } catch (const EmployeeException&) {
+            if (!savedIsActive && updatedEmployee->getCurrentWeeklyHours() > 0) {
+                int currentHours = updatedEmployee->getCurrentWeeklyHours();
+                updatedEmployee->removeWeeklyHours(currentHours);
+                updatedEmployee->setIsActive(false);
+            }
+        }
+    }
+}
+
 bool EmployeeDialogHandler::processEditEmployee(
     QDialog* dialog, Company* company, int employeeId, int& nextEmployeeId,
     const QLineEdit* nameEdit, const QLineEdit* salaryEdit, const QLineEdit* deptEdit,
@@ -145,53 +267,15 @@ bool EmployeeDialogHandler::processEditEmployee(
         return false;
     }
 
-    bool hasChanges = false;
-
-    if (oldEmployee->getName() != name || oldEmployee->getSalary() != salary ||
-        oldEmployee->getDepartment() != department ||
-        oldEmployee->getEmploymentRate() !=
-            employmentRateCombo->currentData().toDouble()) {
-        hasChanges = true;
-    }
-
-    if (currentType == "Manager") {
-        if (const auto* manager =
-                dynamic_cast<const Manager*>(oldEmployee.get())) {
-            int newProjectId = managerProject->currentData().toInt();
-            if (manager->getManagedProjectId() != newProjectId) {
-                hasChanges = true;
-            }
-        }
-    } else if (currentType == "Developer") {
-        if (const auto* developer =
-                dynamic_cast<const Developer*>(oldEmployee.get())) {
-            auto newLanguage = devLanguage->text().trimmed();
-            double newExperience = devExperience->text().toDouble();
-            if (developer->getProgrammingLanguage() != newLanguage ||
-                qAbs(developer->getYearsOfExperience() - newExperience) >
-                    0.01) {
-                hasChanges = true;
-            }
-        }
-    } else if (currentType == "Designer") {
-        if (const auto* designer =
-                dynamic_cast<const Designer*>(oldEmployee.get())) {
-            auto newTool = designerTool->text().trimmed();
-            int newProjects = designerProjects->text().toInt();
-            if (designer->getDesignTool() != newTool ||
-                designer->getNumberOfProjects() != newProjects) {
-                hasChanges = true;
-            }
-        }
-    } else if (currentType == "QA") {
-        if (const auto* qa = dynamic_cast<const QA*>(oldEmployee.get())) {
-            auto newTestType = qaTestType->text().trimmed();
-            int newBugs = qaBugs->text().toInt();
-            if (qa->getTestingType() != newTestType ||
-                qa->getBugsFound() != newBugs) {
-                hasChanges = true;
-            }
-        }
+    double newEmploymentRate = employmentRateCombo->currentData().toDouble();
+    bool hasChanges = checkBasicFieldChanges(oldEmployee, name, salary,
+                                             department, newEmploymentRate);
+    
+    if (!hasChanges) {
+        hasChanges = checkTypeSpecificChanges(oldEmployee, currentType,
+                                              managerProject, devLanguage,
+                                              devExperience, designerTool,
+                                              designerProjects, qaTestType, qaBugs);
     }
 
     if (!hasChanges) {
@@ -204,12 +288,9 @@ bool EmployeeDialogHandler::processEditEmployee(
 
     std::vector<int> savedAssignedProjects = oldEmployee->getAssignedProjects();
     std::vector<int> savedProjectHistory = oldEmployee->getProjectHistory();
-    int savedCurrentWeeklyHours = oldEmployee->getCurrentWeeklyHours();
     bool savedIsActive = oldEmployee->getIsActive();
     double oldEmploymentRate = oldEmployee->getEmploymentRate();
-    double newEmploymentRate = employmentRateCombo->currentData().toDouble();
 
-    
     double scaleFactor = 1.0;
     bool employmentRateChanged = (qAbs(oldEmploymentRate - newEmploymentRate) > 0.001);
     if (employmentRateChanged && oldEmploymentRate > 0) {
@@ -217,17 +298,8 @@ bool EmployeeDialogHandler::processEditEmployee(
     }
 
     std::vector<std::tuple<int, int, int, int>> savedTaskAssignments;
-    for (int projectId : savedAssignedProjects) {
-        auto tasks = company->getProjectTasks(projectId);
-        for (const auto& task : tasks) {
-            int hours = company->getEmployeeTaskHours(employeeId, projectId,
-                                                      task.getId());
-            if (hours > 0) {
-                savedTaskAssignments.push_back(std::make_tuple(
-                    employeeId, projectId, task.getId(), hours));
-            }
-        }
-    }
+    collectTaskAssignmentsForEmployee(company, employeeId, savedAssignedProjects,
+                                      savedTaskAssignments);
 
     auto updatedEmployee = EmployeeDialogHelper::createEmployeeFromType(
         currentType, employeeId, name, salary, department, employmentRateCombo,
@@ -242,35 +314,16 @@ bool EmployeeDialogHandler::processEditEmployee(
     }
 
     company->removeEmployee(employeeId);
-
     company->addEmployee(updatedEmployee);
+    restoreEmployeeState(updatedEmployee, savedProjectHistory,
+                        savedAssignedProjects, savedIsActive);
 
-    for (int projectId : savedProjectHistory) {
-        updatedEmployee->addToProjectHistory(projectId);
-    }
-
-    for (int projectId : savedAssignedProjects) {
-        updatedEmployee->addAssignedProject(projectId);
-    }
-
-    
     if (employmentRateChanged && scaleFactor > 0) {
         company->scaleEmployeeTaskAssignments(employeeId, scaleFactor);
     } else {
-        
         for (const auto& assignment : savedTaskAssignments) {
             const auto [empId, projId, taskId, hours] = assignment;
             company->restoreTaskAssignment(employeeId, projId, taskId, hours);
-        }
-    }
-
-    try {
-        updatedEmployee->setIsActive(savedIsActive);
-    } catch (const EmployeeException&) {
-        if (!savedIsActive && updatedEmployee->getCurrentWeeklyHours() > 0) {
-            int currentHours = updatedEmployee->getCurrentWeeklyHours();
-            updatedEmployee->removeWeeklyHours(currentHours);
-            updatedEmployee->setIsActive(false);
         }
     }
 

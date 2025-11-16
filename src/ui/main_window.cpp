@@ -729,26 +729,26 @@ bool MainWindow::validatePhaseTransition(QDialog& dialog, const QString& current
         return true;
     }
 
-                auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
-                auto newPhaseOrder = Project::getPhaseOrder(newPhase);
+    auto currentPhaseOrder = Project::getPhaseOrder(currentPhase);
+    auto newPhaseOrder = Project::getPhaseOrder(newPhase);
 
-                if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
-                    newPhaseOrder < currentPhaseOrder) {
-                    QMessageBox::warning(
-                        &dialog, "Phase Validation Error",
-                        QString("Cannot set phase to '%1' because current "
-                                "phase '%2' is already later in the project "
-                                "lifecycle.\n\n"
-                                "Phase order: Analysis → Planning → Design → "
-                                "Development → Testing → Deployment → "
-                                "Maintenance → Completed\n\n"
-                                "You can only move forward in the project "
-                                "lifecycle, not backward.")
-                            .arg(newPhase, currentPhase));
+    if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
+        newPhaseOrder < currentPhaseOrder) {
+        QMessageBox::warning(
+            &dialog, "Phase Validation Error",
+            QString("Cannot set phase to '%1' because current "
+                    "phase '%2' is already later in the project "
+                    "lifecycle.\n\n"
+                    "Phase order: Analysis → Planning → Design → "
+                    "Development → Testing → Deployment → "
+                    "Maintenance → Completed\n\n"
+                    "You can only move forward in the project "
+                    "lifecycle, not backward.")
+                .arg(newPhase, currentPhase));
         return false;
-                }
+    }
     return true;
-            }
+}
 
 void MainWindow::updateProjectWithChanges(int projectId, const ProjectEditData& data, const ProjectDialogHelper::ProjectDialogFields& fields, const Project* oldProject) {
             std::vector<Task> savedTasks = oldProject->getTasks();

@@ -102,20 +102,27 @@ void ProjectDialogHelper::populateProjectDialogFields(
     QString currentPhase = project->getPhase();
     int currentPhaseOrder = Project::getPhaseOrder(currentPhase);
 
-    if (currentPhaseOrder >= 0) {
-        QStandardItemModel* model =
-            qobject_cast<QStandardItemModel*>(fields.phaseCombo->model());
-        if (model) {
-            for (int i = 0; i < fields.phaseCombo->count(); ++i) {
-                QString phaseText = fields.phaseCombo->itemText(i);
-                int phaseOrder = Project::getPhaseOrder(phaseText);
-                QStandardItem* item = model->item(i);
-                if (item && phaseOrder >= 0 && phaseOrder < currentPhaseOrder) {
-                    item->setEnabled(false);
-                } else if (item) {
-                    item->setEnabled(true);
-                }
-            }
+    if (currentPhaseOrder < 0) {
+        return;
+    }
+    
+    QStandardItemModel* model =
+        qobject_cast<QStandardItemModel*>(fields.phaseCombo->model());
+    if (!model) {
+        return;
+    }
+    
+    for (int i = 0; i < fields.phaseCombo->count(); ++i) {
+        QString phaseText = fields.phaseCombo->itemText(i);
+        int phaseOrder = Project::getPhaseOrder(phaseText);
+        QStandardItem* item = model->item(i);
+        if (!item) {
+            continue;
+        }
+        if (phaseOrder >= 0 && phaseOrder < currentPhaseOrder) {
+            item->setEnabled(false);
+        } else {
+            item->setEnabled(true);
         }
     }
 

@@ -147,7 +147,7 @@ void EmployeeDialogHelper::createEmployeeDialog(
     qaBugsLabel->setVisible(false);
     qaBugs->setVisible(false);
 
-    auto updateFields = [&](int index) {
+    auto updateFields = [managerProjectLabel, managerProject, devLanguageLabel, devLanguage, devExperienceLabel, devExperience, designerToolLabel, designerTool, designerProjectsLabel, designerProjects, qaTestTypeLabel, qaTestType, qaBugsLabel, qaBugs](int index) {
         showManagerFields(managerProjectLabel, managerProject, index == 0);
         showDeveloperFields(devLanguageLabel, devLanguage, devExperienceLabel,
                             devExperience, index == 1);

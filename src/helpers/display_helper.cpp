@@ -10,6 +10,7 @@
 #include <QWidget>
 #include <algorithm>
 #include <map>
+#include <ranges>
 
 #include "helpers/action_button_helper.h"
 #include "entities/derived_employees.h"
@@ -100,16 +101,11 @@ QString DisplayHelper::formatTaskInfo(
     return taskInfoList.isEmpty() ? "-" : taskInfoList.join(", ");
 }
 
-void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
-                                     const Company* currentCompany,
-                                     MainWindow* mainWindow) {
-    if (currentCompany == nullptr || employeeTable == nullptr) return;
-
-    auto employees = currentCompany->getAllEmployees();
-    employeeTable->setRowCount(employees.size());
-
-    for (size_t index = 0; index < employees.size(); ++index) {
-        const auto& employee = employees[index];
+namespace {
+    void populateEmployeeRow(QTableWidget* employeeTable, size_t index,
+                             const std::shared_ptr<Employee>& employee,
+                             const Company* currentCompany,
+                             MainWindow* mainWindow) {
         employeeTable->setItem(
             index, 0, new QTableWidgetItem(QString::number(employee->getId())));
         employeeTable->setItem(index, 1,
@@ -131,16 +127,32 @@ void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
                     employeeTable, static_cast<int>(index), mainWindow)) {
             employeeTable->setCellWidget(index, 6, actionWidget);
         }
+    }
+    
+    void setInactiveEmployeeStyle(QTableWidget* employeeTable, size_t index) {
+        for (int col = 0; col < employeeTable->columnCount(); ++col) {
+            QTableWidgetItem* item = employeeTable->item(index, col);
+            if (item) {
+                item->setForeground(QBrush(QColor("#666666")));
+            }
+        }
+    }
+}
 
+void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
+                                     const Company* currentCompany,
+                                     MainWindow* mainWindow) {
+    if (currentCompany == nullptr || employeeTable == nullptr) return;
+
+    auto employees = currentCompany->getAllEmployees();
+    employeeTable->setRowCount(employees.size());
+
+    for (size_t index = 0; index < employees.size(); ++index) {
+        const auto& employee = employees[index];
+        populateEmployeeRow(employeeTable, index, employee, currentCompany, mainWindow);
         
         if (!employee->getIsActive()) {
-            for (int col = 0; col < employeeTable->columnCount(); ++col) {
-                QTableWidgetItem* item = employeeTable->item(index, col);
-                if (item) {
-                    item->setForeground(
-                        QBrush(QColor("#666666")));  
-                }
-            }
+            setInactiveEmployeeStyle(employeeTable, index);
         }
     }
 }
