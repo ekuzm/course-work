@@ -152,13 +152,12 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs]() {
         try {
-            EmployeeDialogHandler::AddEmployeeParams params{
-                &dialog, window->currentCompany, window->nextEmployeeId,
-                nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
-                managerProject, devLanguage, devExperience, designerTool,
-                designerProjects, qaTestType, qaBugs};
-
-            if (!EmployeeDialogHandler::processAddEmployee(params)) {
+            if (EmployeeDialogHandler::AddEmployeeParams params{
+                    &dialog, window->currentCompany, window->nextEmployeeId,
+                    nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
+                    managerProject, devLanguage, devExperience, designerTool,
+                    designerProjects, qaTestType, qaBugs};
+                !EmployeeDialogHandler::processAddEmployee(params)) {
                 return;
             }
 
@@ -245,8 +244,7 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
         managerProject->addItem(proj.getName(), proj.getId());
     }
 
-    const auto* manager = dynamic_cast<const Manager*>(employee.get());
-    if (manager) {
+    if (const auto* manager = dynamic_cast<const Manager*>(employee.get()); manager) {
         int currentProjectId = manager->getManagedProjectId();
         if (currentProjectId > 0) {
             auto index = managerProject->findData(currentProjectId);
@@ -294,13 +292,12 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
         try {
-            EmployeeDialogHandler::EditEmployeeParams params{
-                &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
-                nameEdit, salaryEdit, deptEdit, employmentRateCombo,
-                managerProject, devLanguage, devExperience, designerTool,
-                designerProjects, qaTestType, qaBugs, currentType};
-
-            if (!EmployeeDialogHandler::processEditEmployee(params)) {
+            if (EmployeeDialogHandler::EditEmployeeParams params{
+                    &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
+                    nameEdit, salaryEdit, deptEdit, employmentRateCombo,
+                    managerProject, devLanguage, devExperience, designerTool,
+                    designerProjects, qaTestType, qaBugs, currentType};
+                !EmployeeDialogHandler::processEditEmployee(params)) {
                 return;
             }
 
@@ -620,7 +617,7 @@ void ProjectOperations::assignTaskFromDetails(MainWindow* window, int projectId,
 
     if (projectId <= 0 || taskId <= 0) {
         QObject* senderObject = window->sender();
-        auto* assignButton = qobject_cast<QPushButton*>(senderObject);
+        const auto* assignButton = qobject_cast<QPushButton*>(senderObject);
         if (assignButton != nullptr) {
             projectId = assignButton->property("projectId").toInt();
             taskId = assignButton->property("taskId").toInt();
@@ -825,8 +822,7 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
         return;
     }
 
-    auto tasks = window->currentCompany->getProjectTasks(projectId);
-    if (tasks.empty()) {
+    if (auto tasks = window->currentCompany->getProjectTasks(projectId); tasks.empty()) {
         QMessageBox::warning(window, "Error",
                              "Project has no tasks. Please add tasks first "
                              "before using auto-assign!");
@@ -1044,7 +1040,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
 
     std::vector<const Project*> employeeProjects;
     for (const auto& proj : allProjects) {
-        if (allProjectIds.find(proj.getId()) != allProjectIds.end()) {
+        if (allProjectIds.contains(proj.getId())) {
             employeeProjects.push_back(&proj);
         }
     }

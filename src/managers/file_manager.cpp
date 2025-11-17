@@ -225,8 +225,7 @@ static std::vector<std::string> readFileLines(const QString& fileName) {
     }
     
     // Limit file size to prevent memory issues (100MB max)
-    const std::streampos maxFileSize = std::streampos(100LL * 1024 * 1024);
-    if (fileSize > maxFileSize) {
+    if (const auto maxFileSize = std::streampos(100LL * 1024 * 1024); fileSize > maxFileSize) {
         fileStream.close();
         throw FileManagerException("File too large: " + fileName);
     }
@@ -751,8 +750,7 @@ void FileManager::saveEmployees(const Company& company,
     auto employees = company.getAllEmployees();
     
     // Safety check: limit employees count to prevent bad_array_new_length
-    constexpr size_t maxEmployees = 100000;
-    if (employees.size() > maxEmployees) {
+    if (constexpr size_t maxEmployees = 100000; employees.size() > maxEmployees) {
         fileStream.close();
         throw FileManagerException("Too many employees to save (max: " + 
                                    QString::number(maxEmployees) + "): " + 
@@ -895,8 +893,7 @@ void FileManager::saveProjects(const Company& company,
     auto projects = company.getAllProjects();
     
     // Safety check: limit projects count to prevent bad_array_new_length
-    constexpr size_t maxProjects = 100000;
-    if (projects.size() > maxProjects) {
+    if (constexpr size_t maxProjects = 100000; projects.size() > maxProjects) {
         fileStream.close();
         throw FileManagerException("Too many projects to save (max: " + 
                                    QString::number(maxProjects) + "): " + 

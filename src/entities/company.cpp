@@ -173,8 +173,7 @@ static bool isEmployeeActive(const std::shared_ptr<Employee>& employee) {
 
 void EmployeeContainer::add(std::shared_ptr<Employee> employee) {
     // Safety check: prevent adding too many employees
-    constexpr size_t maxEmployees = 100000;
-    if (employees.size() >= maxEmployees) {
+    if (constexpr size_t maxEmployees = 100000; employees.size() >= maxEmployees) {
         return;  // Don't add if limit reached
     }
     employees.emplace_back(employee);
@@ -197,8 +196,7 @@ std::shared_ptr<Employee> EmployeeContainer::find(int employeeId) const {
 
 std::vector<std::shared_ptr<Employee>> EmployeeContainer::getAll() const {
     // Safety check: validate size to prevent bad_array_new_length
-    constexpr size_t maxEmployees = 100000;
-    if (employees.size() > maxEmployees) {
+    if (constexpr size_t maxEmployees = 100000; employees.size() > maxEmployees) {
         // Return empty vector if size is invalid
         return {};
     }
@@ -209,8 +207,7 @@ size_t EmployeeContainer::size() const { return employees.size(); }
 
 void ProjectContainer::add(std::shared_ptr<Project> project) {
     // Safety check: prevent adding too many projects
-    constexpr size_t maxProjects = 100000;
-    if (projects.size() >= maxProjects) {
+    if (constexpr size_t maxProjects = 100000; projects.size() >= maxProjects) {
         return;  // Don't add if limit reached
     }
     projects.emplace_back(project);
@@ -233,8 +230,7 @@ std::shared_ptr<Project> ProjectContainer::find(int projectId) const {
 
 std::vector<std::shared_ptr<Project>> ProjectContainer::getAll() const {
     // Safety check: validate size to prevent bad_array_new_length
-    constexpr size_t maxProjects = 100000;
-    if (projects.size() > maxProjects) {
+    if (constexpr size_t maxProjects = 100000; projects.size() > maxProjects) {
         // Return empty vector if size is invalid
         return {};
     }
