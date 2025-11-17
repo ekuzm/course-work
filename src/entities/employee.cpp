@@ -135,22 +135,20 @@ void Employee::setEmploymentRate(double newRate, int baseWeeklyCapacity) {
         throw EmployeeException("Employment rate must be between 0 and 1.0");
     }
 
-    int oldCapacity = weeklyHoursCapacity;
+    auto oldCapacity = weeklyHoursCapacity;
     auto newCapacity = static_cast<int>(baseWeeklyCapacity * newRate);
 
-    
     if (oldCapacity > 0 && currentWeeklyHours > 0) {
         auto scaleFactor = static_cast<double>(newCapacity) / oldCapacity;
-        auto scaledHours = static_cast<int>(std::round(currentWeeklyHours * scaleFactor));
-        
-        
+        auto scaledHours =
+            static_cast<int>(std::round(currentWeeklyHours * scaleFactor));
+
         if (scaledHours > newCapacity) {
             scaledHours = newCapacity;
         }
-        
+
         currentWeeklyHours = scaledHours;
     } else {
-        
         currentWeeklyHours = 0;
     }
 

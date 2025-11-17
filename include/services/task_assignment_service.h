@@ -7,10 +7,10 @@
 
 #include "entities/company.h"
 #include "entities/employee.h"
-#include "exceptions/exceptions.h"
 #include "entities/project.h"
-#include "services/cost_calculation_service.h"
 #include "entities/task.h"
+#include "exceptions/exceptions.h"
+#include "services/cost_calculation_service.h"
 
 class TaskAssignmentService {
    private:
@@ -39,7 +39,6 @@ class TaskAssignmentService {
 
    private:
     bool validateAssignment(std::shared_ptr<Employee> employee,
-                           std::shared_ptr<Project> project, const Task& task,
-                           int hours) const;
+                            std::shared_ptr<Project> project, const Task& task,
+                            int hours) const;
 };
-

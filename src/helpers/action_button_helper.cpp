@@ -6,70 +6,67 @@
 #include <QPushButton>
 #include <QTableWidget>
 #include <QWidget>
+#include <functional>
 
 #include "ui/main_window.h"
+#include "ui/main_window_operations.h"
+
+QWidget* createActionContainer(QTableWidget* table) {
+    auto* actionContainer = new QWidget(table);
+    auto* actionLayout = new QHBoxLayout(actionContainer);
+    actionLayout->setContentsMargins(0, 0, 0, 0);
+    actionLayout->setAlignment(Qt::AlignCenter);
+    return actionContainer;
+}
+
+QPushButton* createActionButton(QWidget* parent) {
+    auto* actionButton = new QPushButton("Actions", parent);
+    actionButton->setFixedHeight(38);
+    actionButton->setMinimumWidth(150);
+    return actionButton;
+}
+
+void connectAction(const QAction* action, QTableWidget* table,
+                   const MainWindow* mainWindow, int rowIndex,
+                   const std::function<void()>& operation) {
+    QObject::connect(action, &QAction::triggered, table,
+                     [table, mainWindow, row = rowIndex, operation]() {
+                         table->setCurrentCell(row, 0);
+                         if (mainWindow) {
+                             operation();
+                         }
+                     });
+}
 
 QWidget* ActionButtonHelper::createEmployeeActionButtons(
     QTableWidget* table, int rowIndex, MainWindow* mainWindow) {
     if (!table || !mainWindow) return nullptr;
 
-    QWidget* actionContainer = new QWidget(table);
-    QHBoxLayout* actionLayout = new QHBoxLayout(actionContainer);
-    actionLayout->setContentsMargins(0, 0, 0, 0);
-    actionLayout->setAlignment(Qt::AlignCenter);
+    auto* actionContainer = createActionContainer(table);
+    auto* actionButton = createActionButton(actionContainer);
+    auto* actionMenu = new QMenu(actionButton);
 
-    QPushButton* actionButton = new QPushButton("Actions", actionContainer);
-    actionButton->setFixedHeight(38);
-    actionButton->setMinimumWidth(150);
-    QMenu* actionMenu = new QMenu(actionButton);
-
-    QAction* editAction = actionMenu->addAction("✎ Edit");
-    QAction* fireAction = actionMenu->addAction("❌ Fire");
-    QAction* deleteAction = actionMenu->addAction("🗑️ Delete");
-    QAction* historyAction = actionMenu->addAction("📋 History");
+    const auto* editAction = actionMenu->addAction("✎ Edit");
+    const auto* fireAction = actionMenu->addAction("❌ Fire");
+    const auto* deleteAction = actionMenu->addAction("🗑️ Delete");
+    const auto* historyAction = actionMenu->addAction("📋 History");
 
     actionButton->setMenu(actionMenu);
-    actionLayout->addWidget(actionButton);
+    qobject_cast<QHBoxLayout*>(actionContainer->layout())
+        ->addWidget(actionButton);
 
-    QObject::connect(editAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "editEmployee",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
-
-    QObject::connect(fireAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "fireEmployee",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
-
-    QObject::connect(deleteAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "deleteEmployee",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
-
-    QObject::connect(historyAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "viewEmployeeHistory",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
+    connectAction(editAction, table, mainWindow, rowIndex, [mainWindow]() {
+        EmployeeOperations::editEmployee(mainWindow);
+    });
+    connectAction(fireAction, table, mainWindow, rowIndex, [mainWindow]() {
+        EmployeeOperations::fireEmployee(mainWindow);
+    });
+    connectAction(deleteAction, table, mainWindow, rowIndex, [mainWindow]() {
+        EmployeeOperations::deleteEmployee(mainWindow);
+    });
+    connectAction(historyAction, table, mainWindow, rowIndex, [mainWindow]() {
+        ProjectOperations::viewEmployeeHistory(mainWindow);
+    });
 
     return actionContainer;
 }
@@ -80,68 +77,37 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
                                                         bool includeAddTask) {
     if (!table || !mainWindow) return nullptr;
 
-    QWidget* actionContainer = new QWidget(table);
-    QHBoxLayout* actionLayout = new QHBoxLayout(actionContainer);
-    actionLayout->setContentsMargins(0, 0, 0, 0);
-    actionLayout->setAlignment(Qt::AlignCenter);
+    auto* actionContainer = createActionContainer(table);
+    auto* actionButton = createActionButton(actionContainer);
+    auto* actionMenu = new QMenu(actionButton);
 
-    QPushButton* actionButton = new QPushButton("Actions", actionContainer);
-    actionButton->setFixedHeight(38);
-    actionButton->setMinimumWidth(150);
-    QMenu* actionMenu = new QMenu(actionButton);
-
-    QAction* editAction = actionMenu->addAction("✎ Edit Project");
-    QAction* deleteAction = actionMenu->addAction("🗑️ Delete Project");
+    const auto* editAction = actionMenu->addAction("✎ Edit Project");
+    const auto* deleteAction = actionMenu->addAction("🗑️ Delete Project");
 
     if (includeAddTask) {
         actionMenu->addSeparator();
-        QAction* addTaskAction = actionMenu->addAction("➕ Add Task");
-        QObject::connect(addTaskAction, &QAction::triggered, table,
-                         [table, mainWindow, row = rowIndex]() {
-                             table->setCurrentCell(row, 0);
-                             if (mainWindow) {
-                                 QMetaObject::invokeMethod(
-                                     mainWindow, "addProjectTask",
-                                     Qt::QueuedConnection);
-                             }
-                         });
+        const auto* addTaskAction = actionMenu->addAction("➕ Add Task");
+        connectAction(
+            addTaskAction, table, mainWindow, rowIndex,
+            [mainWindow]() { ProjectOperations::addProjectTask(mainWindow); });
     }
 
     actionMenu->addSeparator();
-    QAction* moreAction = actionMenu->addAction("More");
+    const auto* moreAction = actionMenu->addAction("More");
 
     actionButton->setMenu(actionMenu);
-    actionLayout->addWidget(actionButton);
+    qobject_cast<QHBoxLayout*>(actionContainer->layout())
+        ->addWidget(actionButton);
 
-    QObject::connect(editAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "editProject",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
-
-    QObject::connect(deleteAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "deleteProject",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
-
-    QObject::connect(moreAction, &QAction::triggered, table,
-                     [table, mainWindow, row = rowIndex]() {
-                         table->setCurrentCell(row, 0);
-                         if (mainWindow) {
-                             QMetaObject::invokeMethod(mainWindow,
-                                                       "openProjectDetails",
-                                                       Qt::QueuedConnection);
-                         }
-                     });
+    connectAction(editAction, table, mainWindow, rowIndex, [mainWindow]() {
+        ProjectOperations::editProject(mainWindow);
+    });
+    connectAction(deleteAction, table, mainWindow, rowIndex, [mainWindow]() {
+        ProjectOperations::deleteProject(mainWindow);
+    });
+    connectAction(moreAction, table, mainWindow, rowIndex, [mainWindow]() {
+        ProjectOperations::openProjectDetails(mainWindow);
+    });
 
     return actionContainer;
 }

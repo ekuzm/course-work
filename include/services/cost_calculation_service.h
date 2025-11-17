@@ -5,7 +5,3 @@ class CostCalculationService {
     static double calculateHourlyRate(double monthlySalary);
     static double calculateEmployeeCost(double monthlySalary, int hours);
 };
-
-
-
-

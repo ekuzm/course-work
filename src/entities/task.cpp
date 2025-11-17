@@ -8,8 +8,7 @@ Task::Task(int taskId, const QString& name, const QString& type,
       name(name),
       type(type),
       estimatedHours(estimatedHours),
-      priority(priority),
-      phase("Planned") {
+      priority(priority) {
     if (name.isEmpty()) throw TaskException("Task name cannot be empty");
     if (estimatedHours < 0)
         throw TaskException("Estimated hours cannot be negative");

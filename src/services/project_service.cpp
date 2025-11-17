@@ -9,7 +9,7 @@ ProjectService::ProjectService(Company* company) : company(company) {
 }
 
 void ProjectService::addTaskToProject(int projectId, const Task& task) {
-    Project* project = company->getMutableProject(projectId);
+    Project* project = company->getProject(projectId);
     if (!project) {
         throw CompanyException("Project not found");
     }
@@ -21,13 +21,9 @@ std::vector<Task> ProjectService::getProjectTasks(int projectId) const {
 }
 
 void ProjectService::recomputeProjectTotals(int projectId) {
-    Project* project = company->getMutableProject(projectId);
+    Project* project = company->getProject(projectId);
     if (!project) {
         return;
     }
     project->recomputeTotalsFromTasks();
 }
-
-
-
-

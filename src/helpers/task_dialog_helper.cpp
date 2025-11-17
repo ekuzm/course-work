@@ -8,14 +8,16 @@
 #include <QPushButton>
 
 #include "entities/company.h"
-#include "utils/consts.h"
-#include "exceptions/exceptions.h"
 #include "entities/task.h"
+#include "exceptions/exceptions.h"
 #include "helpers/validation_helper.h"
+#include "utils/consts.h"
 
 void TaskDialogHelper::createAddTaskDialog(QDialog* dialog, QFormLayout* form,
-                                          QLineEdit*& taskNameEdit, QComboBox*& taskTypeCombo,
-                                          QLineEdit*& taskEstHoursEdit, QLineEdit*& priorityEdit) {
+                                           QLineEdit*& taskNameEdit,
+                                           QComboBox*& taskTypeCombo,
+                                           QLineEdit*& taskEstHoursEdit,
+                                           QLineEdit*& priorityEdit) {
     if (!dialog || !form) return;
 
     dialog->setWindowTitle("Add Task to Project");
@@ -47,20 +49,22 @@ void TaskDialogHelper::createAddTaskDialog(QDialog* dialog, QFormLayout* form,
     form->addRow("Priority:", priorityEdit);
 }
 
-bool TaskDialogHelper::validateAndAddTask(const QString& taskName, const QString& taskType,
-                                         int taskEst, int priority, int projectId,
-                                         Company* company, QDialog* dialog) {
+bool TaskDialogHelper::validateAndAddTask(const QString& taskName,
+                                          const QString& taskType, int taskEst,
+                                          int priority, int projectId,
+                                          Company* company, QDialog* dialog) {
     if (!company || !dialog) return false;
 
     auto tasks = company->getProjectTasks(projectId);
     for (const auto& existingTask : tasks) {
         if (existingTask.getName().toLower() == taskName.toLower()) {
-            QMessageBox::warning(dialog, "Duplicate Error",
-                                QString("A task with this name already exists!\n\n"
-                                       "Task name: \"%1\"\n"
-                                       "Project ID: %2\n"
-                                       "Please choose a different name for the task.")
-                                    .arg(taskName, QString::number(projectId)));
+            QMessageBox::warning(
+                dialog, "Duplicate Error",
+                QString("A task with this name already exists!\n\n"
+                        "Task name: \"%1\"\n"
+                        "Project ID: %2\n"
+                        "Please choose a different name for the task.")
+                    .arg(taskName, QString::number(projectId)));
             return false;
         }
     }
@@ -76,4 +80,3 @@ bool TaskDialogHelper::validateAndAddTask(const QString& taskName, const QString
     company->addTaskToProject(projectId, task);
     return true;
 }
-

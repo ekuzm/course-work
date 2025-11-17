@@ -5,8 +5,20 @@
 #include <memory>
 #include <vector>
 
-#include "exceptions/exceptions.h"
 #include "entities/task.h"
+#include "exceptions/exceptions.h"
+
+struct ProjectParams {
+    int projectId;
+    const QString& name;
+    const QString& description;
+    const QString& phase;
+    const QDate& startDate;
+    const QDate& endDate;
+    double budget;
+    const QString& clientName;
+    int estimatedHours;
+};
 
 class Project {
    private:
@@ -24,9 +36,7 @@ class Project {
     std::vector<Task> tasks;
 
    public:
-    Project(int projectId, const QString& name, const QString& description,
-            const QString& phase, const QDate& startDate, const QDate& endDate,
-            double budget, const QString& clientName, int estimatedHours = 0);
+    explicit Project(const ProjectParams& params);
 
     int getId() const;
     QString getName() const;

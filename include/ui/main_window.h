@@ -21,154 +21,60 @@
 #include <vector>
 
 #include "entities/company.h"
-#include "managers/company_manager.h"
-#include "utils/consts.h"
+#include "exceptions/exception_handler.h"
 #include "helpers/display_helper.h"
 #include "helpers/employee_dialog_helper.h"
 #include "helpers/employee_validator.h"
-#include "exceptions/exception_handler.h"
-#include "managers/file_manager.h"
 #include "helpers/project_dialog_helper.h"
 #include "helpers/validation_helper.h"
+#include "managers/company_manager.h"
+#include "managers/file_manager.h"
+#include "ui/main_window_helpers.h"
+#include "ui/main_window_operations.h"
+#include "ui/main_window_ui_components.h"
+#include "utils/consts.h"
 
 class EmployeeDialogHelper;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
+    friend class EmployeeOperations;
+    friend class ProjectOperations;
+    friend class ProjectDetailOperations;
+    friend class CompanyOperations;
+
    public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
+    void refreshAllData();
+    void autoSave();
+    void selectProjectRowById(int projectId);
+
    protected:
     void closeEvent(QCloseEvent* event) override;
-
-   private slots:
-    void initializeCompanySetup();
-
-    void addEmployee();
-    void editEmployee();
-    void deleteEmployee();
-    void fireEmployee();
-    void searchEmployee();
-    void refreshEmployeeTable();
-
-    void addProject();
-    void editProject();
-    void deleteProject();
-    void refreshProjectTable();
-    void openProjectDetails();
-    void closeProjectDetails();
-    void autoAssignDetailedProject();
-    void assignTaskFromDetails(int projectId = -1, int taskId = -1);
-
-    void addProjectTask();
-    void assignEmployeeToTask();
-    void autoAssignToProject(int projectId = -1);
-    void viewProjectAssignments();
-    void viewEmployeeHistory();
-    void showStatistics();
-    void refreshAllData();
-
-    void addCompany();
-    void switchCompany();
-    void deleteCompany();
-    void refreshCompanyList();
 
     static QString getDataDirectory();
 
     friend class MainWindowUIBuilder;
     friend class FileHelper;
+    friend struct AddEmployeeButtonParams;
+    friend struct EditEmployeeButtonParams;
+    friend void handleAddProjectButtonClick(
+        MainWindow*, QDialog&, const ProjectDialogHelper::ProjectDialogFields&);
 
    private:
-    void setupUI();
-    void setupEmployeeTab();
-    void setupProjectTab();
-    void setupStatisticsTab();
-    void drawStatisticsChart(QWidget* widget);
-
-    int getSelectedEmployeeId() const;
-    int getSelectedProjectId() const;
-    void autoSave();
     void autoLoad();
 
    public:
     void validateAndFixProjectAssignments(Company* company);
 
-   private:
-    bool checkCompanyAndHandleError(const QString& actionName);
-    void clearAllDataFiles();
-    static bool checkDuplicateProjectOnEdit(const QString& projectName,
-                                            int excludeId,
-                                            const Company* currentCompany);
-    void showProjectDetails(int projectId);
-    void hideProjectDetails();
-    void refreshProjectDetailView();
-    void populateProjectTasksTable(const Project& project);
-    void selectProjectRowById(int projectId);
-    
-    void handleEditProjectDialog(int projectId, QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields);
-    void handleAddTaskDialog(int projectId, QDialog& dialog, const QLineEdit* taskNameEdit, const QComboBox* taskTypeCombo, const QLineEdit* taskEstHoursEdit, const QLineEdit* priorityEdit);
-    void handleAssignEmployeeToTaskDialog(int projectId, QDialog& dialog, const QComboBox* taskCombo, const QComboBox* employeeCombo, const QLineEdit* hoursEdit, const std::vector<Task>& tasks);
-    void removeEmployeeFromProjectTasks(int employeeId, int projectId, Project* mutableProject, double employeeHourlyRate);
-    void collectTaskAssignments(int projectId, const std::vector<Task>& savedTasks, std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments) const;
-    void handleEmployeeActiveAssignments(int employeeId, const std::shared_ptr<Employee>& employee);
-    
-    // Helper functions for handleEditProjectDialog
-    struct ProjectEditData {
-        QString projectName;
-        double projectBudget;
-        QString selectedPhase;
-        QString clientName;
-        int estimatedHours;
-        QString newName;
-        QString newDescription;
-        QString newPhase;
-        QDate newStartDate;
-        QDate newEndDate;
-        QString newClientName;
-    };
-    
-    bool validateProjectEditFields(QDialog& dialog, const ProjectDialogHelper::ProjectDialogFields& fields, ProjectEditData& data);
-    bool checkProjectChanges(const Project* oldProject, const ProjectEditData& data);
-    bool validatePhaseTransition(QDialog& dialog, const QString& currentPhase, const QString& newPhase);
-    void updateProjectWithChanges(int projectId, const ProjectEditData& data, const ProjectDialogHelper::ProjectDialogFields& fields, const Project* oldProject);
-    void showProjectUpdateSuccess(QDialog& dialog, const ProjectEditData& data);
-
-    static void setupTableWidget(QTableWidget* table,
-                                 const QStringList& headers,
-                                 const QList<int>& columnWidths,
-                                 bool stretchLast = true);
-    QWidget* createEmployeeActionButtons(int rowIndex);
-    QWidget* createProjectActionButtons(int rowIndex);
-
-    QWidget* companyWidget = nullptr;
-    QWidget* employeeTab = nullptr;
-    QTableWidget* employeeTable = nullptr;
-    QPushButton* employeeAddBtn = nullptr;
-    QLineEdit* employeeSearchEdit = nullptr;
-
-    QWidget* projectTab = nullptr;
-    QWidget* projectListContainer = nullptr;
-    QWidget* projectDetailHeaderContainer = nullptr;
-    QWidget* projectDetailContainer = nullptr;
-    QTableWidget* projectTable = nullptr;
-    QTableWidget* projectTasksTable = nullptr;
-    QPushButton* projectAddBtn = nullptr;
-    QPushButton* projectDetailCloseBtn = nullptr;
-    QPushButton* projectDetailAutoAssignBtn = nullptr;
-    QLabel* projectDetailTitle = nullptr;
-    QTextEdit* projectDetailInfoText = nullptr;
-
     QTabWidget* mainTabWidget = nullptr;
-    QWidget* statsTab = nullptr;
-    QWidget* statisticsChartWidget = nullptr;
-    QWidget* statisticsChartInnerWidget = nullptr;
-    QTextEdit* statisticsText = nullptr;
-
-    QComboBox* companySelector = nullptr;
-    QPushButton* companyAddBtn = nullptr;
-    QPushButton* companyDeleteBtn = nullptr;
+    EmployeeTabUI employeeUI;
+    ProjectTabUI projectUI;
+    StatisticsTabUI statisticsUI;
+    CompanyUI companyUI;
 
     std::vector<Company*> companies{};
     Company* currentCompany = nullptr;

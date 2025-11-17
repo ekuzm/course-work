@@ -32,8 +32,4 @@ int IdHelper::findMaxProjectId(const std::vector<Project>& projects) {
     return maxId;
 }
 
-int IdHelper::calculateNextId(int maxId) {
-    return maxId + 1;
-}
-
-
+int IdHelper::calculateNextId(int maxId) { return maxId + 1; }

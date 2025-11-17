@@ -15,4 +15,3 @@ class IdHelper {
 
     static int calculateNextId(int maxId);
 };
-

@@ -2,45 +2,45 @@
 
 #include <QDialog>
 
-#include "utils/consts.h"
 #include "helpers/validation_helper.h"
+#include "utils/consts.h"
 
 bool EmployeeValidator::validateEmployeeTypeFields(
-    const QString& employeeType, QDialog* dialog, QLineEdit* devLanguage,
-    QLineEdit* devExperience, QLineEdit* designerTool,
-    QLineEdit* designerProjects, QLineEdit* qaTestType, QLineEdit* qaBugs) {
-    if (employeeType == "Developer") {
-        if (!ValidationHelper::validateNonEmpty(devLanguage->text().trimmed(),
-                                                "Programming language",
-                                                dialog)) {
+    const ValidateEmployeeTypeFieldsParams& params) {
+    if (params.employeeType == "Developer") {
+        if (!ValidationHelper::validateNonEmpty(
+                params.devLanguage->text().trimmed(), "Programming language",
+                params.dialog)) {
             return false;
         }
         double years = 0.0;
-        if (!ValidationHelper::validateDouble(devExperience->text().trimmed(),
-                                              years, 0.0, 50.0,
-                                              "Years of experience", dialog)) {
+        if (!ValidationHelper::validateDouble(
+                params.devExperience->text().trimmed(), years, 0.0, 50.0,
+                "Years of experience", params.dialog)) {
             return false;
         }
-    } else if (employeeType == "Designer") {
-        if (!ValidationHelper::validateNonEmpty(designerTool->text().trimmed(),
-                                                "Design tool", dialog)) {
+    } else if (params.employeeType == "Designer") {
+        if (!ValidationHelper::validateNonEmpty(
+                params.designerTool->text().trimmed(), "Design tool",
+                params.dialog)) {
             return false;
         }
         int projects = 0;
-        if (!ValidationHelper::validateInt(designerProjects->text().trimmed(),
-                                           projects, 0, kMaxNumberOfProjects,
-                                           "Number of projects", dialog)) {
+        if (!ValidationHelper::validateInt(
+                params.designerProjects->text().trimmed(), projects, 0,
+                kMaxNumberOfProjects, "Number of projects", params.dialog)) {
             return false;
         }
-    } else if (employeeType == "QA") {
-        if (!ValidationHelper::validateNonEmpty(qaTestType->text().trimmed(),
-                                                "Testing type", dialog)) {
+    } else if (params.employeeType == "QA") {
+        if (!ValidationHelper::validateNonEmpty(
+                params.qaTestType->text().trimmed(), "Testing type",
+                params.dialog)) {
             return false;
         }
         int bugs = 0;
-        if (!ValidationHelper::validateInt(qaBugs->text().trimmed(), bugs, 0,
-                                           kMaxBugsFound, "Bugs found",
-                                           dialog)) {
+        if (!ValidationHelper::validateInt(params.qaBugs->text().trimmed(),
+                                           bugs, 0, kMaxBugsFound, "Bugs found",
+                                           params.dialog)) {
             return false;
         }
     }

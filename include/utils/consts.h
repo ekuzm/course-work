@@ -49,7 +49,6 @@ inline const int kDesignerProjectBonus = 800;
 inline const double kQaSalaryMultiplier = 0.10;
 inline const int kQaBugBonus = 100;
 
-
 inline const double kHoursPerMonth = 160.0;
-inline const double kMaxAffordableHourlyRateMultiplier = 0.7;  
-inline const int kHoursPerDay = 8;  
+inline const double kMaxAffordableHourlyRateMultiplier = 0.7;
+inline const int kHoursPerDay = 8;

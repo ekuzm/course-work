@@ -3,32 +3,49 @@
 #include <QComboBox>
 #include <QDialog>
 #include <QLineEdit>
+#include <QString>
 
 class Company;
 
 class EmployeeDialogHandler {
    public:
-    static bool processAddEmployee(
-        QDialog* dialog, Company* company, int& nextEmployeeId,
-        const QLineEdit* nameEdit, const QLineEdit* salaryEdit, const QLineEdit* deptEdit,
-        QComboBox* typeCombo, QComboBox* employmentRateCombo,
-        QComboBox* managerProject, QLineEdit* devLanguage,
-        QLineEdit* devExperience, QLineEdit* designerTool,
-        QLineEdit* designerProjects, QLineEdit* qaTestType, QLineEdit* qaBugs);
-    static bool processEditEmployee(
-        QDialog* dialog, Company* company, int employeeId, int& nextEmployeeId,
-        const QLineEdit* nameEdit, const QLineEdit* salaryEdit, const QLineEdit* deptEdit,
-        QComboBox* employmentRateCombo, QComboBox* managerProject,
-        QLineEdit* devLanguage, QLineEdit* devExperience,
-        QLineEdit* designerTool, QLineEdit* designerProjects,
-        QLineEdit* qaTestType, QLineEdit* qaBugs, const QString& currentType);
+    struct AddEmployeeParams {
+        QDialog* dialog;
+        Company* company;
+        int& nextEmployeeId;
+        const QLineEdit* nameEdit;
+        const QLineEdit* salaryEdit;
+        const QLineEdit* deptEdit;
+        QComboBox* typeCombo;
+        QComboBox* employmentRateCombo;
+        QComboBox* managerProject;
+        QLineEdit* devLanguage;
+        QLineEdit* devExperience;
+        QLineEdit* designerTool;
+        QLineEdit* designerProjects;
+        QLineEdit* qaTestType;
+        QLineEdit* qaBugs;
+    };
 
-   private:
-    static bool validateEmployeeFields(QDialog* dialog,
-                                       const QLineEdit* nameEdit,
-                                       const QLineEdit* salaryEdit,
-                                       const QLineEdit* deptEdit,
-                                       QString& name,
-                                       double& salary,
-                                       QString& department);
+    struct EditEmployeeParams {
+        QDialog* dialog;
+        Company* company;
+        int employeeId;
+        int& nextEmployeeId;
+        const QLineEdit* nameEdit;
+        const QLineEdit* salaryEdit;
+        const QLineEdit* deptEdit;
+        QComboBox* employmentRateCombo;
+        QComboBox* managerProject;
+        QLineEdit* devLanguage;
+        QLineEdit* devExperience;
+        QLineEdit* designerTool;
+        QLineEdit* designerProjects;
+        QLineEdit* qaTestType;
+        QLineEdit* qaBugs;
+        const QString& currentType;
+    };
+
+    static bool processAddEmployee(const AddEmployeeParams& params);
+    static bool processEditEmployee(const EditEmployeeParams& params);
 };

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "utils/consts.h"
 #include "entities/employee.h"
+#include "utils/consts.h"
 
 class Manager : public Employee {
    private:

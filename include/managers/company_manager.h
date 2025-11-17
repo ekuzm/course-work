@@ -6,16 +6,19 @@
 #include <QMessageBox>
 #include <QPushButton>
 #include <QString>
+#include <span>
 #include <vector>
 
 #include "entities/company.h"
 
 class CompanyManager {
    public:
-    static void initializeCompany(std::vector<Company*>& companies,
-                                  Company*& currentCompany,
-                                  int& currentCompanyIndex, int& nextEmployeeId,
-                                  int& nextProjectId, QComboBox* selector);
+    static void initializeCompany(std::span<Company* const> companies,
+                                  [[maybe_unused]] Company*& currentCompany,
+                                  const int& currentCompanyIndex,
+                                  [[maybe_unused]] int& nextEmployeeId,
+                                  [[maybe_unused]] int& nextProjectId,
+                                  QComboBox* selector);
     static void addCompany(std::vector<Company*>& companies,
                            Company*& currentCompany, int& currentCompanyIndex,
                            QComboBox* selector, QWidget* parent);
@@ -27,6 +30,6 @@ class CompanyManager {
                               Company*& currentCompany,
                               int& currentCompanyIndex, QComboBox* selector,
                               QWidget* parent);
-    static void refreshCompanyList(const std::vector<Company*>& companies,
+    static void refreshCompanyList(std::span<Company* const> companies,
                                    QComboBox* selector);
 };

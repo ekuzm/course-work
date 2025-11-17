@@ -9,12 +9,13 @@
 #include <QTimer>
 #include <algorithm>
 #include <map>
+#include <ranges>
 
 #include "entities/company.h"
 #include "entities/employee.h"
 
 StatisticsChartWidget::StatisticsChartWidget(QWidget* parent)
-    : QWidget(parent), animationProgress(0.0) {
+    : QWidget(parent) {
     animationTimer = new QTimer(this);
     connect(animationTimer, &QTimer::timeout, this, [this]() {
         animationProgress += 0.02;
@@ -26,15 +27,15 @@ StatisticsChartWidget::StatisticsChartWidget(QWidget* parent)
     });
 }
 
-void StatisticsChartWidget::setData(const Company* company) {
-    this->company = company;
+void StatisticsChartWidget::setData(const Company* companyData) {
+    this->company = companyData;
     animationProgress = 0.0;
     animationTimer->start(16);
     update();
 }
 
 void StatisticsChartWidget::paintEvent(QPaintEvent* event) {
-    Q_UNUSED(event);
+    (void)event;
     if (company == nullptr) return;
 
     QPainter painter(this);
@@ -62,12 +63,13 @@ void StatisticsChartWidget::paintEvent(QPaintEvent* event) {
     std::vector<std::pair<std::shared_ptr<Employee>, double>> employeeData;
     for (const auto& emp : employees) {
         if (emp && emp->getIsActive()) {
-            employeeData.push_back({emp, emp->getSalary()});
+            employeeData.emplace_back(emp, emp->getSalary());
         }
     }
 
-    std::sort(employeeData.begin(), employeeData.end(),
-              [](const auto& a, const auto& b) { return a.second < b.second; });
+    std::ranges::sort(employeeData, [](const auto& a, const auto& b) {
+        return a.second < b.second;
+    });
 
     if (employeeData.empty()) {
         painter.setPen(QPen(QColor(150, 150, 150), 1));
@@ -85,7 +87,7 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
     QPainter& painter, int width, int height,
     const std::vector<std::pair<std::shared_ptr<Employee>, double>>&
         employeeData,
-    double progress) {
+    double progress) const {
     int padding = 60;
     int chartX = padding;
     int chartY = padding + 50;
@@ -132,7 +134,7 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
     painter.drawLine(chartX, chartY + chartHeight, chartX + chartWidth,
                      chartY + chartHeight);
 
-    int barCount = static_cast<int>(employeeData.size());
+    auto barCount = static_cast<int>(employeeData.size());
     int barSpacing = 8;
     int availableWidth = chartWidth - 20;
     int minBarWidth = 20;
@@ -149,22 +151,22 @@ void StatisticsChartWidget::drawMainEmployeeSalaryChart(
         {"QA", QColor(156, 39, 176)},
     };
 
-    QColor defaultColor = QColor(128, 128, 128);
+    auto defaultColor = QColor(128, 128, 128);
 
     int currentX = chartX + 10;
 
-    for (size_t i = 0; i < employeeData.size(); i++) {
-        const auto& [emp, salary] = employeeData[i];
+    for (const auto& [emp, salary] : employeeData) {
         QString empType = emp->getEmployeeType();
 
         QColor baseColor = defaultColor;
-        if (fixedTypeColors.find(empType) != fixedTypeColors.end()) {
-            baseColor = fixedTypeColors[empType];
+        if (auto it = fixedTypeColors.find(empType);
+            it != fixedTypeColors.end()) {
+            baseColor = it->second;
         }
 
         double normalizedSalary = salary / maxSalary;
         int maxBarHeight = chartHeight - 30;
-        int targetBarHeight =
+        auto targetBarHeight =
             static_cast<int>(normalizedSalary * maxBarHeight * progress);
 
         QLinearGradient gradient(currentX, baseY - targetBarHeight,

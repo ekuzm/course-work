@@ -10,7 +10,7 @@ class StatisticsChartWidget : public QWidget {
 
    public:
     explicit StatisticsChartWidget(QWidget* parent = nullptr);
-    void setData(const Company* company);
+    void setData(const Company* companyData);
 
    protected:
     void paintEvent(QPaintEvent* event) override;
@@ -20,7 +20,7 @@ class StatisticsChartWidget : public QWidget {
         class QPainter& painter, int width, int height,
         const std::vector<std::pair<std::shared_ptr<class Employee>, double>>&
             employeeData,
-        double progress);
+        double progress) const;
 
     const Company* company = nullptr;
     QTimer* animationTimer = nullptr;

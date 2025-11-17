@@ -11,21 +11,22 @@
 void FileHelper::clearAllDataFiles(QWidget* parent) {
     if (!parent) return;
 
-    int confirmation = QMessageBox::question(
-        parent, "Confirm Clear Data",
-        "Are you sure you want to clear all data files?\n\n"
-        "This action cannot be undone!",
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
-
-    if (confirmation != QMessageBox::Yes) {
+    if (int confirmation = QMessageBox::question(
+            parent, "Confirm Clear Data",
+            "Are you sure you want to clear all data files?\n\n"
+            "This action cannot be undone!",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        confirmation != QMessageBox::Yes) {
         return;
     }
 
     try {
-        MainWindow* mainWindow = qobject_cast<MainWindow*>(parent);
-        if (!mainWindow) return;
+        if (const MainWindow* mainWindow = qobject_cast<MainWindow*>(parent);
+            !mainWindow) {
+            return;
+        }
 
-        QString dataDirPath = mainWindow->getDataDirectory();
+        QString dataDirPath = MainWindow::getDataDirectory();
         QDir dataDir(dataDirPath);
 
         if (dataDir.exists()) {
@@ -48,7 +49,7 @@ void FileHelper::clearAllDataFiles(QWidget* parent) {
                 parent, "Success",
                 "All data files have been cleared successfully.");
         }
-    } catch (const std::exception& e) {
+    } catch (const FileManagerException& e) {
         QMessageBox::warning(
             parent, "Error",
             QString("Failed to clear data files: %1").arg(e.what()));

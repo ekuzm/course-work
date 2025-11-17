@@ -8,7 +8,6 @@ double CostCalculationService::calculateHourlyRate(double monthlySalary) {
 }
 
 double CostCalculationService::calculateEmployeeCost(double monthlySalary,
-                                                      int hours) {
+                                                     int hours) {
     return calculateHourlyRate(monthlySalary) * hours;
 }
-

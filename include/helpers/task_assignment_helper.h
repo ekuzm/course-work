@@ -21,12 +21,12 @@ class TaskAssignmentHelper {
     static void setupTaskCombo(QComboBox* taskCombo,
                                const std::vector<class Task>& tasks,
                                int pendingTaskId);
-    static void setupHoursEdit(QLineEdit* hoursEdit, QComboBox* taskCombo,
-                               QComboBox* employeeCombo,
+    static void setupHoursEdit(QLineEdit* hoursEdit, const QComboBox* taskCombo,
+                               const QComboBox* employeeCombo,
                                const std::vector<class Task>& tasks,
                                const Company* company);
     static void setupEmployeeComboUpdate(QComboBox* employeeCombo,
-                                         QComboBox* taskCombo,
+                                         const QComboBox* taskCombo,
                                          QLabel* taskInfoLabel,
                                          const Company* company, int projectId,
                                          const QString& projectPhase);

@@ -7,11 +7,12 @@
 #include <tuple>
 #include <vector>
 
+#include "entities/company_managers.h"
 #include "entities/derived_employees.h"
 #include "entities/employee.h"
-#include "exceptions/exceptions.h"
 #include "entities/project.h"
 #include "entities/task.h"
+#include "exceptions/exceptions.h"
 
 class EmployeeContainer {
    private:
@@ -45,56 +46,130 @@ class Company {
     int foundedYear;
 
     EmployeeContainer employees;
-    ProjectContainer projects;
+    mutable ProjectContainer projects;
     std::map<std::tuple<int, int, int>, int> taskAssignments;
+
+    TaskAssignmentManager taskManager;
+    mutable CompanyStatistics statistics;
 
    public:
     Company(QString name, QString industry, QString location, int foundedYear);
 
-    QString getName() const;
-    QString getIndustry() const;
-    QString getLocation() const;
-    int getFoundedYear() const;
+    TaskAssignmentManager& getTaskManager() { return taskManager; }
+    const CompanyStatistics& getStatistics() const { return statistics; }
+
+    QString getName() const { return name; }
+    QString getIndustry() const { return industry; }
+    QString getLocation() const { return location; }
+    int getFoundedYear() const { return foundedYear; }
 
     void addEmployee(std::shared_ptr<Employee> employee);
     void removeEmployee(int employeeId);
-    std::shared_ptr<Employee> getEmployee(int employeeId) const;
-    std::vector<std::shared_ptr<Employee>> getAllEmployees() const;
+    std::shared_ptr<Employee> getEmployee(int employeeId) const {
+        return employees.find(employeeId);
+    }
+    std::vector<std::shared_ptr<Employee>> getAllEmployees() const {
+        return employees.getAll();
+    }
 
     void addProject(const Project& project);
     void removeProject(int projectId);
-    const Project* getProject(int projectId) const;
-    Project* getProject(int projectId);
-    std::vector<Project> getAllProjects() const;
+    const Project* getProject(int projectId) const {
+        if (std::shared_ptr<Project> result = projects.find(projectId);
+            result) {
+            return result.get();
+        }
+        return nullptr;
+    }
+    Project* getProject(int projectId) {
+        if (std::shared_ptr<Project> result = projects.find(projectId);
+            result) {
+            return result.get();
+        }
+        return nullptr;
+    }
+    std::vector<Project> getAllProjects() const {
+        std::vector<Project> projectList;
+        auto allProjects = projects.getAll();
+        
+        // Safety check: limit projects to prevent bad_array_new_length
+        constexpr size_t maxProjects = 100000;
+        if (allProjects.size() > maxProjects) {
+            return {};  // Return empty vector if size is invalid
+        }
+        
+        projectList.reserve(std::min(allProjects.size(), maxProjects));
+        for (const auto& proj : allProjects) {
+            if (proj) {
+                projectList.push_back(*proj);
+            }
+        }
+        return projectList;
+    }
 
-    void addTaskToProject(int projectId, const Task& task);
-    std::vector<Task> getProjectTasks(int projectId) const;
+    void addTaskToProject(int projectId, const Task& task) const {
+        if (std::shared_ptr<Project> proj = projects.find(projectId); proj) {
+            proj->addTask(task);
+            return;
+        }
+        throw CompanyException("Project not found");
+    }
+    std::vector<Task> getProjectTasks(int projectId) const {
+        return getProject(projectId) ? getProject(projectId)->getTasks()
+                                     : std::vector<Task>();
+    }
 
     void assignEmployeeToTask(int employeeId, int projectId, int taskId,
-                              int hours);
+                              int hours) {
+        getTaskManager().assignEmployeeToTask(employeeId, projectId, taskId,
+                                              hours);
+    }
     void restoreTaskAssignment(int employeeId, int projectId, int taskId,
-                               int hours);
-    void removeEmployeeTaskAssignments(int employeeId);
-    void recalculateEmployeeHours();
-    void recalculateTaskAllocatedHours();
-    void fixTaskAssignmentsToCapacity();
-    void autoAssignEmployeesToProject(int projectId);
-    int getEmployeeProjectHours(int employeeId, int projectId) const;
-    int getEmployeeTaskHours(int employeeId, int projectId, int taskId) const;
+                               int hours) {
+        getTaskManager().restoreTaskAssignment(employeeId, projectId, taskId,
+                                               hours);
+    }
+    void removeEmployeeTaskAssignments(int employeeId) {
+        getTaskManager().removeEmployeeTaskAssignments(employeeId);
+    }
+    void recalculateEmployeeHours() {
+        getTaskManager().recalculateEmployeeHours();
+    }
+    void recalculateTaskAllocatedHours() {
+        getTaskManager().recalculateTaskAllocatedHours();
+    }
+    void fixTaskAssignmentsToCapacity() {
+        getTaskManager().fixTaskAssignmentsToCapacity();
+    }
+    void autoAssignEmployeesToProject(int projectId) {
+        getTaskManager().autoAssignEmployeesToProject(projectId);
+    }
+    int getEmployeeProjectHours(int employeeId, int projectId) const {
+        return taskManager.getEmployeeProjectHours(employeeId, projectId);
+    }
+    int getEmployeeTaskHours(int employeeId, int projectId, int taskId) const {
+        return taskManager.getEmployeeTaskHours(employeeId, projectId, taskId);
+    }
+    void scaleEmployeeTaskAssignments(int employeeId, double scaleFactor) {
+        getTaskManager().scaleEmployeeTaskAssignments(employeeId, scaleFactor);
+    }
+    std::map<std::tuple<int, int, int>, int> getAllTaskAssignments() const {
+        return taskManager.getAllTaskAssignments();
+    }
 
-    int getEmployeeCount() const;
-    int getProjectCount() const;
-    double getTotalSalaries() const;
-    double getTotalBudget() const;
-    QString getCompanyInfo() const;
-
-    void scaleEmployeeTaskAssignments(int employeeId, double scaleFactor);
-
-    
-    int getTaskAssignment(int employeeId, int projectId, int taskId) const;
-    void setTaskAssignment(int employeeId, int projectId, int taskId, int hours);
-    void addTaskAssignment(int employeeId, int projectId, int taskId, int hours);
-    void removeTaskAssignment(int employeeId, int projectId, int taskId);
-    std::map<std::tuple<int, int, int>, int> getAllTaskAssignments() const;
-    Project* getMutableProject(int projectId);
+    int getEmployeeCount() const { return statistics.getEmployeeCount(); }
+    int getProjectCount() const { return statistics.getProjectCount(); }
+    double getTotalSalaries() const { return statistics.getTotalSalaries(); }
+    double getTotalBudget() const { return statistics.getTotalBudget(); }
+    QString getCompanyInfo() const {
+        return QString(
+                   "Company: %1\nIndustry: %2\nLocation: %3\nFounded: "
+                   "%4\nEmployees: %5\nProjects: %6")
+            .arg(name)
+            .arg(industry)
+            .arg(location)
+            .arg(foundedYear)
+            .arg(getEmployeeCount())
+            .arg(getProjectCount());
+    }
 };

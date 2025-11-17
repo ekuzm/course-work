@@ -4,11 +4,11 @@
 #include <QDateEdit>
 #include <QStandardItemModel>
 
-#include "utils/consts.h"
 #include "entities/project.h"
+#include "utils/consts.h"
 
 void ProjectDialogHelper::createProjectDialogFields(
-    QDialog& dialog, QFormLayout* form, ProjectDialogFields& fields) {
+    QDialog& /*dialog*/, QFormLayout* form, ProjectDialogFields& fields) {
     fields.projectTypeCombo = new QComboBox();
     fields.projectTypeCombo->addItems({"Web Development", "Mobile App",
                                        "Software Product", "Consulting",
@@ -105,13 +105,13 @@ void ProjectDialogHelper::populateProjectDialogFields(
     if (currentPhaseOrder < 0) {
         return;
     }
-    
-    QStandardItemModel* model =
+
+    const QStandardItemModel* model =
         qobject_cast<QStandardItemModel*>(fields.phaseCombo->model());
     if (!model) {
         return;
     }
-    
+
     for (int i = 0; i < fields.phaseCombo->count(); ++i) {
         QString phaseText = fields.phaseCombo->itemText(i);
         int phaseOrder = Project::getPhaseOrder(phaseText);
@@ -126,8 +126,8 @@ void ProjectDialogHelper::populateProjectDialogFields(
         }
     }
 
-    int phaseIndex = fields.phaseCombo->findText(currentPhase);
-    if (phaseIndex >= 0) {
+    if (int phaseIndex = fields.phaseCombo->findText(currentPhase);
+        phaseIndex >= 0) {
         fields.phaseCombo->setCurrentIndex(phaseIndex);
     }
 

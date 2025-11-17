@@ -13,7 +13,7 @@ class Task {
     int estimatedHours;
     int allocatedHours{0};
     int priority;
-    QString phase;
+    QString phase{"Planned"};
 
     void updatePhase();
 

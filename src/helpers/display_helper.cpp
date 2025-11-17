@@ -12,8 +12,8 @@
 #include <map>
 #include <ranges>
 
-#include "helpers/action_button_helper.h"
 #include "entities/derived_employees.h"
+#include "helpers/action_button_helper.h"
 #include "ui/main_window.h"
 
 QString DisplayHelper::formatProjectInfo(
@@ -46,52 +46,51 @@ QString DisplayHelper::formatProjectInfo(
 
 static void addManagedProjectIfNeeded(
     const std::shared_ptr<const Employee>& employee,
-        std::vector<int>& projectIds) {
-        auto manager = std::dynamic_pointer_cast<const Manager>(employee);
-        if (!manager) {
-            return;
-        }
-        
-        int managedProjectId = manager->getManagedProjectId();
-        if (managedProjectId < 0) {
-            return;
-        }
-        
-        bool found = std::any_of(projectIds.begin(), projectIds.end(),
-                                 [managedProjectId](int pid) { return pid == managedProjectId; });
-            if (!found) {
-                projectIds.push_back(managedProjectId);
-        }
+    std::vector<int>& projectIds) {
+    auto manager = std::dynamic_pointer_cast<const Manager>(employee);
+    if (!manager) {
+        return;
     }
 
-static void collectTaskNamesFromProject(
-        int projectId,
-        const Company* currentCompany,
-        QStringList& taskInfoList) {
-        const auto* project = currentCompany->getProject(projectId);
-        if (!project) {
-            return;
-        }
-        
-            auto tasks = currentCompany->getProjectTasks(projectId);
-            for (const auto& task : tasks) {
-                if (task.getAllocatedHours() > 0) {
-                    QString taskName = task.getName();
-                    if (!taskInfoList.contains(taskName)) {
-                        taskInfoList.append(taskName);
-                    }
-                }
+    int managedProjectId = manager->getManagedProjectId();
+    if (managedProjectId < 0) {
+        return;
+    }
+
+    if (bool found = std::ranges::any_of(
+            projectIds,
+            [managedProjectId](int pid) { return pid == managedProjectId; });
+        !found) {
+        projectIds.push_back(managedProjectId);
+    }
+}
+
+static void collectTaskNamesFromProject(int projectId,
+                                        const Company* currentCompany,
+                                        QStringList& taskInfoList) {
+    if (const auto* project = currentCompany->getProject(projectId); !project) {
+        return;
+    }
+
+    auto tasks = currentCompany->getProjectTasks(projectId);
+    for (const auto& task : tasks) {
+        if (task.getAllocatedHours() > 0) {
+            QString taskName = task.getName();
+            if (!taskInfoList.contains(taskName)) {
+                taskInfoList.append(taskName);
             }
         }
+    }
+}
 
 QString DisplayHelper::formatTaskInfo(
     const std::shared_ptr<const Employee>& employee,
     const Company* currentCompany) {
     QStringList taskInfoList;
     std::vector<int> projectIds = employee->getAssignedProjects();
-    
+
     addManagedProjectIfNeeded(employee, projectIds);
-    
+
     for (int projectId : projectIds) {
         collectTaskNamesFromProject(projectId, currentCompany, taskInfoList);
     }
@@ -100,40 +99,38 @@ QString DisplayHelper::formatTaskInfo(
 }
 
 static void populateEmployeeRow(QTableWidget* employeeTable, size_t index,
-                             const std::shared_ptr<Employee>& employee,
-                             const Company* currentCompany,
-                             MainWindow* mainWindow) {
-        employeeTable->setItem(
-            index, 0, new QTableWidgetItem(QString::number(employee->getId())));
-        employeeTable->setItem(index, 1,
-                               new QTableWidgetItem(employee->getName()));
-        employeeTable->setItem(index, 2,
-                               new QTableWidgetItem(employee->getDepartment()));
-        employeeTable->setItem(index, 3,
-                               new QTableWidgetItem(QString::number(
-                                   employee->getSalary(), 'f', 2)));
-        employeeTable->setItem(
-            index, 4, new QTableWidgetItem(employee->getEmployeeType()));
+                                const std::shared_ptr<Employee>& employee,
+                                const Company* currentCompany,
+                                MainWindow* mainWindow) {
+    employeeTable->setItem(
+        index, 0, new QTableWidgetItem(QString::number(employee->getId())));
+    employeeTable->setItem(index, 1, new QTableWidgetItem(employee->getName()));
+    employeeTable->setItem(index, 2,
+                           new QTableWidgetItem(employee->getDepartment()));
+    employeeTable->setItem(
+        index, 3,
+        new QTableWidgetItem(QString::number(employee->getSalary(), 'f', 2)));
+    employeeTable->setItem(index, 4,
+                           new QTableWidgetItem(employee->getEmployeeType()));
 
-        QString projectInfo =
-            DisplayHelper::formatProjectInfo(employee, currentCompany);
-        employeeTable->setItem(index, 5, new QTableWidgetItem(projectInfo));
+    QString projectInfo =
+        DisplayHelper::formatProjectInfo(employee, currentCompany);
+    employeeTable->setItem(index, 5, new QTableWidgetItem(projectInfo));
 
-        if (QWidget* actionWidget =
-                ActionButtonHelper::createEmployeeActionButtons(
-                    employeeTable, static_cast<int>(index), mainWindow)) {
-            employeeTable->setCellWidget(index, 6, actionWidget);
+    if (QWidget* actionWidget = ActionButtonHelper::createEmployeeActionButtons(
+            employeeTable, static_cast<int>(index), mainWindow)) {
+        employeeTable->setCellWidget(index, 6, actionWidget);
+    }
+}
+
+static void setInactiveEmployeeStyle(const QTableWidget* employeeTable,
+                                     size_t index) {
+    for (int col = 0; col < employeeTable->columnCount(); ++col) {
+        if (QTableWidgetItem* item = employeeTable->item(index, col); item) {
+            item->setForeground(QBrush(QColor("#666666")));
         }
     }
-    
-static void setInactiveEmployeeStyle(QTableWidget* employeeTable, size_t index) {
-        for (int col = 0; col < employeeTable->columnCount(); ++col) {
-            QTableWidgetItem* item = employeeTable->item(index, col);
-            if (item) {
-                item->setForeground(QBrush(QColor("#666666")));
-            }
-        }
-    }
+}
 
 void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
                                      const Company* currentCompany,
@@ -145,8 +142,9 @@ void DisplayHelper::displayEmployees(QTableWidget* employeeTable,
 
     for (size_t index = 0; index < employees.size(); ++index) {
         const auto& employee = employees[index];
-        populateEmployeeRow(employeeTable, index, employee, currentCompany, mainWindow);
-        
+        populateEmployeeRow(employeeTable, index, employee, currentCompany,
+                            mainWindow);
+
         if (!employee->getIsActive()) {
             setInactiveEmployeeStyle(employeeTable, index);
         }

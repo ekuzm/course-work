@@ -15,9 +15,11 @@
 #include <QVBoxLayout>
 #include <QWidget>
 
+#include "ui/main_window.h"
+#include "ui/main_window_helpers.h"
+#include "ui/main_window_operations.h"
 #include "utils/app_styles.h"
 #include "utils/consts.h"
-#include "ui/main_window.h"
 
 void MainWindowUIBuilder::setupMainUI(MainWindow* window) {
     if (!window) return;
@@ -26,42 +28,43 @@ void MainWindowUIBuilder::setupMainUI(MainWindow* window) {
     window->setMinimumSize(900, 700);
     window->setStyleSheet(UIStyleHelper::getMainWindowStylesheet());
 
-    window->companyWidget = new QWidget();
-    QHBoxLayout* companyLayout = new QHBoxLayout(window->companyWidget);
+    window->companyUI.widget = new QWidget();
+    auto* companyLayout = new QHBoxLayout(window->companyUI.widget);
     companyLayout->setContentsMargins(
         kCompanyLayoutMargins, kCompanyLayoutVerticalMargins,
         kCompanyLayoutMargins, kCompanyLayoutVerticalMargins);
 
-    QLabel* companyLabel = new QLabel("Current Company:");
-    window->companySelector = new QComboBox();
-    window->companySelector->setMinimumWidth(kCompanySelectorMinWidth);
-    window->companySelector->setStyleSheet(
+    auto* companyLabel = new QLabel("Current Company:");
+    window->companyUI.selector = new QComboBox();
+    window->companyUI.selector->setMinimumWidth(kCompanySelectorMinWidth);
+    window->companyUI.selector->setStyleSheet(
         UIStyleHelper::getCompanyComboBoxStylesheet());
 
-    window->companyAddBtn = new QPushButton("Add");
-    window->companyDeleteBtn = new QPushButton("Delete");
+    window->companyUI.addBtn = new QPushButton("Add");
+    window->companyUI.deleteBtn = new QPushButton("Delete");
 
     companyLayout->addWidget(companyLabel);
-    companyLayout->addWidget(window->companySelector);
-    companyLayout->addWidget(window->companyAddBtn);
-    companyLayout->addWidget(window->companyDeleteBtn);
+    companyLayout->addWidget(window->companyUI.selector);
+    companyLayout->addWidget(window->companyUI.addBtn);
+    companyLayout->addWidget(window->companyUI.deleteBtn);
     companyLayout->addStretch();
 
-    QObject::connect(window->companySelector,
-                     QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     window, &MainWindow::switchCompany);
-    QObject::connect(window->companyAddBtn, &QPushButton::clicked, window,
-                     &MainWindow::addCompany);
-    QObject::connect(window->companyDeleteBtn, &QPushButton::clicked, window,
-                     &MainWindow::deleteCompany);
+    QObject::connect(
+        window->companyUI.selector,
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
+        [window](int) { CompanyOperations::switchCompany(window); });
+    QObject::connect(window->companyUI.addBtn, &QPushButton::clicked,
+                     [window]() { CompanyOperations::addCompany(window); });
+    QObject::connect(window->companyUI.deleteBtn, &QPushButton::clicked,
+                     [window]() { CompanyOperations::deleteCompany(window); });
 
     window->mainTabWidget = new QTabWidget(window);
 
-    QWidget* centralWidget = new QWidget();
-    QVBoxLayout* mainLayout = new QVBoxLayout(centralWidget);
+    auto* centralWidget = new QWidget();
+    auto* mainLayout = new QVBoxLayout(centralWidget);
     mainLayout->setContentsMargins(0, 0, 0, 0);
     mainLayout->setSpacing(0);
-    mainLayout->addWidget(window->companyWidget);
+    mainLayout->addWidget(window->companyUI.widget);
     mainLayout->addWidget(window->mainTabWidget);
 
     window->setCentralWidget(centralWidget);
@@ -72,199 +75,205 @@ void MainWindowUIBuilder::setupMainUI(MainWindow* window) {
 }
 
 QWidget* MainWindowUIBuilder::createCompanyWidget(MainWindow* window) {
-    return window ? window->companyWidget : nullptr;
+    return window ? window->companyUI.widget : nullptr;
 }
 
 void MainWindowUIBuilder::setupEmployeeTab(MainWindow* window,
                                            QTabWidget* tabWidget) {
     if (!window || !tabWidget) return;
 
-    window->employeeTab = new QWidget();
-    QVBoxLayout* mainLayout = new QVBoxLayout(window->employeeTab);
+    window->employeeUI.tab = new QWidget();
+    auto* mainLayout = new QVBoxLayout(window->employeeUI.tab);
     mainLayout->setSpacing(15);
     mainLayout->setContentsMargins(20, 20, 20, 20);
 
-    QHBoxLayout* toolbarLayout = new QHBoxLayout();
+    auto* toolbarLayout = new QHBoxLayout();
     toolbarLayout->setSpacing(10);
 
-    window->employeeSearchEdit = new QLineEdit();
-    window->employeeSearchEdit->setPlaceholderText("🔍 Search...");
-    window->employeeSearchEdit->setMinimumHeight(40);
+    window->employeeUI.searchEdit = new QLineEdit();
+    window->employeeUI.searchEdit->setPlaceholderText("🔍 Search...");
+    window->employeeUI.searchEdit->setMinimumHeight(40);
 
-    window->employeeAddBtn = new QPushButton("➕ Add Employee");
-    window->employeeAddBtn->setMinimumWidth(150);
-    window->employeeAddBtn->setMinimumHeight(40);
+    window->employeeUI.addBtn = new QPushButton("➕ Add Employee");
+    window->employeeUI.addBtn->setMinimumWidth(150);
+    window->employeeUI.addBtn->setMinimumHeight(40);
 
-    toolbarLayout->addWidget(window->employeeSearchEdit, 1);
-    toolbarLayout->addWidget(window->employeeAddBtn);
+    toolbarLayout->addWidget(window->employeeUI.searchEdit, 1);
+    toolbarLayout->addWidget(window->employeeUI.addBtn);
 
     mainLayout->addLayout(toolbarLayout);
 
-    window->employeeTable = new QTableWidget();
-    QStringList headers = {"ID",   "Name",    "Department", "Salary",
-                           "Type", "Project", "Actions"};
-    QList<int> columnWidths = {110, 280, 250, 210, 250, 590, 10};
-    window->setupTableWidget(window->employeeTable, headers, columnWidths);
+    window->employeeUI.table = new QTableWidget();
+    auto headers = QStringList{"ID",   "Name",    "Department", "Salary",
+                               "Type", "Project", "Actions"};
+    auto columnWidths = QList<int>{110, 280, 250, 210, 250, 590, 10};
+    MainWindowUIHelper::setupTableWidget(window->employeeUI.table, headers,
+                                         columnWidths);
 
-    mainLayout->addWidget(window->employeeTable);
+    mainLayout->addWidget(window->employeeUI.table);
 
-    QObject::connect(window->employeeAddBtn, &QPushButton::clicked, window,
-                     &MainWindow::addEmployee);
-    QObject::connect(window->employeeSearchEdit, &QLineEdit::textChanged, window,
-                     &MainWindow::searchEmployee);
+    QObject::connect(window->employeeUI.addBtn, &QPushButton::clicked,
+                     [window]() { EmployeeOperations::addEmployee(window); });
+    QObject::connect(window->employeeUI.searchEdit, &QLineEdit::textChanged,
+                     [window](const QString&) {
+                         EmployeeOperations::searchEmployee(window);
+                     });
 
-    tabWidget->addTab(window->employeeTab, "Employees");
+    tabWidget->addTab(window->employeeUI.tab, "Employees");
 }
 
 void MainWindowUIBuilder::setupProjectTab(MainWindow* window,
                                           QTabWidget* tabWidget) {
     if (!window || !tabWidget) return;
 
-    window->projectTab = new QWidget();
-    QVBoxLayout* mainLayout = new QVBoxLayout(window->projectTab);
+    window->projectUI.tab = new QWidget();
+    auto* mainLayout = new QVBoxLayout(window->projectUI.tab);
     mainLayout->setSpacing(20);
     mainLayout->setContentsMargins(20, 20, 20, 20);
 
-    QHBoxLayout* actionsLayout = new QHBoxLayout();
+    auto* actionsLayout = new QHBoxLayout();
     actionsLayout->setSpacing(10);
     actionsLayout->setContentsMargins(0, 0, 0, 0);
     actionsLayout->addStretch();
 
-    window->projectAddBtn = new QPushButton("➕ Add Project");
-    window->projectAddBtn->setMinimumWidth(160);
-    window->projectAddBtn->setMinimumHeight(42);
-    actionsLayout->addWidget(window->projectAddBtn);
+    window->projectUI.addBtn = new QPushButton("➕ Add Project");
+    window->projectUI.addBtn->setMinimumWidth(160);
+    window->projectUI.addBtn->setMinimumHeight(42);
+    actionsLayout->addWidget(window->projectUI.addBtn);
 
-    window->projectTable = new QTableWidget();
-    QStringList headers = {"ID",         "Name",         "Phase",  "Budget",
-                           "Est. Hours", "Alloc. Hours", "Client", "Actions"};
-    QList<int> columnWidths = {110, 340, 240, 220, 240, 240, 300, 100};
-    window->setupTableWidget(window->projectTable, headers, columnWidths);
+    window->projectUI.table = new QTableWidget();
+    auto headers =
+        QStringList{"ID",         "Name",         "Phase",  "Budget",
+                    "Est. Hours", "Alloc. Hours", "Client", "Actions"};
+    auto columnWidths = QList<int>{110, 340, 240, 220, 240, 240, 300, 100};
+    MainWindowUIHelper::setupTableWidget(window->projectUI.table, headers,
+                                         columnWidths);
 
-    window->projectListContainer = new QWidget();
-    QVBoxLayout* projectListLayout =
-        new QVBoxLayout(window->projectListContainer);
+    window->projectUI.listContainer = new QWidget();
+    auto* projectListLayout = new QVBoxLayout(window->projectUI.listContainer);
     projectListLayout->setSpacing(20);
     projectListLayout->setContentsMargins(0, 0, 0, 0);
     projectListLayout->addLayout(actionsLayout);
-    projectListLayout->addWidget(window->projectTable);
+    projectListLayout->addWidget(window->projectUI.table);
 
-    mainLayout->addWidget(window->projectListContainer);
+    mainLayout->addWidget(window->projectUI.listContainer);
 
-    window->projectDetailContainer = new QWidget();
-    QVBoxLayout* projectDetailLayout =
-        new QVBoxLayout(window->projectDetailContainer);
+    window->projectUI.detailContainer = new QWidget();
+    auto* projectDetailLayout =
+        new QVBoxLayout(window->projectUI.detailContainer);
     projectDetailLayout->setSpacing(18);
     projectDetailLayout->setContentsMargins(0, 0, 0, 0);
 
-    window->projectDetailHeaderContainer =
-        new QWidget(window->projectDetailContainer);
-    QHBoxLayout* detailHeaderLayout =
-        new QHBoxLayout(window->projectDetailHeaderContainer);
+    window->projectUI.detailHeaderContainer =
+        new QWidget(window->projectUI.detailContainer);
+    auto* detailHeaderLayout =
+        new QHBoxLayout(window->projectUI.detailHeaderContainer);
     detailHeaderLayout->setSpacing(12);
     detailHeaderLayout->setContentsMargins(0, 0, 0, 0);
 
-    window->projectDetailTitle = new QLabel("Current Project");
-    window->projectDetailTitle->setStyleSheet(
+    window->projectUI.detailTitle = new QLabel("Current Project");
+    window->projectUI.detailTitle->setStyleSheet(
         "font-size: 20px; font-weight: 700; color: #1a1a1a;");
-    detailHeaderLayout->addWidget(window->projectDetailTitle);
+    detailHeaderLayout->addWidget(window->projectUI.detailTitle);
 
     detailHeaderLayout->addStretch();
 
-    window->projectDetailAutoAssignBtn = new QPushButton("Auto Assign");
-    window->projectDetailAutoAssignBtn->setMinimumWidth(150);
-    window->projectDetailAutoAssignBtn->setMinimumHeight(42);
-    detailHeaderLayout->addWidget(window->projectDetailAutoAssignBtn);
+    window->projectUI.detailAutoAssignBtn = new QPushButton("Auto Assign");
+    window->projectUI.detailAutoAssignBtn->setMinimumWidth(150);
+    window->projectUI.detailAutoAssignBtn->setMinimumHeight(42);
+    detailHeaderLayout->addWidget(window->projectUI.detailAutoAssignBtn);
 
-    window->projectDetailCloseBtn = new QPushButton("Close");
-    window->projectDetailCloseBtn->setMinimumWidth(110);
-    window->projectDetailCloseBtn->setMinimumHeight(40);
-    detailHeaderLayout->addWidget(window->projectDetailCloseBtn);
+    window->projectUI.detailCloseBtn = new QPushButton("Close");
+    window->projectUI.detailCloseBtn->setMinimumWidth(110);
+    window->projectUI.detailCloseBtn->setMinimumHeight(40);
+    detailHeaderLayout->addWidget(window->projectUI.detailCloseBtn);
 
-    projectDetailLayout->addWidget(window->projectDetailHeaderContainer);
+    projectDetailLayout->addWidget(window->projectUI.detailHeaderContainer);
 
-    window->projectDetailInfoText = new QTextEdit();
-    window->projectDetailInfoText->setReadOnly(true);
-    window->projectDetailInfoText->setStyleSheet(
+    window->projectUI.detailInfoText = new QTextEdit();
+    window->projectUI.detailInfoText->setReadOnly(true);
+    window->projectUI.detailInfoText->setStyleSheet(
         "QTextEdit { font-size: 14px; line-height: 1.65; padding: 0; border: "
         "none; "
         "background-color: transparent; }");
-    window->projectDetailInfoText->setVerticalScrollBarPolicy(
+    window->projectUI.detailInfoText->setVerticalScrollBarPolicy(
         Qt::ScrollBarAsNeeded);
-    window->projectDetailInfoText->setHorizontalScrollBarPolicy(
+    window->projectUI.detailInfoText->setHorizontalScrollBarPolicy(
         Qt::ScrollBarAsNeeded);
-    window->projectDetailInfoText->setMinimumHeight(400);
-    window->projectDetailInfoText->setFrameShape(QFrame::NoFrame);
-    window->projectDetailInfoText->setVisible(false);
-    projectDetailLayout->addWidget(window->projectDetailInfoText);
+    window->projectUI.detailInfoText->setMinimumHeight(400);
+    window->projectUI.detailInfoText->setFrameShape(QFrame::NoFrame);
+    window->projectUI.detailInfoText->setVisible(false);
+    projectDetailLayout->addWidget(window->projectUI.detailInfoText);
 
-    window->projectTasksTable = new QTableWidget();
-    QStringList taskHeaders = {
+    window->projectUI.tasksTable = new QTableWidget();
+    auto taskHeaders = QStringList{
         "Name",  "Task Type", "Priority", "Estimated Hours", "Allocated Hours",
         "Assign"};
-    QList<int> taskColumnWidths = {340, 260, 200, 260, 260, 100};
-    window->setupTableWidget(window->projectTasksTable, taskHeaders,
-                             taskColumnWidths);
-    window->projectTasksTable->setEditTriggers(
+    auto taskColumnWidths = QList<int>{340, 260, 200, 260, 260, 100};
+    MainWindowUIHelper::setupTableWidget(window->projectUI.tasksTable,
+                                         taskHeaders, taskColumnWidths);
+    window->projectUI.tasksTable->setEditTriggers(
         QAbstractItemView::NoEditTriggers);
-    window->projectTasksTable->horizontalHeader()->setSectionResizeMode(
+    window->projectUI.tasksTable->horizontalHeader()->setSectionResizeMode(
         QHeaderView::Stretch);
-    window->projectTasksTable->setSizePolicy(QSizePolicy::Expanding,
-                                             QSizePolicy::Expanding);
-    window->projectTasksTable->verticalHeader()->setDefaultSectionSize(56);
+    window->projectUI.tasksTable->setSizePolicy(QSizePolicy::Expanding,
+                                                QSizePolicy::Expanding);
+    window->projectUI.tasksTable->verticalHeader()->setDefaultSectionSize(56);
 
-    projectDetailLayout->addWidget(window->projectTasksTable);
+    projectDetailLayout->addWidget(window->projectUI.tasksTable);
 
-    window->projectDetailContainer->setVisible(false);
+    window->projectUI.detailContainer->setVisible(false);
 
-    mainLayout->addWidget(window->projectDetailContainer);
+    mainLayout->addWidget(window->projectUI.detailContainer);
 
-    QObject::connect(window->projectAddBtn, &QPushButton::clicked, window,
-                     &MainWindow::addProject);
-    QObject::connect(window->projectDetailCloseBtn, &QPushButton::clicked,
-                     window, &MainWindow::closeProjectDetails);
-    QObject::connect(window->projectDetailAutoAssignBtn, &QPushButton::clicked,
-                     window, &MainWindow::autoAssignDetailedProject);
+    QObject::connect(window->projectUI.addBtn, &QPushButton::clicked,
+                     [window]() { ProjectOperations::addProject(window); });
+    QObject::connect(
+        window->projectUI.detailCloseBtn, &QPushButton::clicked,
+        [window]() { ProjectOperations::closeProjectDetails(window); });
+    QObject::connect(
+        window->projectUI.detailAutoAssignBtn, &QPushButton::clicked,
+        [window]() { ProjectOperations::autoAssignDetailedProject(window); });
 
-    tabWidget->addTab(window->projectTab, "Projects");
+    tabWidget->addTab(window->projectUI.tab, "Projects");
 }
 
 void MainWindowUIBuilder::setupStatisticsTab(MainWindow* window,
                                              QTabWidget* tabWidget) {
     if (!window || !tabWidget) return;
 
-    window->statsTab = new QWidget();
-    QVBoxLayout* layout = new QVBoxLayout(window->statsTab);
+    window->statisticsUI.tab = new QWidget();
+    auto* layout = new QVBoxLayout(window->statisticsUI.tab);
     layout->setContentsMargins(30, 30, 30, 30);
     layout->setSpacing(25);
 
-    QLabel* titleLabel = new QLabel("📊 Company Statistics");
+    auto* titleLabel = new QLabel("📊 Company Statistics");
     titleLabel->setStyleSheet(
         "font-size: 20px; font-weight: bold; padding: 10px; color: #000000;");
     layout->addWidget(titleLabel);
 
-    window->statisticsChartWidget = new QWidget();
-    window->statisticsChartWidget->setMinimumHeight(400);
-    window->statisticsChartWidget->setStyleSheet(
+    window->statisticsUI.chartWidget = new QWidget();
+    window->statisticsUI.chartWidget->setMinimumHeight(400);
+    window->statisticsUI.chartWidget->setStyleSheet(
         "background-color: white; border: 1px solid #e3f2fd; border-radius: "
         "10px;");
-    layout->addWidget(window->statisticsChartWidget, 1);
+    layout->addWidget(window->statisticsUI.chartWidget, 1);
 
-    window->statisticsText = new QTextEdit();
-    window->statisticsText->setReadOnly(true);
-    window->statisticsText->setStyleSheet(
+    window->statisticsUI.text = new QTextEdit();
+    window->statisticsUI.text->setReadOnly(true);
+    window->statisticsUI.text->setStyleSheet(
         "font-size: 15px; line-height: 2.0; padding: 25px; border-radius: "
         "10px;");
-    layout->addWidget(window->statisticsText, 1);
+    layout->addWidget(window->statisticsUI.text, 1);
 
-    tabWidget->addTab(window->statsTab, "Statistics");
+    tabWidget->addTab(window->statisticsUI.tab, "Statistics");
 
-    QObject::connect(tabWidget, &QTabWidget::currentChanged, window,
+    QObject::connect(tabWidget, &QTabWidget::currentChanged,
                      [window, tabWidget](int index) {
                          if (window && tabWidget) {
                              QString tabText = tabWidget->tabText(index);
                              if (tabText == "Statistics") {
-                                 window->showStatistics();
+                                 ProjectOperations::showStatistics(window);
                              }
                          }
                      });

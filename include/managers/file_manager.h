@@ -34,7 +34,6 @@ class FileManager {
 
     static Company loadFromFile(const QString& fileName);
 
-    
     static std::map<int, bool> employeeStatusesFromFile;
 
    private:
@@ -56,7 +55,7 @@ class FileManager {
         double salary;
         QString department;
         double employmentRate;
-        bool isActive{true};  
+        bool isActive{true};
     };
     static EmployeeBaseData loadEmployeeBaseData(std::ifstream& fileStream);
 

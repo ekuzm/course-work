@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <utility>
 
-#include "utils/consts.h"
 #include "exceptions/exceptions.h"
+#include "utils/consts.h"
 
 int Project::getId() const { return id; }
 
@@ -22,20 +22,17 @@ double Project::getBudget() const { return budget; }
 
 QString Project::getClientName() const { return clientName; }
 
-Project::Project(int projectId, const QString& name, const QString& description,
-                 const QString& phase, const QDate& startDate,
-                 const QDate& endDate, double budget, const QString& clientName,
-                 int estimatedHours)
-    : id(projectId),
-      name(name),
-      description(description),
-      phase(phase),
-      startDate(startDate),
-      endDate(endDate),
-      budget(budget),
-      clientName(clientName),
-      initialEstimatedHours(estimatedHours) {
-    if (name.isEmpty()) {
+Project::Project(const ProjectParams& params)
+    : id(params.projectId),
+      name(params.name),
+      description(params.description),
+      phase(params.phase),
+      startDate(params.startDate),
+      endDate(params.endDate),
+      budget(params.budget),
+      clientName(params.clientName),
+      initialEstimatedHours(params.estimatedHours) {
+    if (params.name.isEmpty()) {
         throw ProjectException("Project name cannot be empty");
     }
     if (budget < 0) {
@@ -79,9 +76,9 @@ void Project::setPhase(const QString& newPhase) {
         throw ProjectException("phase cannot be empty");
     }
     int currentPhaseOrder = getPhaseOrder(phase);
-    int newPhaseOrder = getPhaseOrder(newPhase);
 
-    if (currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
+    if (int newPhaseOrder = getPhaseOrder(newPhase);
+        currentPhaseOrder >= 0 && newPhaseOrder >= 0 &&
         newPhaseOrder < currentPhaseOrder) {
         throw ProjectException(
             QString("Cannot set phase to '%1' because current phase '%2' is "
@@ -173,9 +170,8 @@ void Project::removeEmployeeCost(double cost) {
 void Project::addTask(const Task& task) {
     int currentTasksTotal = getTasksEstimatedTotal();
     int newTasksTotal = currentTasksTotal + task.getEstimatedHours();
-    int newEstimated = std::max(initialEstimatedHours, newTasksTotal);
-
-    if (newEstimated > 0 && !endDate.isNull()) {
+    if (int newEstimated = std::max(initialEstimatedHours, newTasksTotal);
+        newEstimated > 0 && !endDate.isNull()) {
         int daysDuration = startDate.daysTo(endDate);
         int maxHoursInDeadline = daysDuration * kHoursPerDay;
         if (newEstimated > maxHoursInDeadline) {

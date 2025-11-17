@@ -7,11 +7,12 @@
 #include <QTableWidget>
 #include <QTableWidgetItem>
 #include <QWidget>
+#include <ranges>
 
 #include "entities/company.h"
-#include "ui/main_window.h"
 #include "entities/project.h"
 #include "entities/task.h"
+#include "ui/main_window.h"
 
 void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
                                               const Project& project,
@@ -24,7 +25,7 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
 
     if (tasks.empty()) return;
 
-    int rowCount = static_cast<int>(tasks.size());
+    auto rowCount = static_cast<int>(tasks.size());
     table->setRowCount(rowCount);
 
     for (int row = 0; row < rowCount; ++row) {
@@ -67,7 +68,7 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
             fullyAllocatedItem->setForeground(QBrush(QColor(100, 100, 100)));
             table->setItem(row, 5, fullyAllocatedItem);
         } else {
-            QWidget* assignContainer = new QWidget(table);
+            auto* assignContainer = new QWidget(table);
             auto* assignLayout = new QHBoxLayout(assignContainer);
             assignLayout->setContentsMargins(0, 0, 0, 0);
             assignLayout->setAlignment(Qt::AlignCenter);
@@ -100,8 +101,9 @@ void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company,
                                                             int projectId) {
     if (!company) return;
 
-    const Project* project = company->getProject(projectId);
-    if (!project || project->getAllocatedHours() == 0) return;
+    if (const Project* project = company->getProject(projectId);
+        !project || project->getAllocatedHours() == 0)
+        return;
 
     if (!hasAssignedEmployees(company, projectId)) {
         Project* projPtr = company->getProject(projectId);
@@ -123,10 +125,7 @@ bool ProjectHelper::hasAssignedEmployees(const Company* company,
     if (!company) return false;
 
     auto employees = company->getAllEmployees();
-    for (const auto& emp : employees) {
-        if (emp && emp->getIsActive() && emp->isAssignedToProject(projectId)) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::any_of(employees, [projectId](const auto& emp) {
+        return emp && emp->getIsActive() && emp->isAssignedToProject(projectId);
+    });
 }

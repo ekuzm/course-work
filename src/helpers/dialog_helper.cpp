@@ -2,8 +2,8 @@
 
 #include <QAbstractItemView>
 #include <QDialog>
-#include <QHeaderView>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QPushButton>
 #include <QTableWidget>
 #include <QTextEdit>
@@ -45,8 +45,8 @@ void DialogHelper::createHtmlDialog(QDialog* dialog, const QString& title,
 }
 
 void DialogHelper::createTableDialog(QDialog* dialog, const QString& title,
-                                      QTableWidget* table, int minWidth,
-                                      int minHeight) {
+                                     QTableWidget* table, int minWidth,
+                                     int minHeight) {
     if (!dialog || !table) return;
 
     dialog->setWindowTitle(title);
@@ -68,12 +68,12 @@ void DialogHelper::createTableDialog(QDialog* dialog, const QString& title,
     table->setSelectionMode(QAbstractItemView::SingleSelection);
     table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     table->setSortingEnabled(true);
-    
-    
-    if (QHeaderView* horizontalHeader = table->horizontalHeader(); horizontalHeader) {
+
+    if (QHeaderView* horizontalHeader = table->horizontalHeader();
+        horizontalHeader) {
         horizontalHeader->setDefaultAlignment(Qt::AlignCenter);
     }
-    
+
     layout->addWidget(table);
 
     auto* closeButton = new QPushButton("Close");

@@ -20,18 +20,15 @@ class HtmlGenerator {
         const std::vector<const Project*>& employeeProjects);
 
    private:
-    static QString generateTeamTableRow(const std::shared_ptr<Employee>& employee,
-                                       const Project& project,
-                                       const Company* company,
-                                       const std::vector<Task>& tasks,
-                                       int rowNumber,
-                                       bool projectCompleted);
+    static QString generateTeamTableRow(
+        const std::shared_ptr<Employee>& employee, const Project& project,
+        const Company* company, const std::vector<Task>& tasks, int rowNumber,
+        bool projectCompleted);
     static QString formatPercentText(double value);
     static QString getEmployeeStatus(const std::shared_ptr<Employee>& employee,
-                                    const Project& project,
-                                    bool projectCompleted);
-    static QString getEmployeeTasksDisplay(const std::shared_ptr<Employee>& employee,
-                                          const Project& project,
-                                          const Company* company,
-                                          const std::vector<Task>& tasks);
+                                     const Project& project,
+                                     bool projectCompleted);
+    static QString getEmployeeTasksDisplay(
+        const std::shared_ptr<Employee>& employee, const Project& project,
+        const Company* company, const std::vector<Task>& tasks);
 };

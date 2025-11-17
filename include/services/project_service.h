@@ -18,7 +18,3 @@ class ProjectService {
     std::vector<Task> getProjectTasks(int projectId) const;
     void recomputeProjectTotals(int projectId);
 };
-
-
-
-

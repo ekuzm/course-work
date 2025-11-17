@@ -15,6 +15,7 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 # Entities
 set(ENTITY_SOURCES
     src/entities/company.cpp
+    src/entities/company_managers.cpp
     src/entities/employee.cpp
     src/entities/derived_employees.cpp
     src/entities/project.cpp
@@ -23,6 +24,7 @@ set(ENTITY_SOURCES
 
 set(ENTITY_HEADERS
     include/entities/company.h
+    include/entities/company_managers.h
     include/entities/employee.h
     include/entities/derived_employees.h
     include/entities/project.h
@@ -47,13 +49,17 @@ set(SERVICE_HEADERS
 # UI
 set(UI_SOURCES
     src/ui/main_window.cpp
+    src/ui/main_window_operations.cpp
     src/ui/main_window_ui_builder.cpp
+    src/ui/main_window_helpers.cpp
     src/ui/statistics_chart_widget.cpp
 )
 
 set(UI_HEADERS
     include/ui/main_window.h
+    include/ui/main_window_operations.h
     include/ui/main_window_ui_builder.h
+    include/ui/main_window_helpers.h
     include/ui/statistics_chart_widget.h
 )
 
