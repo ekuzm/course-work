@@ -100,7 +100,7 @@ class MainWindowValidationHelper {
                                             int excludeId,
                                             const Company* currentCompany);
     static void validateAndFixProjectAssignments(MainWindow* window,
-                                                 Company* company);
+                                                 const Company* company);
 };
 
 class MainWindowDataOperations {
