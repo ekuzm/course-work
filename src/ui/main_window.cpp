@@ -374,6 +374,6 @@ void MainWindow::selectProjectRowById(int projectId) {
     MainWindowDataOperations::selectProjectRowById(this, projectId);
 }
 
-void MainWindow::validateAndFixProjectAssignments(Company* company) {
+void MainWindow::validateAndFixProjectAssignments(const Company* company) {
     MainWindowValidationHelper::validateAndFixProjectAssignments(this, company);
 }

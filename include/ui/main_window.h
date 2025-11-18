@@ -68,7 +68,7 @@ class MainWindow : public QMainWindow {
     void autoLoad();
 
    public:
-    void validateAndFixProjectAssignments(Company* company);
+    void validateAndFixProjectAssignments(const Company* company);
 
     QTabWidget* mainTabWidget = nullptr;
     EmployeeTabUI employeeUI;
