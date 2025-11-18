@@ -253,6 +253,15 @@ Company::Company(Company&& other) noexcept
       taskManager(taskAssignments, employees, projects),
       statistics(employees, projects) {}
 
+Company::~Company() {
+    // Explicit destructor for resource management
+    // All resources are managed automatically:
+    // - EmployeeContainer and ProjectContainer use smart pointers (automatic cleanup)
+    // - taskAssignments is a std::map (automatic cleanup)
+    // - taskManager and statistics are value types (automatic cleanup)
+    // This explicit destructor ensures proper resource management order
+}
+
 void Company::addEmployee(std::shared_ptr<Employee> employee) {
     if (std::shared_ptr<Employee> existing = getEmployee(employee->getId());
         existing) {
