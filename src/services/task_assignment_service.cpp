@@ -338,7 +338,7 @@ void TaskAssignmentService::assignEmployeeToTask(int employeeId, int projectId,
 
 int TaskAssignmentService::getEmployeeTaskHours(int employeeId, int projectId,
                                                 int taskId) const {
-    return company->getEmployeeTaskHours(employeeId, projectId, taskId);
+    return company->getEmployeeHours(employeeId, projectId, taskId);
 }
 
 int TaskAssignmentService::getEmployeeProjectHours(int employeeId,
@@ -374,7 +374,7 @@ void TaskAssignmentService::restoreTaskAssignment(int employeeId, int projectId,
     const std::vector<Task>& tasks = projPtr->getTasks();
     for (const Task& task : tasks) {
         if (task.getId() == taskId) {
-            const int newHours = hours - company->getEmployeeTaskHours(
+            const int newHours = hours - company->getEmployeeHours(
                                              employeeId, projectId, taskId);
             
             company->getTaskManager().setTaskAssignment(employeeId, projectId,
@@ -503,7 +503,7 @@ static void calculateTaskAllocatedHours(const Company* company, int projectId,
                 continue;
             }
             
-            auto hours = company->getEmployeeTaskHours(employee->getId(),
+            auto hours = company->getEmployeeHours(employee->getId(),
                                                        projectId, taskId);
             if (hours > 0) {
                 totalAllocated += hours;

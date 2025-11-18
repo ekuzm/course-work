@@ -104,23 +104,45 @@ static void handleEditEmployeeSuccess(QDialog& dialog, const QLineEdit* nameEdit
     dialog.accept();
 }
 
-static void handleAddEmployeeButtonClick(MainWindow* window, QDialog& dialog,
-                                         QLineEdit* nameEdit, QLineEdit* salaryEdit,
-                                         QLineEdit* deptEdit, QComboBox* typeCombo,
-                                         QComboBox* employmentRateCombo,
-                                         QComboBox* managerProject,
-                                         QLineEdit* devLanguage,
-                                         QLineEdit* devExperience,
-                                         QLineEdit* designerTool,
-                                         QLineEdit* designerProjects,
-                                         QLineEdit* qaTestType, QLineEdit* qaBugs) {
+struct HandleAddEmployeeButtonClickParams {
+    MainWindow* window;
+    QDialog& dialog;
+    QLineEdit* nameEdit;
+    QLineEdit* salaryEdit;
+    QLineEdit* deptEdit;
+    QComboBox* typeCombo;
+    QComboBox* employmentRateCombo;
+    QComboBox* managerProject;
+    QLineEdit* devLanguage;
+    QLineEdit* devExperience;
+    QLineEdit* designerTool;
+    QLineEdit* designerProjects;
+    QLineEdit* qaTestType;
+    QLineEdit* qaBugs;
+};
+
+static void handleAddEmployeeButtonClick(const HandleAddEmployeeButtonClickParams& params) {
+    MainWindow* window = params.window;
+    QDialog& dialog = params.dialog;
+    QLineEdit* nameEdit = params.nameEdit;
+    QLineEdit* salaryEdit = params.salaryEdit;
+    QLineEdit* deptEdit = params.deptEdit;
+    QComboBox* typeCombo = params.typeCombo;
+    QComboBox* employmentRateCombo = params.employmentRateCombo;
+    QComboBox* managerProject = params.managerProject;
+    QLineEdit* devLanguage = params.devLanguage;
+    QLineEdit* devExperience = params.devExperience;
+    QLineEdit* designerTool = params.designerTool;
+    QLineEdit* designerProjects = params.designerProjects;
+    QLineEdit* qaTestType = params.qaTestType;
+    QLineEdit* qaBugs = params.qaBugs;
     try {
-        if (EmployeeDialogHandler::AddEmployeeParams params{
+        if (EmployeeDialogHandler::AddEmployeeParams addParams{
                 &dialog, window->currentCompany, window->nextEmployeeId,
                 nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
                 managerProject, devLanguage, devExperience, designerTool,
                 designerProjects, qaTestType, qaBugs};
-            !EmployeeDialogHandler::processAddEmployee(params)) {
+            !EmployeeDialogHandler::processAddEmployee(addParams)) {
             return;
         }
         handleAddEmployeeSuccess(window, dialog, nameEdit, typeCombo, salaryEdit);
@@ -139,24 +161,47 @@ static void handleAddEmployeeButtonClick(MainWindow* window, QDialog& dialog,
 
 static void handleEditEmployeeError(QDialog& dialog, const std::exception& e);
 
-static void handleEditEmployeeButtonClick(MainWindow* window, QDialog& dialog,
-                                           int employeeId, QLineEdit* nameEdit,
-                                           QLineEdit* salaryEdit, QLineEdit* deptEdit,
-                                           QComboBox* employmentRateCombo,
-                                           QComboBox* managerProject,
-                                           QLineEdit* devLanguage,
-                                           QLineEdit* devExperience,
-                                           QLineEdit* designerTool,
-                                           QLineEdit* designerProjects,
-                                           QLineEdit* qaTestType, QLineEdit* qaBugs,
-                                           const QString& currentType) {
+struct HandleEditEmployeeButtonClickParams {
+    MainWindow* window;
+    QDialog& dialog;
+    int employeeId;
+    QLineEdit* nameEdit;
+    QLineEdit* salaryEdit;
+    QLineEdit* deptEdit;
+    QComboBox* employmentRateCombo;
+    QComboBox* managerProject;
+    QLineEdit* devLanguage;
+    QLineEdit* devExperience;
+    QLineEdit* designerTool;
+    QLineEdit* designerProjects;
+    QLineEdit* qaTestType;
+    QLineEdit* qaBugs;
+    const QString& currentType;
+};
+
+static void handleEditEmployeeButtonClick(const HandleEditEmployeeButtonClickParams& params) {
+    MainWindow* window = params.window;
+    QDialog& dialog = params.dialog;
+    int employeeId = params.employeeId;
+    QLineEdit* nameEdit = params.nameEdit;
+    QLineEdit* salaryEdit = params.salaryEdit;
+    QLineEdit* deptEdit = params.deptEdit;
+    QComboBox* employmentRateCombo = params.employmentRateCombo;
+    QComboBox* managerProject = params.managerProject;
+    QLineEdit* devLanguage = params.devLanguage;
+    QLineEdit* devExperience = params.devExperience;
+    QLineEdit* designerTool = params.designerTool;
+    QLineEdit* designerProjects = params.designerProjects;
+    QLineEdit* qaTestType = params.qaTestType;
+    QLineEdit* qaBugs = params.qaBugs;
+    const QString& currentType = params.currentType;
     try {
-        if (EmployeeDialogHandler::EditEmployeeParams params{
+        if (EmployeeDialogHandler::EditEmployeeParams editParams{
                 &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
                 nameEdit, salaryEdit, deptEdit, employmentRateCombo,
                 managerProject, devLanguage, devExperience, designerTool,
                 designerProjects, qaTestType, qaBugs, currentType};
-            !EmployeeDialogHandler::processEditEmployee(params)) {
+            !EmployeeDialogHandler::processEditEmployee(editParams)) {
             return;
         }
         if (auto* mainWindow = qobject_cast<MainWindow*>(window)) {
@@ -413,10 +458,10 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
     if (!okButton) return;
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs]() {
-        handleAddEmployeeButtonClick(window, dialog, nameEdit, salaryEdit, deptEdit,
+        handleAddEmployeeButtonClick({window, dialog, nameEdit, salaryEdit, deptEdit,
                                      typeCombo, employmentRateCombo, managerProject,
                                      devLanguage, devExperience, designerTool,
-                                     designerProjects, qaTestType, qaBugs);
+                                     designerProjects, qaTestType, qaBugs});
     });
 
     dialog.exec();
@@ -475,10 +520,10 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
     if (!okButton) return;
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
-        handleEditEmployeeButtonClick(window, dialog, employeeId, nameEdit, salaryEdit,
+        handleEditEmployeeButtonClick({window, dialog, employeeId, nameEdit, salaryEdit,
                                       deptEdit, employmentRateCombo, managerProject,
                                       devLanguage, devExperience, designerTool,
-                                      designerProjects, qaTestType, qaBugs, currentType);
+                                      designerProjects, qaTestType, qaBugs, currentType});
     });
 
     dialog.exec();
@@ -874,12 +919,30 @@ static bool validateAssignEmployeeToTask(MainWindow* window, int& projectId,
     return true;
 }
 
-static void setupAssignTaskDialogUI(QDialog& dialog, QFormLayout* form,
-                                    QComboBox*& taskCombo, QComboBox*& employeeCombo,
-                                    QLineEdit*& hoursEdit, QLabel*& taskInfoLabel,
-                                    MainWindow* window, int projectId,
-                                    const QString& projectPhase,
-                                    const std::vector<Task>& tasks, int matchingCount) {
+struct SetupAssignTaskDialogUIParams {
+    QFormLayout* form;
+    QComboBox*& taskCombo;
+    QComboBox*& employeeCombo;
+    QLineEdit*& hoursEdit;
+    QLabel*& taskInfoLabel;
+    MainWindow* window;
+    int projectId;
+    const QString& projectPhase;
+    const std::vector<Task>& tasks;
+    int matchingCount;
+};
+
+static void setupAssignTaskDialogUI(const SetupAssignTaskDialogUIParams& params) {
+    QFormLayout* form = params.form;
+    QComboBox*& taskCombo = params.taskCombo;
+    QComboBox*& employeeCombo = params.employeeCombo;
+    QLineEdit*& hoursEdit = params.hoursEdit;
+    QLabel*& taskInfoLabel = params.taskInfoLabel;
+    MainWindow* window = params.window;
+    int projectId = params.projectId;
+    const QString& projectPhase = params.projectPhase;
+    const std::vector<Task>& tasks = params.tasks;
+    int matchingCount = params.matchingCount;
     taskCombo = new QComboBox();
     taskCombo->setStyleSheet(
         "QComboBox { background-color: white; color: black; } "
@@ -981,8 +1044,8 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
     QLineEdit* hoursEdit = nullptr;
     QLabel* taskInfoLabel = nullptr;
     
-    setupAssignTaskDialogUI(dialog, form, taskCombo, employeeCombo, hoursEdit,
-                            taskInfoLabel, window, projectId, projectPhase, tasks, matchingCount);
+    setupAssignTaskDialogUI({form, taskCombo, employeeCombo, hoursEdit,
+                            taskInfoLabel, window, projectId, projectPhase, tasks, matchingCount});
 
     auto* okButton = new QPushButton("Assign");
     form->addRow(okButton);

@@ -651,7 +651,7 @@ void MainWindowTaskAssignmentHelper::removeEmployeeFromProjectTasks(
     for (auto& task : mutableProject->getTasks()) {
         auto taskId = task.getId();
         auto employeeTaskHours =
-            company->getEmployeeTaskHours(employeeId, projectId, taskId);
+            company->getEmployeeHours(employeeId, projectId, taskId);
 
         if (employeeTaskHours > 0) {
             auto currentAllocated = task.getAllocatedHours();
@@ -686,7 +686,7 @@ void MainWindowTaskAssignmentHelper::collectTaskAssignments(
         if (!emp) continue;
         for (const auto& task : savedTasks) {
             auto taskId = task.getId();
-            auto hours = window->currentCompany->getEmployeeTaskHours(
+            auto hours = window->currentCompany->getEmployeeHours(
                 emp->getId(), projectId, taskId);
             if (hours > 0) {
                 savedTaskAssignments.push_back(

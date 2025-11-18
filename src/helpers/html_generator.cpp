@@ -51,7 +51,7 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
 
         bool hasTaskAssignments = false;
         for (const auto& task : tasks) {
-            if (company->getEmployeeTaskHours(
+            if (company->getEmployeeHours(
                     employee->getId(), project.getId(), task.getId()) > 0) {
                 hasTaskAssignments = true;
                 break;
@@ -188,7 +188,7 @@ static bool employeeHasTaskAssignments(const Company* company, int employeeId,
                                        const std::vector<Task>& tasks) {
     return std::ranges::any_of(
         tasks, [company, employeeId, projectId](const auto& task) {
-            return company->getEmployeeTaskHours(employeeId, projectId,
+            return company->getEmployeeHours(employeeId, projectId,
                                                  task.getId()) > 0;
         });
 }
@@ -219,7 +219,7 @@ static int calculateProjectHoursForEmployee(const Company* company,
     int projectHours = 0;
     for (const auto& task : tasks) {
         projectHours +=
-            company->getEmployeeTaskHours(employeeId, projectId, task.getId());
+            company->getEmployeeHours(employeeId, projectId, task.getId());
     }
     return projectHours;
 }
@@ -781,7 +781,7 @@ QString HtmlGenerator::getEmployeeTasksDisplay(
     const Company* company, const std::vector<Task>& tasks) {
     QStringList employeeTasks;
     for (const auto& task : tasks) {
-        int taskHours = company->getEmployeeTaskHours(
+        int taskHours = company->getEmployeeHours(
             employee->getId(), project.getId(), task.getId());
         if (taskHours > 0) {
             employeeTasks.append(task.getName().toHtmlEscaped());
@@ -809,7 +809,7 @@ QString HtmlGenerator::generateTeamTableRow(
 
     int capacity = std::max(employee->getWeeklyHoursCapacity(), 0);
     int projectHours =
-        company->getEmployeeProjectHours(employee->getId(), project.getId());
+        company->getEmployeeHours(employee->getId(), project.getId());
     int used = std::min(std::max(projectHours, 0), capacity);
     int currentTotalHours = std::max(employee->getCurrentWeeklyHours(), 0);
     int available = std::max(capacity - currentTotalHours, 0);

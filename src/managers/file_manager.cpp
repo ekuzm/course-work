@@ -158,7 +158,7 @@ static void collectTaskAssignments(
         }
 
         auto taskHours =
-            company.getEmployeeTaskHours(emp->getId(), projectId, taskId);
+            company.getEmployeeHours(emp->getId(), projectId, taskId);
         
         if (taskHours <= 0) {
             continue;
@@ -462,7 +462,7 @@ static void collectEmployeeTaskAssignments(
                 break;
             }
             
-            int taskHours = company.getEmployeeTaskHours(employeeId, projectId,
+            int taskHours = company.getEmployeeHours(employeeId, projectId,
                                                          task.getId());
             
             if (taskHours <= 0) {

@@ -13,7 +13,7 @@ static bool hasEmployeeTaskAssignments(const Company& company, int employeeId,
     auto tasks = company.getProjectTasks(projectId);
     return std::ranges::any_of(
         tasks, [&company, employeeId, projectId](const auto& task) {
-            return company.getEmployeeTaskHours(employeeId, projectId,
+            return company.getEmployeeHours(employeeId, projectId,
                                                 task.getId()) > 0;
         });
 }
