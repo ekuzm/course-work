@@ -12,7 +12,7 @@ class ProjectHelper {
     static void populateProjectTasksTable(QTableWidget* table,
                                           const Project& project,
                                           MainWindow* mainWindow);
-    static void clearProjectAllocatedHoursIfNoEmployees(Company* company,
+    static void clearProjectAllocatedHoursIfNoEmployees(const Company* company,
                                                         int projectId);
     static bool hasAssignedEmployees(const Company* company, int projectId);
 };
