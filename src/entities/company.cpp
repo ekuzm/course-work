@@ -253,7 +253,7 @@ Company::Company(Company&& other) noexcept
       taskManager(taskAssignments, employees, projects),
       statistics(employees, projects) {}
 
-Company::~Company() = default;
+Company::~Company() noexcept = default;
 
 void Company::addEmployee(std::shared_ptr<Employee> employee) {
     if (std::shared_ptr<Employee> existing = getEmployee(employee->getId());
