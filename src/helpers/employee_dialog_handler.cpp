@@ -314,12 +314,16 @@ static bool processEditEmployeeImpl(
     }
 
     if (!hasChanges) {
-        params.dialog->hide();
+        QWidget* parent = params.dialog->parentWidget();
+        if (!parent) {
+            parent = params.dialog;
+        }
         QMessageBox::information(
-            params.dialog->parentWidget(), "No Changes",
+            parent, "No Changes",
             "No changes were made to the employee.\n\n"
             "Please modify at least one field before saving.");
-        params.dialog->show();
+        params.dialog->raise();
+        params.dialog->activateWindow();
         return false;
     }
 

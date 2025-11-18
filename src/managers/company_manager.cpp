@@ -34,26 +34,31 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
     int foundedYear =
         params.yearEdit->text().trimmed().toInt(&conversionSuccess);
 
+    QWidget* parent = params.dialog.parentWidget();
+    if (!parent) {
+        parent = &params.dialog;
+    }
+    
     if (companyName.isEmpty()) {
-        QMessageBox::warning(&params.dialog, "Validation Error",
+        QMessageBox::warning(parent, "Validation Error",
                              "Company name cannot be empty!\n\n"
                              "Please enter a name for the company.");
         return;
     }
     if (companyIndustry.isEmpty()) {
-        QMessageBox::warning(&params.dialog, "Validation Error",
+        QMessageBox::warning(parent, "Validation Error",
                              "Industry cannot be empty!\n\n"
                              "Please enter the industry of the company.");
         return;
     }
     if (companyLocation.isEmpty()) {
-        QMessageBox::warning(&params.dialog, "Validation Error",
+        QMessageBox::warning(parent, "Validation Error",
                              "Location cannot be empty!\n\n"
                              "Please enter the location of the company.");
         return;
     }
     if (!conversionSuccess) {
-        QMessageBox::warning(&params.dialog, "Validation Error",
+        QMessageBox::warning(parent, "Validation Error",
                              "Invalid year format!\n\n"
                              "Please enter a valid number.\n"
                              "Current value: \"" +
@@ -61,7 +66,7 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
         return;
     }
     if (foundedYear < kMinYear || foundedYear > QDate::currentDate().year()) {
-        QMessageBox::warning(&params.dialog, "Validation Error",
+        QMessageBox::warning(parent, "Validation Error",
                              "Year out of valid range!\n\n"
                              "Current value: " +
                                  QString::number(foundedYear) +
@@ -75,7 +80,7 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
     for (const Company* existingCompany : params.companies) {
         if (existingCompany != nullptr &&
             existingCompany->getName().toLower() == companyName.toLower()) {
-            QMessageBox::warning(&params.dialog, "Duplicate Error",
+            QMessageBox::warning(parent, "Duplicate Error",
                                  "A company with this name already exists!\n\n"
                                  "Company name: \"" +
                                      companyName +
@@ -95,7 +100,8 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
         params.selector->setCurrentIndex(params.currentCompanyIndex);
     }
 
-    QMessageBox::information(&params.dialog, "Success",
+    params.dialog.hide();
+    QMessageBox::information(params.dialog.parentWidget(), "Success",
                              "Company added successfully!\n\n"
                              "Name: " +
                                  companyName +

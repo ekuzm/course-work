@@ -413,7 +413,8 @@ void MainWindowProjectDialogHandler::updateProjectWithChanges(
 
 void MainWindowProjectDialogHandler::showProjectUpdateSuccess(
     QDialog& dialog, const ProjectEditData& data) {
-    QMessageBox::information(&dialog, "Success",
+    dialog.hide();
+    QMessageBox::information(dialog.parentWidget(), "Success",
                              "Project updated successfully!\n\n"
                              "Name: " +
                                  data.projectName +
@@ -423,6 +424,7 @@ void MainWindowProjectDialogHandler::showProjectUpdateSuccess(
                                  "\n"
                                  "Budget: $" +
                                  QString::number(data.projectBudget, 'f', 2));
+    dialog.accept();
 }
 
 void MainWindowProjectDialogHandler::handleEditProjectDialog(
@@ -438,7 +440,11 @@ void MainWindowProjectDialogHandler::handleEditProjectDialog(
 
         if (!MainWindowValidationHelper::checkDuplicateProjectOnEdit(
                 data.projectName, projectId, window->currentCompany)) {
-            QMessageBox::warning(&dialog, "Duplicate Error",
+            QWidget* parent = dialog.parentWidget();
+            if (!parent) {
+                parent = &dialog;
+            }
+            QMessageBox::warning(parent, "Duplicate Error",
                                  "A project with this name already exists!\n\n"
                                  "Project name: \"" +
                                      data.projectName +
@@ -453,15 +459,22 @@ void MainWindowProjectDialogHandler::handleEditProjectDialog(
         const Project* oldProject =
             window->currentCompany->getProject(projectId);
         if (!oldProject) {
-            QMessageBox::warning(&dialog, "Error", "Project not found!");
+            QWidget* parent = dialog.parentWidget();
+            if (!parent) {
+                parent = &dialog;
+            }
+            QMessageBox::warning(parent, "Error", "Project not found!");
             return;
         }
 
         if (!checkProjectChanges(oldProject, data)) {
+            QWidget* parent = window;
             QMessageBox::information(
-                &dialog, "No Changes",
+                parent, "No Changes",
                 "No changes were made to the project.\n\n"
                 "Please modify at least one field before saving.");
+            dialog.raise();
+            dialog.activateWindow();
             return;
         }
 
@@ -519,8 +532,9 @@ void MainWindowProjectDialogHandler::handleAddTaskDialog(
 
         MainWindowDataOperations::refreshAllData(window);
         MainWindowDataOperations::autoSave(window);
+        dialog.hide();
         QMessageBox::information(
-            &dialog, "Success",
+            dialog.parentWidget(), "Success",
             QString("Task added successfully!\n\n"
                     "Task name: %1\n"
                     "Type: %2\n"
@@ -548,7 +562,11 @@ void MainWindowProjectDialogHandler::handleAssignEmployeeToTaskDialog(
 
         auto employee = window->currentCompany->getEmployee(employeeId);
         if (!employee) {
-            QMessageBox::warning(&dialog, "Error", "Employee not found!");
+            QWidget* parent = dialog.parentWidget();
+            if (!parent) {
+                parent = &dialog;
+            }
+            QMessageBox::warning(parent, "Error", "Employee not found!");
             return;
         }
 
@@ -556,8 +574,12 @@ void MainWindowProjectDialogHandler::handleAssignEmployeeToTaskDialog(
         int maxHours = std::min(kMaxHoursPerWeek, availableHours);
 
         if (maxHours <= 0) {
+            QWidget* parent = dialog.parentWidget();
+            if (!parent) {
+                parent = &dialog;
+            }
             QMessageBox::warning(
-                &dialog, "Error",
+                parent, "Error",
                 QString("Employee '%1' has no available hours.\n\n"
                         "Weekly capacity: %2h\n"
                         "Currently used: %3h\n"
@@ -599,8 +621,9 @@ void MainWindowProjectDialogHandler::handleAssignEmployeeToTaskDialog(
             employeeName = emp->getName();
         }
 
+        dialog.hide();
         QMessageBox::information(
-            &dialog, "Success",
+            dialog.parentWidget(), "Success",
             QString("Employee assigned to task successfully!\n\n"
                     "Task: %1\n"
                     "Employee: %2\n"

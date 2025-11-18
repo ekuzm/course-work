@@ -8,8 +8,12 @@ bool ValidationHelper::validateNonEmpty(const QString& value,
                                         const QString& fieldName,
                                         QDialog* dialog) {
     if (value.isEmpty()) {
+        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
+        if (!parent && dialog) {
+            parent = dialog;
+        }
         QMessageBox::warning(
-            dialog, "Validation Error",
+            parent, "Validation Error",
             QString("%1 cannot be empty!\n\nPlease enter a valid %2.")
                 .arg(fieldName, fieldName.toLower()));
         return false;
@@ -25,8 +29,12 @@ bool ValidationHelper::validateDouble(const QString& text, double& result,
     double value = text.toDouble(&conversionSuccess);
 
     if (!conversionSuccess) {
+        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
+        if (!parent && dialog) {
+            parent = dialog;
+        }
         QMessageBox::warning(
-            dialog, "Validation Error",
+            parent, "Validation Error",
             QString("Invalid %1 format!\n\nPlease enter a valid number.\n"
                     "Current value: \"%2\"\nValid range: $%3 to $%4")
                 .arg(fieldName.toLower(), text, QString::number(min, 'f', 0),
@@ -35,7 +43,11 @@ bool ValidationHelper::validateDouble(const QString& text, double& result,
     }
 
     if (value < min || value > max) {
-        QMessageBox::warning(dialog, "Validation Error",
+        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
+        if (!parent && dialog) {
+            parent = dialog;
+        }
+        QMessageBox::warning(parent, "Validation Error",
                              QString("%1 out of valid range!\n\nCurrent value: "
                                      "$%2\nValid range: $%3 to $%4")
                                  .arg(fieldName, QString::number(value, 'f', 2),
@@ -55,8 +67,12 @@ bool ValidationHelper::validateInt(const QString& text, int& result, int min,
     int value = text.toInt(&conversionSuccess);
 
     if (!conversionSuccess || text.isEmpty()) {
+        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
+        if (!parent && dialog) {
+            parent = dialog;
+        }
         QMessageBox::warning(
-            dialog, "Validation Error",
+            parent, "Validation Error",
             QString("Invalid %1 format!\n\nPlease enter a valid number.\n"
                     "Current value: \"%2\"\nValid range: %3 to %4")
                 .arg(fieldName.toLower(), text, QString::number(min),
@@ -65,6 +81,10 @@ bool ValidationHelper::validateInt(const QString& text, int& result, int min,
     }
 
     if (value < min || value > max) {
+        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
+        if (!parent && dialog) {
+            parent = dialog;
+        }
         QString errorMessage;
         if (max < min) {
             errorMessage =
@@ -83,7 +103,7 @@ bool ValidationHelper::validateInt(const QString& text, int& result, int min,
                                .arg(fieldName, QString::number(value),
                                     QString::number(min), QString::number(max));
         }
-        QMessageBox::warning(dialog, "Validation Error", errorMessage);
+        QMessageBox::warning(parent, "Validation Error", errorMessage);
         return false;
     }
 
@@ -95,7 +115,11 @@ bool ValidationHelper::validateDateRange(const QDate& startDate,
                                          const QDate& endDate,
                                          QDialog* dialog) {
     if (endDate < startDate) {
-        QMessageBox::warning(dialog, "Validation Error",
+        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
+        if (!parent && dialog) {
+            parent = dialog;
+        }
+        QMessageBox::warning(parent, "Validation Error",
                              QString("End date cannot be before start date!\n\n"
                                      "Start date: %1\n"
                                      "End date: %2\n\n"

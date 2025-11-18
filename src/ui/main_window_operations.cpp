@@ -302,7 +302,7 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Employee not found!");
         return;
     }
-
+    
     QDialog dialog(window);
     dialog.setWindowTitle("Edit Employee");
     dialog.setMinimumWidth(kDefaultDialogMinWidth);
@@ -491,12 +491,12 @@ void EmployeeOperations::fireEmployee(MainWindow* window) {
     
     if (employee->getCurrentWeeklyHours() > 0) {
         if (int userChoice = QMessageBox::question(
-            window, "Confirm Fire",
+        window, "Confirm Fire",
             QString("This employee has active assignments (%1 hours/week).\n\n"
                     "Are you sure you want to fire this employee?\n\n"
                     "This will remove all active assignments.")
                 .arg(employee->getCurrentWeeklyHours()),
-            QMessageBox::Yes | QMessageBox::No);
+        QMessageBox::Yes | QMessageBox::No);
             userChoice != QMessageBox::Yes) {
             return;
         }
@@ -613,7 +613,7 @@ void ProjectOperations::editProject(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Please select a project to edit.");
         return;
     }
-
+    
     const auto* project = window->currentCompany->getProject(projectId);
     if (project == nullptr) {
         QMessageBox::warning(window, "Error", "Project not found!");
@@ -747,7 +747,7 @@ void ProjectOperations::addProjectTask(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
         return;
     }
-
+    
     QDialog dialog(window);
     auto* form = new QFormLayout(&dialog);
 
@@ -921,7 +921,7 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
         return;
     }
-
+    
     const auto* project = window->currentCompany->getProject(projectId);
     if (!project) {
         QMessageBox::warning(window, "Error", "Project not found!");
@@ -970,14 +970,14 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
                     .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
     } catch (const CompanyException& e) {
             handleAutoAssignCompanyException(window, projectId, e);
-        } catch (const EmployeeException& e) {
+    } catch (const EmployeeException& e) {
             QString detailedMessage = QString("Failed to assign employee to task!\n\n"
                                               "Error details:\n%1\n\n"
                                               "Please check the input data and try again.")
                                           .arg(e.what());
             QMessageBox::warning(window, "Failed to assign employee to task!",
                                  detailedMessage);
-        } catch (const ProjectException& e) {
+    } catch (const ProjectException& e) {
             QString detailedMessage = QString("Failed to assign employee to task!\n\n"
                                               "Error details:\n%1\n\n"
                                               "Please check the input data and try again.")
@@ -1010,7 +1010,7 @@ void ProjectOperations::viewProjectAssignments(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
         return;
     }
-
+    
     const auto* project = window->currentCompany->getProject(projectId);
     if (!project) {
         QMessageBox::warning(window, "Error", "Project not found!");
@@ -1112,7 +1112,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Please select an employee first.");
         return;
     }
-
+    
     auto employee = window->currentCompany->getEmployee(employeeId);
     if (!employee) {
         QMessageBox::warning(window, "Error", "Employee not found!");
@@ -1136,8 +1136,8 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
     for (const auto& proj : allProjects) {
         if (allProjectIds.contains(proj.getId())) {
             employeeProjects.push_back(&proj);
-        }
     }
+}
 
     if (employeeProjects.empty()) {
         QMessageBox::information(window, "Employee History",
@@ -1158,7 +1158,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
                              "Too many projects to display. Data may be corrupted.");
         delete table;
         return;
-    }
+}
     table->setRowCount(static_cast<int>(employeeProjectCount));
 
     auto row = 0;
@@ -1176,7 +1176,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
         table->setItem(row, 7, new QTableWidgetItem(QString::number(proj->getEmployeeCosts(), 'f', 2)));
         table->setItem(row, 8, new QTableWidgetItem(status));
         row++;
-    }
+}
 
     table->resizeColumnsToContents();
     table->setColumnWidth(0, 50); 

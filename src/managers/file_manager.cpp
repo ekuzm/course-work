@@ -429,8 +429,8 @@ static void processTasksVersion2(Company& company,
                     addTaskWithDeadlineException(company, taskData);
                 } catch (const ProjectException&) {
                     continue;
-                } catch (const CompanyException&) {
-                    continue;
+        } catch (const CompanyException&) {
+            continue;
                 } catch (const TaskException&) {
                     continue;
                 }
