@@ -189,12 +189,120 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
                         "Please check file permissions and try again.")
                     .arg(e.what()));
             dialog.show();
-        } catch (const std::exception& e) {
+        } catch (const EmployeeException& e) {
+            ExceptionHandler::handleGenericException(e, &dialog);
+        } catch (const ProjectException& e) {
+            ExceptionHandler::handleGenericException(e, &dialog);
+        } catch (const TaskException& e) {
             ExceptionHandler::handleGenericException(e, &dialog);
         }
     });
 
     dialog.exec();
+}
+
+static void handleEditEmployeeButtonClick(MainWindow* window, QDialog& dialog,
+                                         int employeeId, QLineEdit* nameEdit,
+                                         QLineEdit* salaryEdit, QLineEdit* deptEdit,
+                                         QComboBox* employmentRateCombo,
+                                         QComboBox* managerProject,
+                                         QLineEdit* devLanguage,
+                                         QLineEdit* devExperience,
+                                         QLineEdit* designerTool,
+                                         QLineEdit* designerProjects,
+                                         QLineEdit* qaTestType,
+                                         QLineEdit* qaBugs,
+                                         const QString& currentType) {
+    try {
+        if (EmployeeDialogHandler::EditEmployeeParams params{
+                &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
+                nameEdit, salaryEdit, deptEdit, employmentRateCombo,
+                managerProject, devLanguage, devExperience, designerTool,
+                designerProjects, qaTestType, qaBugs, currentType};
+            !EmployeeDialogHandler::processEditEmployee(params)) {
+            return;
+        }
+
+        MainWindowDataOperations::refreshAllData(window);
+        MainWindowDataOperations::autoSave(window);
+        QMessageBox::information(
+            &dialog, "Success",
+            "Employee updated successfully!\n\n"
+            "Name: " +
+                nameEdit->text().trimmed() + "\nType: " + currentType +
+                "\nSalary: $" + salaryEdit->text().trimmed());
+        dialog.accept();
+    } catch (const CompanyException& e) {
+        ExceptionHandler::handleCompanyException(e, &dialog,
+                                                 "edit employee");
+    } catch (const FileManagerException& e) {
+        ExceptionHandler::handleFileManagerException(e, &dialog,
+                                                     "employee update");
+    } catch (const EmployeeException& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    } catch (const ProjectException& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    } catch (const TaskException& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
+}
+
+static void handleAddEmployeeButtonClick(MainWindow* window, QDialog& dialog,
+                                         QLineEdit* nameEdit, QLineEdit* salaryEdit,
+                                         QLineEdit* deptEdit, QComboBox* typeCombo,
+                                         QComboBox* employmentRateCombo,
+                                         QComboBox* managerProject,
+                                         QLineEdit* devLanguage,
+                                         QLineEdit* devExperience,
+                                         QLineEdit* designerTool,
+                                         QLineEdit* designerProjects,
+                                         QLineEdit* qaTestType,
+                                         QLineEdit* qaBugs) {
+    try {
+        if (EmployeeDialogHandler::AddEmployeeParams params{
+                &dialog, window->currentCompany, window->nextEmployeeId,
+                nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
+                managerProject, devLanguage, devExperience, designerTool,
+                designerProjects, qaTestType, qaBugs};
+            !EmployeeDialogHandler::processAddEmployee(params)) {
+            return;
+        }
+
+        MainWindowDataOperations::refreshAllData(window);
+        MainWindowDataOperations::autoSave(window);
+        dialog.hide();
+        QMessageBox::information(window, "Success",
+                                 "Employee added successfully!\n\n"
+                                 "Name: " +
+                                     nameEdit->text().trimmed() +
+                                     "\nType: " + typeCombo->currentText() +
+                                     "\nSalary: $" +
+                                     salaryEdit->text().trimmed());
+        dialog.accept();
+    } catch (const CompanyException& e) {
+        dialog.hide();
+        QMessageBox::warning(window, "Error",
+                             QString("Failed to add employee!\n\nError details: %1\n\nPlease "
+                                     "check the input data and try again.")
+                                 .arg(e.what()));
+        dialog.show();
+    } catch (const FileManagerException& e) {
+        dialog.hide();
+        QMessageBox::warning(
+            window, "Auto-save Error",
+            QString("Failed to auto-save changes!\n\nError details: %1\n\n"
+                    "The employee was completed but the data could not be saved "
+                    "automatically.\n"
+                    "Please check file permissions and try again.")
+                .arg(e.what()));
+        dialog.show();
+    } catch (const EmployeeException& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    } catch (const ProjectException& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    } catch (const TaskException& e) {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
 }
 
 void EmployeeOperations::editEmployee(MainWindow* window) {
@@ -303,34 +411,7 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
     dialog.setFixedSize(maxSize);
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
-        try {
-            if (EmployeeDialogHandler::EditEmployeeParams params{
-                    &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
-                    nameEdit, salaryEdit, deptEdit, employmentRateCombo,
-                    managerProject, devLanguage, devExperience, designerTool,
-                    designerProjects, qaTestType, qaBugs, currentType};
-                !EmployeeDialogHandler::processEditEmployee(params)) {
-                return;
-            }
-
-            MainWindowDataOperations::refreshAllData(window);
-            MainWindowDataOperations::autoSave(window);
-            QMessageBox::information(
-                &dialog, "Success",
-                "Employee updated successfully!\n\n"
-                "Name: " +
-                    nameEdit->text().trimmed() + "\nType: " + currentType +
-                    "\nSalary: $" + salaryEdit->text().trimmed());
-            dialog.accept();
-        } catch (const CompanyException& e) {
-            ExceptionHandler::handleCompanyException(e, &dialog,
-                                                     "edit employee");
-        } catch (const FileManagerException& e) {
-            ExceptionHandler::handleFileManagerException(e, &dialog,
-                                                         "employee update");
-        } catch (const std::exception& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
-        }
+        handleEditEmployeeButtonClick(window, dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType);
     });
 
     dialog.exec();
@@ -909,7 +990,21 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
                 QMessageBox::warning(window, "Failed to assign employee to task!",
                                      detailedMessage);
             }
-        } catch (const std::exception& e) {
+        } catch (const EmployeeException& e) {
+            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
+                                              "Error details:\n%1\n\n"
+                                              "Please check the input data and try again.")
+                                          .arg(e.what());
+            QMessageBox::warning(window, "Failed to assign employee to task!",
+                                 detailedMessage);
+        } catch (const ProjectException& e) {
+            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
+                                              "Error details:\n%1\n\n"
+                                              "Please check the input data and try again.")
+                                          .arg(e.what());
+            QMessageBox::warning(window, "Failed to assign employee to task!",
+                                 detailedMessage);
+        } catch (const TaskException& e) {
             QString detailedMessage = QString("Failed to assign employee to task!\n\n"
                                               "Error details:\n%1\n\n"
                                               "Please check the input data and try again.")

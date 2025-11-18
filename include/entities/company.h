@@ -55,6 +55,7 @@ class Company {
    public:
     Company(QString name, QString industry, QString location, int foundedYear);
     Company(Company&& other) noexcept;
+    ~Company() = default;
 
     TaskAssignmentManager& getTaskManager() { return taskManager; }
     const CompanyStatistics& getStatistics() const { return statistics; }

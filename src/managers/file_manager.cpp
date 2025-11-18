@@ -287,6 +287,34 @@ static int calculateStartIndex(const std::vector<std::string>& lines,
     return startIndex;
 }
 
+static void updateTaskDataFromField(const TaskFieldData& fieldData,
+                                    TaskData& taskData) {
+    if (fieldData.projectId > 0) {
+        taskData.projectId = fieldData.projectId;
+    }
+    if (fieldData.taskId > 0) {
+        taskData.taskId = fieldData.taskId;
+    }
+    if (!fieldData.taskName.isEmpty()) {
+        taskData.taskName = fieldData.taskName;
+    }
+    if (!fieldData.taskType.isEmpty()) {
+        taskData.taskType = fieldData.taskType;
+    }
+    if (fieldData.estimatedHours >= 0) {
+        taskData.estimatedHours = fieldData.estimatedHours;
+    }
+    if (fieldData.allocatedHours >= 0) {
+        taskData.allocatedHours = fieldData.allocatedHours;
+    }
+    if (fieldData.priority >= 0) {
+        taskData.priority = fieldData.priority;
+    }
+    if (!fieldData.phase.isEmpty()) {
+        taskData.phase = fieldData.phase;
+    }
+}
+
 static bool processTaskVersion2(const ProcessTaskVersion2Params& params) {
     while (params.lineIndex < static_cast<int>(params.lines.size()) &&
            params.lines[params.lineIndex].find("[TASK") != 0) {
@@ -318,30 +346,7 @@ static bool processTaskVersion2(const ProcessTaskVersion2Params& params) {
 
         TaskFieldData fieldData;
         parseTaskField(lineContent, fieldData);
-        if (fieldData.projectId > 0) {
-            params.taskData.projectId = fieldData.projectId;
-        }
-        if (fieldData.taskId > 0) {
-            params.taskData.taskId = fieldData.taskId;
-        }
-        if (!fieldData.taskName.isEmpty()) {
-            params.taskData.taskName = fieldData.taskName;
-        }
-        if (!fieldData.taskType.isEmpty()) {
-            params.taskData.taskType = fieldData.taskType;
-        }
-        if (fieldData.estimatedHours >= 0) {
-            params.taskData.estimatedHours = fieldData.estimatedHours;
-        }
-        if (fieldData.allocatedHours >= 0) {
-            params.taskData.allocatedHours = fieldData.allocatedHours;
-        }
-        if (fieldData.priority >= 0) {
-            params.taskData.priority = fieldData.priority;
-        }
-        if (!fieldData.phase.isEmpty()) {
-            params.taskData.phase = fieldData.phase;
-        }
+        updateTaskDataFromField(fieldData, params.taskData);
 
         processTaskAssignmentLine(lineContent, params.taskData.assignments,
                                   assignmentsRead, assignmentsCount,
@@ -351,6 +356,75 @@ static bool processTaskVersion2(const ProcessTaskVersion2Params& params) {
     }
 
     return true;
+}
+
+static bool isTaskDataValid(const TaskData& taskData) {
+    return taskData.projectId > 0 && taskData.taskId > 0 &&
+           !taskData.taskName.isEmpty();
+}
+
+static bool taskExists(const Company& company, int projectId, int taskId) {
+    auto existingTasks = company.getProjectTasks(projectId);
+    for (const auto& existingTask : existingTasks) {
+        if (existingTask.getId() == taskId) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void addTaskDirectlyToProject(Company& company, const TaskData& taskData) {
+    Project* project = company.getProject(taskData.projectId);
+    if (project) {
+        Task task(taskData.taskId, taskData.taskName, taskData.taskType,
+                  taskData.estimatedHours, taskData.priority);
+        task.setPhase(taskData.phase);
+        task.setAllocatedHours(taskData.allocatedHours);
+        project->getTasks().push_back(task);
+        project->recomputeTotalsFromTasks();
+        processTaskAssignments(company, taskData.projectId, taskData.taskId,
+                               taskData.assignments);
+    }
+}
+
+static void processSingleTask(Company& company, const TaskData& taskData) {
+    if (!isTaskDataValid(taskData)) {
+        return;
+    }
+
+    if (const Project* project = company.getProject(taskData.projectId);
+        !project) {
+        return;
+    }
+
+    if (taskExists(company, taskData.projectId, taskData.taskId)) {
+        return;
+    }
+
+    try {
+        AddTaskParams addParams;
+        addParams.projectId = taskData.projectId;
+        addParams.taskId = taskData.taskId;
+        addParams.taskName = taskData.taskName;
+        addParams.taskType = taskData.taskType;
+        addParams.estimatedHours = taskData.estimatedHours;
+        addParams.allocatedHours = taskData.allocatedHours;
+        addParams.priority = taskData.priority;
+        addParams.phase = taskData.phase;
+        addParams.assignments = taskData.assignments;
+        addTaskToCompany(company, addParams);
+    } catch (const ProjectException& e) {
+        if (QString errorMsg = e.what(); errorMsg.contains("exceed deadline")) {
+            try {
+                addTaskDirectlyToProject(company, taskData);
+            } catch (const CompanyException&) {
+            } catch (const ProjectException&) {
+            } catch (const TaskException&) {
+            }
+        }
+    } catch (const CompanyException&) {
+    } catch (const TaskException&) {
+    }
 }
 
 static void processTasksVersion2(Company& company,
@@ -366,65 +440,7 @@ static void processTasksVersion2(Company& company,
             break;
         }
 
-        if (taskData.projectId <= 0 || taskData.taskId <= 0 ||
-            taskData.taskName.isEmpty()) {
-            continue;
-        }
-
-        if (const Project* project = company.getProject(taskData.projectId);
-            !project) {
-            continue;
-        }
-
-        auto existingTasks = company.getProjectTasks(taskData.projectId);
-        bool taskExists = false;
-        for (const auto& existingTask : existingTasks) {
-            if (existingTask.getId() == taskData.taskId) {
-                taskExists = true;
-                break;
-            }
-        }
-        if (taskExists) {
-            continue;
-        }
-
-        try {
-            AddTaskParams addParams;
-            addParams.projectId = taskData.projectId;
-            addParams.taskId = taskData.taskId;
-            addParams.taskName = taskData.taskName;
-            addParams.taskType = taskData.taskType;
-            addParams.estimatedHours = taskData.estimatedHours;
-            addParams.allocatedHours = taskData.allocatedHours;
-            addParams.priority = taskData.priority;
-            addParams.phase = taskData.phase;
-            addParams.assignments = taskData.assignments;
-            addTaskToCompany(company, addParams);
-        } catch (const ProjectException& e) {
-            if (QString errorMsg = e.what(); errorMsg.contains("exceed deadline")) {
-                try {
-                    Project* project = company.getProject(taskData.projectId);
-                    if (project) {
-                        Task task(taskData.taskId, taskData.taskName, taskData.taskType,
-                                  taskData.estimatedHours, taskData.priority);
-                        task.setPhase(taskData.phase);
-                        task.setAllocatedHours(taskData.allocatedHours);
-                        project->getTasks().push_back(task);
-                        project->recomputeTotalsFromTasks();
-                        processTaskAssignments(company, taskData.projectId, taskData.taskId,
-                                               taskData.assignments);
-                    }
-                } catch (...) {
-                    continue;
-                }
-            } else {
-                continue;
-            }
-        } catch (const CompanyException&) {
-            continue;
-        } catch (const TaskException&) {
-            continue;
-        }
+        processSingleTask(company, taskData);
     }
 }
 

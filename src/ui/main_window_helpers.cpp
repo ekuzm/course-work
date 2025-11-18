@@ -513,8 +513,7 @@ void MainWindowProjectDialogHandler::handleAddTaskDialog(
             return;
         }
 
-        Project* project = const_cast<Project*>(window->currentCompany->getProject(projectId));
-        if (project) {
+        if (auto* project = const_cast<Project*>(window->currentCompany->getProject(projectId)); project) {
             project->recomputeTotalsFromTasks();
         }
 
@@ -581,8 +580,7 @@ void MainWindowProjectDialogHandler::handleAssignEmployeeToTaskDialog(
                                                      taskId, hours);
         window->currentCompany->recalculateTaskAllocatedHours();
         
-        Project* project = const_cast<Project*>(window->currentCompany->getProject(projectId));
-        if (project) {
+        if (auto* project = const_cast<Project*>(window->currentCompany->getProject(projectId)); project) {
             project->recomputeTotalsFromTasks();
         }
         
