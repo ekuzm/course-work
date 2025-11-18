@@ -8,13 +8,8 @@
 #include "entities/task.h"
 
 class ProjectService {
-   private:
-    Company* company;
-
    public:
-    explicit ProjectService(Company* company);
-
-    void addTaskToProject(int projectId, const Task& task);
-    std::vector<Task> getProjectTasks(int projectId) const;
-    void recomputeProjectTotals(int projectId);
+    static void addTaskToProject(Company* company, int projectId, const Task& task);
+    static std::vector<Task> getProjectTasks(const Company* company, int projectId);
+    static void recomputeProjectTotals(Company* company, int projectId);
 };

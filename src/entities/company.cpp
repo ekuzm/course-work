@@ -253,12 +253,6 @@ Company::Company(Company&& other) noexcept
       taskManager(taskAssignments, employees, projects),
       statistics(employees, projects) {}
 
-Company::~Company() {
-    // Resources are managed automatically by smart pointers and containers
-    // EmployeeContainer and ProjectContainer handle cleanup automatically
-    // TaskAssignmentManager and CompanyStatistics are value types
-}
-
 void Company::addEmployee(std::shared_ptr<Employee> employee) {
     if (std::shared_ptr<Employee> existing = getEmployee(employee->getId());
         existing) {
