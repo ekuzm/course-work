@@ -300,6 +300,27 @@ void executeWithExceptionHandling(MainWindow* window, Func&& operation,
     }
 }
 
+struct EmployeeDialogFieldPointers {
+    QLineEdit* nameEdit = nullptr;
+    QLineEdit* salaryEdit = nullptr;
+    QLineEdit* deptEdit = nullptr;
+    QComboBox* employmentRateCombo = nullptr;
+    QComboBox* managerProject = nullptr;
+    QLineEdit* devLanguage = nullptr;
+    QLineEdit* devExperience = nullptr;
+    QLineEdit* designerTool = nullptr;
+    QLineEdit* designerProjects = nullptr;
+    QLineEdit* qaTestType = nullptr;
+    QLineEdit* qaBugs = nullptr;
+    QLabel* managerProjectLabel = nullptr;
+    QLabel* devLanguageLabel = nullptr;
+    QLabel* devExperienceLabel = nullptr;
+    QLabel* designerToolLabel = nullptr;
+    QLabel* designerProjectsLabel = nullptr;
+    QLabel* qaTestTypeLabel = nullptr;
+    QLabel* qaBugsLabel = nullptr;
+};
+
 struct SetupEmployeeDialogCommonFieldsParams {
     QDialog& dialog;
     QVBoxLayout* mainLayout;
@@ -451,40 +472,23 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
 
     auto* mainLayout = new QVBoxLayout(&dialog);
     QComboBox* typeCombo = nullptr;
-    QLineEdit* nameEdit = nullptr;
-    QLineEdit* salaryEdit = nullptr;
-    QLineEdit* deptEdit = nullptr;
-    QComboBox* employmentRateCombo = nullptr;
-    QComboBox* managerProject = nullptr;
-    QLineEdit* devLanguage = nullptr;
-    QLineEdit* devExperience = nullptr;
-    QLineEdit* designerTool = nullptr;
-    QLineEdit* designerProjects = nullptr;
-    QLineEdit* qaTestType = nullptr;
-    QLineEdit* qaBugs = nullptr;
-    QLabel* managerProjectLabel = nullptr;
-    QLabel* devLanguageLabel = nullptr;
-    QLabel* devExperienceLabel = nullptr;
-    QLabel* designerToolLabel = nullptr;
-    QLabel* designerProjectsLabel = nullptr;
-    QLabel* qaTestTypeLabel = nullptr;
-    QLabel* qaBugsLabel = nullptr;
+    EmployeeDialogFieldPointers fieldPointers;
 
     EmployeeDialogHelper::CreateEmployeeDialogFields fields{
-        typeCombo, nameEdit, salaryEdit, deptEdit, employmentRateCombo,
-        managerProject, devLanguage, devExperience, designerTool,
-        designerProjects, qaTestType, qaBugs, managerProjectLabel,
-        devLanguageLabel, devExperienceLabel, designerToolLabel,
-        designerProjectsLabel, qaTestTypeLabel, qaBugsLabel};
+        typeCombo, fieldPointers.nameEdit, fieldPointers.salaryEdit, fieldPointers.deptEdit, fieldPointers.employmentRateCombo,
+        fieldPointers.managerProject, fieldPointers.devLanguage, fieldPointers.devExperience, fieldPointers.designerTool,
+        fieldPointers.designerProjects, fieldPointers.qaTestType, fieldPointers.qaBugs, fieldPointers.managerProjectLabel,
+        fieldPointers.devLanguageLabel, fieldPointers.devExperienceLabel, fieldPointers.designerToolLabel,
+        fieldPointers.designerProjectsLabel, fieldPointers.qaTestTypeLabel, fieldPointers.qaBugsLabel};
 
     const auto* okButton = setupAddEmployeeDialogUI(dialog, mainLayout, fields, typeCombo, window);
     if (!okButton) return;
 
-    QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs]() {
-        handleAddEmployeeButtonClick({window, dialog, nameEdit, salaryEdit, deptEdit,
-                                     typeCombo, employmentRateCombo, managerProject,
-                                     devLanguage, devExperience, designerTool,
-                                     designerProjects, qaTestType, qaBugs});
+    QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, &fieldPointers, typeCombo]() {
+        handleAddEmployeeButtonClick({window, dialog, fieldPointers.nameEdit, fieldPointers.salaryEdit, fieldPointers.deptEdit,
+                                     typeCombo, fieldPointers.employmentRateCombo, fieldPointers.managerProject,
+                                     fieldPointers.devLanguage, fieldPointers.devExperience, fieldPointers.designerTool,
+                                     fieldPointers.designerProjects, fieldPointers.qaTestType, fieldPointers.qaBugs});
     });
 
     dialog.exec();
@@ -513,40 +517,23 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
 
     auto* mainLayout = new QVBoxLayout(&dialog);
     auto currentType = employee->getEmployeeType();
-    QLineEdit* nameEdit = nullptr;
-    QLineEdit* salaryEdit = nullptr;
-    QLineEdit* deptEdit = nullptr;
-    QComboBox* employmentRateCombo = nullptr;
-    QComboBox* managerProject = nullptr;
-    QLineEdit* devLanguage = nullptr;
-    QLineEdit* devExperience = nullptr;
-    QLineEdit* designerTool = nullptr;
-    QLineEdit* designerProjects = nullptr;
-    QLineEdit* qaTestType = nullptr;
-    QLineEdit* qaBugs = nullptr;
-    QLabel* managerProjectLabel = nullptr;
-    QLabel* devLanguageLabel = nullptr;
-    QLabel* devExperienceLabel = nullptr;
-    QLabel* designerToolLabel = nullptr;
-    QLabel* designerProjectsLabel = nullptr;
-    QLabel* qaTestTypeLabel = nullptr;
-    QLabel* qaBugsLabel = nullptr;
+    EmployeeDialogFieldPointers fieldPointers;
 
     EmployeeDialogHelper::CreateEditEmployeeDialogFields fields{
-        nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject,
-        devLanguage, devExperience, designerTool, designerProjects,
-        qaTestType, qaBugs, managerProjectLabel, devLanguageLabel,
-        devExperienceLabel, designerToolLabel, designerProjectsLabel,
-        qaTestTypeLabel, qaBugsLabel};
+        fieldPointers.nameEdit, fieldPointers.salaryEdit, fieldPointers.deptEdit, fieldPointers.employmentRateCombo, fieldPointers.managerProject,
+        fieldPointers.devLanguage, fieldPointers.devExperience, fieldPointers.designerTool, fieldPointers.designerProjects,
+        fieldPointers.qaTestType, fieldPointers.qaBugs, fieldPointers.managerProjectLabel, fieldPointers.devLanguageLabel,
+        fieldPointers.devExperienceLabel, fieldPointers.designerToolLabel, fieldPointers.designerProjectsLabel,
+        fieldPointers.qaTestTypeLabel, fieldPointers.qaBugsLabel};
 
     const auto* okButton = setupEditEmployeeDialogUI(dialog, mainLayout, fields, employee, currentType, window);
     if (!okButton) return;
 
-    QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
-        handleEditEmployeeButtonClick({window, dialog, employeeId, nameEdit, salaryEdit,
-                                      deptEdit, employmentRateCombo, managerProject,
-                                      devLanguage, devExperience, designerTool,
-                                      designerProjects, qaTestType, qaBugs, currentType});
+    QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, &fieldPointers, currentType]() {
+        handleEditEmployeeButtonClick({window, dialog, employeeId, fieldPointers.nameEdit, fieldPointers.salaryEdit,
+                                      fieldPointers.deptEdit, fieldPointers.employmentRateCombo, fieldPointers.managerProject,
+                                      fieldPointers.devLanguage, fieldPointers.devExperience, fieldPointers.designerTool,
+                                      fieldPointers.designerProjects, fieldPointers.qaTestType, fieldPointers.qaBugs, currentType});
     });
 
     dialog.exec();
