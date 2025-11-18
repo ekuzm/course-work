@@ -455,7 +455,7 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
                 }
                 .stat-value {
                     font-size: 32px;
-                    font-weight: bold;
+                    font-weight: normal;
                     color: #000000;
                     margin-bottom: 5px;
                 }
@@ -474,7 +474,7 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
                 }
                 .section-title {
                     font-size: 20px;
-                    font-weight: bold;
+                    font-weight: normal;
                     color: #1565c0;
                     margin-bottom: 20px;
                     padding-bottom: 10px;
@@ -514,9 +514,9 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    color: white;
+                    color: black;
                     font-size: 11px;
-                    font-weight: bold;
+                    font-weight: normal;
                 }
                 .badge {
                     display: inline-block;
@@ -640,12 +640,12 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
                 .arg(totalCapacity);
 
     html += QString(R"(
-        <div class="item-row" style="margin-top: 20px;">
+        <div class="item-row" style="margin-top: 20px; ">
             <span class="item-label">Budget Utilization</span>
-            <span class="item-value">%1%</span>
+            <span class="item-value">%1%;</span>
         </div>
         <div class="progress-bar">
-            <div class="progress-fill" style="width: %1%;">$%2 / $%3</div>
+            <div class="progress-fill" style="width: %1%; color: #000000; font-weight: normal;">$%2 / $%3</div>
         </div>
     )")
                 .arg(budgetUtilizationPercent, 0, 'f', 1)
@@ -658,7 +658,7 @@ void DisplayHelper::showStatistics(QTextEdit* statisticsText,
             <span class="item-value">%1h / %2h</span>
         </div>
         <div class="progress-bar">
-            <div class="progress-fill" style="width: %3%;">%1h allocated</div>
+            <div class="progress-fill" style="width: %3%;color: #000000; font-weight: normal;">%1h allocated</div>
         </div>
     )")
                 .arg(totalAllocatedHours)

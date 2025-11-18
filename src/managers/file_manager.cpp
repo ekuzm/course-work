@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iomanip>
 #include <memory>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -40,7 +41,7 @@ struct TaskData {
     std::vector<std::pair<int, int>> assignments;
 };
 
-struct ProcessTaskVersion2Params {
+struct ProcessTaskParams {
     const std::vector<std::string>& lines;
     int& lineIndex;
     int taskIndex;
@@ -289,21 +290,6 @@ static bool findTaskHeader(const std::vector<std::string>& lines,
     return false;
 }
 
-static int determineFormatVersion(const std::vector<std::string>& lines,
-                                 int lastHeaderIndex) {
-    if (lastHeaderIndex + 1 < static_cast<int>(lines.size()) && 
-        lines[lastHeaderIndex + 1].find("FORMAT_VERSION:") == 0) {
-        try {
-            return std::stoi(lines[lastHeaderIndex + 1].substr(15));
-        } catch (const std::invalid_argument&) {
-            return 1;
-        } catch (const std::out_of_range&) {
-            return 1;
-        }
-    }
-    return 1;
-}
-
 static int calculateStartIndex(const std::vector<std::string>& lines,
                               int lastHeaderIndex) {
     int startIndex = lastHeaderIndex + 2;
@@ -314,7 +300,7 @@ static int calculateStartIndex(const std::vector<std::string>& lines,
     return startIndex;
 }
 
-static bool processTaskVersion2(const ProcessTaskVersion2Params& params) {
+static bool processTask(const ProcessTaskParams& params) {
     while (params.lineIndex < static_cast<int>(params.lines.size()) && 
            params.lines[params.lineIndex].find("[TASK") != 0) {
         params.lineIndex++;
@@ -363,12 +349,7 @@ static bool isValidTaskData(const TaskData& taskData) {
 
 static bool taskExistsInProject(const Company& company, int projectId, int taskId) {
     auto existingTasks = company.getProjectTasks(projectId);
-    for (const auto& existingTask : existingTasks) {
-        if (existingTask.getId() == taskId) {
-            return true;
-        }
-    }
-    return false;
+    return std::ranges::contains(existingTasks, taskId, &Task::getId);
 }
 
 static void addTaskWithDeadlineException(Company& company, const TaskData& taskData) {
@@ -385,16 +366,61 @@ static void addTaskWithDeadlineException(Company& company, const TaskData& taskD
     }
 }
 
-static void processTasksVersion2(Company& company,
+static AddTaskParams createAddTaskParams(const TaskData& taskData) {
+    AddTaskParams addParams;
+    addParams.projectId = taskData.projectId;
+    addParams.taskId = taskData.taskId;
+    addParams.taskName = taskData.taskName;
+    addParams.taskType = taskData.taskType;
+    addParams.estimatedHours = taskData.estimatedHours;
+    addParams.allocatedHours = taskData.allocatedHours;
+    addParams.priority = taskData.priority;
+    addParams.phase = taskData.phase;
+    addParams.assignments = taskData.assignments;
+    return addParams;
+}
+
+static bool handleProjectException(Company& company, const ProjectException& e, const TaskData& taskData) {
+    QString errorMsg = e.what();
+    if (!errorMsg.contains("exceed deadline")) {
+        return false;
+    }
+    try {
+        addTaskWithDeadlineException(company, taskData);
+        return true;
+    } catch (const ProjectException&) {
+        return false;
+    } catch (const CompanyException&) {
+        return false;
+    } catch (const TaskException&) {
+        return false;
+    }
+}
+
+static bool tryAddTaskToCompany(Company& company, const TaskData& taskData) {
+    try {
+        AddTaskParams addParams = createAddTaskParams(taskData);
+        addTaskToCompany(company, addParams);
+        return true;
+    } catch (const ProjectException& e) {
+        return handleProjectException(company, e, taskData);
+    } catch (const CompanyException&) {
+        return false;
+    } catch (const TaskException&) {
+        return false;
+    }
+}
+
+static void processTasks(Company& company,
                                  const std::vector<std::string>& lines,
                                 int startIndex, int taskCount) {
     int lineIndex = startIndex;
     for (int i = 0; i < taskCount && lineIndex < static_cast<int>(lines.size());
          ++i) {
         TaskData taskData;
-        if (ProcessTaskVersion2Params params{lines, lineIndex, i, taskCount,
+        if (ProcessTaskParams params{lines, lineIndex, i, taskCount,
                                              taskData};
-            !processTaskVersion2(params)) {
+            !processTask(params)) {
             break;
         }
         
@@ -411,37 +437,7 @@ static void processTasksVersion2(Company& company,
             continue;
         }
         
-        try {
-            AddTaskParams addParams;
-            addParams.projectId = taskData.projectId;
-            addParams.taskId = taskData.taskId;
-            addParams.taskName = taskData.taskName;
-            addParams.taskType = taskData.taskType;
-            addParams.estimatedHours = taskData.estimatedHours;
-            addParams.allocatedHours = taskData.allocatedHours;
-            addParams.priority = taskData.priority;
-            addParams.phase = taskData.phase;
-            addParams.assignments = taskData.assignments;
-            addTaskToCompany(company, addParams);
-        } catch (const ProjectException& e) {
-            if (QString errorMsg = e.what(); errorMsg.contains("exceed deadline")) {
-                try {
-                    addTaskWithDeadlineException(company, taskData);
-                } catch (const ProjectException&) {
-                    continue;
-        } catch (const CompanyException&) {
-            continue;
-                } catch (const TaskException&) {
-                    continue;
-                }
-            } else {
-                continue;
-            }
-        } catch (const CompanyException&) {
-            continue;
-        } catch (const TaskException&) {
-            continue;
-        }
+        tryAddTaskToCompany(company, taskData);
     }
 }
 
@@ -1169,12 +1165,8 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
         return;
     }
     
-    int formatVersion = determineFormatVersion(lines, lastHeaderIndex);
     int startIndex = calculateStartIndex(lines, lastHeaderIndex);
-
-    if (formatVersion >= 2) {
-        processTasksVersion2(company, lines, startIndex, taskCount);
-    }
+    processTasks(company, lines, startIndex, taskCount);
 }
 
 void FileManager::saveTaskAssignments(const Company& company,

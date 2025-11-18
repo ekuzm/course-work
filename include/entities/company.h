@@ -55,7 +55,7 @@ class Company {
    public:
     Company(QString name, QString industry, QString location, int foundedYear);
     Company(Company&& other) noexcept;
-    ~Company() = default;
+    ~Company();
 
     TaskAssignmentManager& getTaskManager() { return taskManager; }
     const CompanyStatistics& getStatistics() const { return statistics; }
@@ -142,6 +142,11 @@ class Company {
     }
     void fixTaskAssignmentsToCapacity() {
         getTaskManager().fixTaskAssignmentsToCapacity();
+    }
+    // Combined method to reduce method count
+    void recalculateAllHours() {
+        recalculateEmployeeHours();
+        recalculateTaskAllocatedHours();
     }
     void autoAssignEmployeesToProject(int projectId) {
         getTaskManager().autoAssignEmployeesToProject(projectId);

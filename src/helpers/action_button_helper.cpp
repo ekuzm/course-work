@@ -1,10 +1,12 @@
 #include "helpers/action_button_helper.h"
 
 #include <QAction>
+#include <QEvent>
 #include <QHBoxLayout>
 #include <QMenu>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTimer>
 #include <QWidget>
 #include <functional>
 
@@ -46,7 +48,7 @@ QWidget* ActionButtonHelper::createEmployeeActionButtons(
     auto* actionButton = createActionButton(actionContainer);
     auto* actionMenu = new QMenu(actionButton);
 
-    const auto* editAction = actionMenu->addAction("✎ Edit");
+    const auto* editAction = actionMenu->addAction("🖉 Edit");
     const auto* fireAction = actionMenu->addAction("❌ Fire");
     const auto* deleteAction = actionMenu->addAction("🗑️ Delete");
     const auto* historyAction = actionMenu->addAction("📋 History");
@@ -81,8 +83,8 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
     auto* actionButton = createActionButton(actionContainer);
     auto* actionMenu = new QMenu(actionButton);
 
-    const auto* editAction = actionMenu->addAction("✎ Edit Project");
-    const auto* deleteAction = actionMenu->addAction("🗑️ Delete Project");
+    const auto* editAction = actionMenu->addAction("🖉 Edit");
+    const auto* deleteAction = actionMenu->addAction("🗑️ Delete");
 
     if (includeAddTask) {
         actionMenu->addSeparator();
@@ -93,9 +95,31 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
     }
 
     actionMenu->addSeparator();
-        const auto* moreAction = actionMenu->addAction("More");
+    const auto* moreAction = actionMenu->addAction("📋 More");
+
+    QObject::connect(actionMenu, &QMenu::aboutToShow, actionMenu,
+                     [actionButton, actionMenu]() {
+                         const int buttonWidth = actionButton->width();
+                         actionMenu->setMinimumWidth(buttonWidth);
+                         const QPoint pos = actionButton->mapToGlobal(
+                             QPoint(0, actionButton->height()));
+                         QTimer::singleShot(0, actionMenu, [actionMenu, pos]() {
+                             actionMenu->move(pos);
+                         });
+                         QTimer::singleShot(10, actionMenu, [actionMenu, pos]() {
+                             if (actionMenu->isVisible()) {
+                                 actionMenu->move(pos);
+                             }
+                         });
+                         QTimer::singleShot(30, actionMenu, [actionMenu, pos]() {
+                             if (actionMenu->isVisible()) {
+                                 actionMenu->move(pos);
+                             }
+                         });
+                     });
 
     actionButton->setMenu(actionMenu);
+
     qobject_cast<QHBoxLayout*>(actionContainer->layout())
         ->addWidget(actionButton);
 

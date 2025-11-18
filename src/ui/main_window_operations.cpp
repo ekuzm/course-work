@@ -50,8 +50,8 @@ void handleOperationExceptions(QWidget* parent, const std::exception& e,
 }
 
 static void handleAddEmployeeSuccess(MainWindow* window, QDialog& dialog,
-                                     QLineEdit* nameEdit, QComboBox* typeCombo,
-                                     QLineEdit* salaryEdit) {
+                                     const QLineEdit* nameEdit, const QComboBox* typeCombo,
+                                     const QLineEdit* salaryEdit) {
     MainWindowDataOperations::refreshAllData(window);
     MainWindowDataOperations::autoSave(window);
     dialog.hide();
@@ -87,9 +87,9 @@ static void handleAddEmployeeError(MainWindow* window, QDialog& dialog,
     dialog.show();
 }
 
-static void handleEditEmployeeSuccess(QDialog& dialog, QLineEdit* nameEdit,
+static void handleEditEmployeeSuccess(QDialog& dialog, const QLineEdit* nameEdit,
                                       const QString& currentType,
-                                      QLineEdit* salaryEdit) {
+                                      const QLineEdit* salaryEdit) {
     MainWindowDataOperations::refreshAllData(
         qobject_cast<MainWindow*>(dialog.parent()));
     MainWindowDataOperations::autoSave(
@@ -102,6 +102,86 @@ static void handleEditEmployeeSuccess(QDialog& dialog, QLineEdit* nameEdit,
             nameEdit->text().trimmed() + "\nType: " + currentType +
             "\nSalary: $" + salaryEdit->text().trimmed());
     dialog.accept();
+}
+
+static void handleAddEmployeeButtonClick(MainWindow* window, QDialog& dialog,
+                                         QLineEdit* nameEdit, QLineEdit* salaryEdit,
+                                         QLineEdit* deptEdit, QComboBox* typeCombo,
+                                         QComboBox* employmentRateCombo,
+                                         QComboBox* managerProject,
+                                         QLineEdit* devLanguage,
+                                         QLineEdit* devExperience,
+                                         QLineEdit* designerTool,
+                                         QLineEdit* designerProjects,
+                                         QLineEdit* qaTestType, QLineEdit* qaBugs) {
+    try {
+        if (EmployeeDialogHandler::AddEmployeeParams params{
+                &dialog, window->currentCompany, window->nextEmployeeId,
+                nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
+                managerProject, devLanguage, devExperience, designerTool,
+                designerProjects, qaTestType, qaBugs};
+            !EmployeeDialogHandler::processAddEmployee(params)) {
+            return;
+        }
+        handleAddEmployeeSuccess(window, dialog, nameEdit, typeCombo, salaryEdit);
+    } catch (const CompanyException& e) {
+        handleAddEmployeeError(window, dialog, e);
+    } catch (const FileManagerException& e) {
+        handleAddEmployeeError(window, dialog, e);
+    } catch (const EmployeeException& e) {
+        handleAddEmployeeError(window, dialog, e);
+    } catch (const ProjectException& e) {
+        handleAddEmployeeError(window, dialog, e);
+    } catch (const TaskException& e) {
+        handleAddEmployeeError(window, dialog, e);
+    }
+}
+
+static void handleEditEmployeeError(QDialog& dialog, const std::exception& e);
+
+static void handleEditEmployeeButtonClick(MainWindow* window, QDialog& dialog,
+                                           int employeeId, QLineEdit* nameEdit,
+                                           QLineEdit* salaryEdit, QLineEdit* deptEdit,
+                                           QComboBox* employmentRateCombo,
+                                           QComboBox* managerProject,
+                                           QLineEdit* devLanguage,
+                                           QLineEdit* devExperience,
+                                           QLineEdit* designerTool,
+                                           QLineEdit* designerProjects,
+                                           QLineEdit* qaTestType, QLineEdit* qaBugs,
+                                           const QString& currentType) {
+    try {
+        if (EmployeeDialogHandler::EditEmployeeParams params{
+                &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
+                nameEdit, salaryEdit, deptEdit, employmentRateCombo,
+                managerProject, devLanguage, devExperience, designerTool,
+                designerProjects, qaTestType, qaBugs, currentType};
+            !EmployeeDialogHandler::processEditEmployee(params)) {
+            return;
+        }
+        if (auto* mainWindow = qobject_cast<MainWindow*>(window)) {
+            MainWindowDataOperations::refreshAllData(mainWindow);
+            MainWindowDataOperations::autoSave(mainWindow);
+        }
+        dialog.hide();
+        QMessageBox::information(
+            dialog.parentWidget(), "Success",
+            "Employee updated successfully!\n\n"
+            "Name: " +
+                nameEdit->text().trimmed() + "\nType: " + currentType +
+                "\nSalary: $" + salaryEdit->text().trimmed());
+        dialog.accept();
+    } catch (const CompanyException& e) {
+        handleEditEmployeeError(dialog, e);
+    } catch (const FileManagerException& e) {
+        handleEditEmployeeError(dialog, e);
+    } catch (const EmployeeException& e) {
+        handleEditEmployeeError(dialog, e);
+    } catch (const ProjectException& e) {
+        handleEditEmployeeError(dialog, e);
+    } catch (const TaskException& e) {
+        handleEditEmployeeError(dialog, e);
+    }
 }
 
 static void handleEditEmployeeError(QDialog& dialog, const std::exception& e) {
@@ -175,6 +255,124 @@ void executeWithExceptionHandling(MainWindow* window, Func&& operation,
     }
 }
 
+static QPushButton* setupAddEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainLayout,
+                                     EmployeeDialogHelper::CreateEmployeeDialogFields& fields,
+                                     QComboBox*& typeCombo, MainWindow* window) {
+    auto* form = new QFormLayout();
+    mainLayout->addLayout(form);
+    
+    EmployeeDialogHelper::createEmployeeDialog(dialog, form, fields);
+    
+    auto projects = window->currentCompany->getAllProjects();
+    fields.managerProject->addItem("(No Project)", -1);
+    for (const auto& proj : projects) {
+        fields.managerProject->addItem(proj.getName(), proj.getId());
+    }
+    
+    mainLayout->addStretch();
+    auto* okButton = new QPushButton("OK");
+    mainLayout->addWidget(okButton);
+    
+    if (fields.managerProjectLabel) fields.managerProjectLabel->setVisible(true);
+    if (fields.managerProject) fields.managerProject->setVisible(true);
+    if (fields.devLanguageLabel) fields.devLanguageLabel->setVisible(true);
+    if (fields.devLanguage) fields.devLanguage->setVisible(true);
+    if (fields.devExperienceLabel) fields.devExperienceLabel->setVisible(true);
+    if (fields.devExperience) fields.devExperience->setVisible(true);
+    if (fields.designerToolLabel) fields.designerToolLabel->setVisible(true);
+    if (fields.designerTool) fields.designerTool->setVisible(true);
+    if (fields.designerProjectsLabel) fields.designerProjectsLabel->setVisible(true);
+    if (fields.designerProjects) fields.designerProjects->setVisible(true);
+    if (fields.qaTestTypeLabel) fields.qaTestTypeLabel->setVisible(true);
+    if (fields.qaTestType) fields.qaTestType->setVisible(true);
+    if (fields.qaBugsLabel) fields.qaBugsLabel->setVisible(true);
+    if (fields.qaBugs) fields.qaBugs->setVisible(true);
+    
+    dialog.adjustSize();
+    QSize maxSize = dialog.size();
+    maxSize.setHeight(maxSize.height() - 227);
+    
+    if (typeCombo) {
+        int index = typeCombo->currentIndex();
+        EmployeeDialogHelper::showDeveloperFields(fields.devLanguageLabel, fields.devLanguage,
+                                                  fields.devExperienceLabel,
+                                                  fields.devExperience, index == 1);
+        EmployeeDialogHelper::showDesignerFields(
+            fields.designerToolLabel, fields.designerTool, fields.designerProjectsLabel,
+            fields.designerProjects, index == 2);
+        EmployeeDialogHelper::showQaFields(fields.qaTestTypeLabel, fields.qaTestType,
+                                           fields.qaBugsLabel, fields.qaBugs, index == 3);
+        EmployeeDialogHelper::showManagerFields(fields.managerProjectLabel,
+                                                fields.managerProject, index == 0);
+    }
+    
+    dialog.setFixedSize(maxSize);
+    return okButton;
+}
+
+static QPushButton* setupEditEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainLayout,
+                                              EmployeeDialogHelper::CreateEditEmployeeDialogFields& fields,
+                                              const std::shared_ptr<Employee>& employee,
+                                              const QString& currentType, MainWindow* window) {
+    auto* form = new QFormLayout();
+    mainLayout->addLayout(form);
+    
+    EmployeeDialogHelper::createEditEmployeeDialog(dialog, form, employee, fields);
+    
+    auto projects = window->currentCompany->getAllProjects();
+    fields.managerProject->addItem("(No Project)", -1);
+    for (const auto& proj : projects) {
+        fields.managerProject->addItem(proj.getName(), proj.getId());
+    }
+    
+    if (const auto* manager = dynamic_cast<const Manager*>(employee.get()); manager) {
+        int currentProjectId = manager->getManagedProjectId();
+        if (currentProjectId > 0) {
+            auto index = fields.managerProject->findData(currentProjectId);
+            if (index >= 0) {
+                fields.managerProject->setCurrentIndex(index);
+            }
+        }
+    }
+    
+    mainLayout->addStretch();
+    auto* okButton = new QPushButton("OK");
+    mainLayout->addWidget(okButton);
+    
+    if (fields.managerProjectLabel) fields.managerProjectLabel->setVisible(true);
+    if (fields.managerProject) fields.managerProject->setVisible(true);
+    if (fields.devLanguageLabel) fields.devLanguageLabel->setVisible(true);
+    if (fields.devLanguage) fields.devLanguage->setVisible(true);
+    if (fields.devExperienceLabel) fields.devExperienceLabel->setVisible(true);
+    if (fields.devExperience) fields.devExperience->setVisible(true);
+    if (fields.designerToolLabel) fields.designerToolLabel->setVisible(true);
+    if (fields.designerTool) fields.designerTool->setVisible(true);
+    if (fields.designerProjectsLabel) fields.designerProjectsLabel->setVisible(true);
+    if (fields.designerProjects) fields.designerProjects->setVisible(true);
+    if (fields.qaTestTypeLabel) fields.qaTestTypeLabel->setVisible(true);
+    if (fields.qaTestType) fields.qaTestType->setVisible(true);
+    if (fields.qaBugsLabel) fields.qaBugsLabel->setVisible(true);
+    if (fields.qaBugs) fields.qaBugs->setVisible(true);
+    
+    dialog.adjustSize();
+    QSize maxSize = dialog.size();
+    maxSize.setHeight(maxSize.height() - 227);
+    
+    EmployeeDialogHelper::showManagerFields(fields.managerProjectLabel, fields.managerProject,
+                                            currentType == "Manager");
+    EmployeeDialogHelper::showDeveloperFields(fields.devLanguageLabel, fields.devLanguage,
+                                              fields.devExperienceLabel, fields.devExperience,
+                                              currentType == "Developer");
+    EmployeeDialogHelper::showDesignerFields(
+        fields.designerToolLabel, fields.designerTool, fields.designerProjectsLabel,
+        fields.designerProjects, currentType == "Designer");
+    EmployeeDialogHelper::showQaFields(fields.qaTestTypeLabel, fields.qaTestType, fields.qaBugsLabel,
+                                       fields.qaBugs, currentType == "QA");
+    
+    dialog.setFixedSize(maxSize);
+    return okButton;
+}
+
 void EmployeeOperations::addEmployee(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "adding employees")) return;
 
@@ -184,8 +382,6 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
     dialog.setStyleSheet("QDialog { background-color: white; }");
 
     auto* mainLayout = new QVBoxLayout(&dialog);
-    auto* form = new QFormLayout();
-    mainLayout->addLayout(form);
     QComboBox* typeCombo = nullptr;
     QLineEdit* nameEdit = nullptr;
     QLineEdit* salaryEdit = nullptr;
@@ -213,75 +409,14 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
         devLanguageLabel, devExperienceLabel, designerToolLabel,
         designerProjectsLabel, qaTestTypeLabel, qaBugsLabel};
 
-    EmployeeDialogHelper::createEmployeeDialog(dialog, form, fields);
-
-    auto projects = window->currentCompany->getAllProjects();
-    managerProject->addItem("(No Project)", -1);
-    for (const auto& proj : projects) {
-        managerProject->addItem(proj.getName(), proj.getId());
-    }
-
-    mainLayout->addStretch();
-    auto* okButton = new QPushButton("OK");
-    mainLayout->addWidget(okButton);
-
-    if (managerProjectLabel) managerProjectLabel->setVisible(true);
-    if (managerProject) managerProject->setVisible(true);
-    if (devLanguageLabel) devLanguageLabel->setVisible(true);
-    if (devLanguage) devLanguage->setVisible(true);
-    if (devExperienceLabel) devExperienceLabel->setVisible(true);
-    if (devExperience) devExperience->setVisible(true);
-    if (designerToolLabel) designerToolLabel->setVisible(true);
-    if (designerTool) designerTool->setVisible(true);
-    if (designerProjectsLabel) designerProjectsLabel->setVisible(true);
-    if (designerProjects) designerProjects->setVisible(true);
-    if (qaTestTypeLabel) qaTestTypeLabel->setVisible(true);
-    if (qaTestType) qaTestType->setVisible(true);
-    if (qaBugsLabel) qaBugsLabel->setVisible(true);
-    if (qaBugs) qaBugs->setVisible(true);
-
-    dialog.adjustSize();
-    QSize maxSize = dialog.size();
-    maxSize.setHeight(maxSize.height() - 227);
-
-    if (typeCombo) {
-        int index = typeCombo->currentIndex();
-        EmployeeDialogHelper::showDeveloperFields(devLanguageLabel, devLanguage,
-                                                  devExperienceLabel,
-                                                  devExperience, index == 1);
-        EmployeeDialogHelper::showDesignerFields(
-            designerToolLabel, designerTool, designerProjectsLabel,
-            designerProjects, index == 2);
-        EmployeeDialogHelper::showQaFields(qaTestTypeLabel, qaTestType,
-                                           qaBugsLabel, qaBugs, index == 3);
-        EmployeeDialogHelper::showManagerFields(managerProjectLabel,
-                                                managerProject, index == 0);
-    }
-
-    dialog.setFixedSize(maxSize);
+    auto* okButton = setupAddEmployeeDialogUI(dialog, mainLayout, fields, typeCombo, window);
+    if (!okButton) return;
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs]() {
-        try {
-            if (EmployeeDialogHandler::AddEmployeeParams params{
-                    &dialog, window->currentCompany, window->nextEmployeeId,
-                    nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
-                    managerProject, devLanguage, devExperience, designerTool,
-                    designerProjects, qaTestType, qaBugs};
-                !EmployeeDialogHandler::processAddEmployee(params)) {
-                return;
-            }
-            handleAddEmployeeSuccess(window, dialog, nameEdit, typeCombo, salaryEdit);
-        } catch (const CompanyException& e) {
-            handleAddEmployeeError(window, dialog, e);
-        } catch (const FileManagerException& e) {
-            handleAddEmployeeError(window, dialog, e);
-        } catch (const EmployeeException& e) {
-            handleAddEmployeeError(window, dialog, e);
-        } catch (const ProjectException& e) {
-            handleAddEmployeeError(window, dialog, e);
-        } catch (const TaskException& e) {
-            handleAddEmployeeError(window, dialog, e);
-        }
+        handleAddEmployeeButtonClick(window, dialog, nameEdit, salaryEdit, deptEdit,
+                                     typeCombo, employmentRateCombo, managerProject,
+                                     devLanguage, devExperience, designerTool,
+                                     designerProjects, qaTestType, qaBugs);
     });
 
     dialog.exec();
@@ -309,8 +444,6 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
     dialog.setStyleSheet("QDialog { background-color: white; }");
 
     auto* mainLayout = new QVBoxLayout(&dialog);
-    auto* form = new QFormLayout();
-    mainLayout->addLayout(form);
     auto currentType = employee->getEmployeeType();
     QLineEdit* nameEdit = nullptr;
     QLineEdit* salaryEdit = nullptr;
@@ -338,93 +471,14 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
         devExperienceLabel, designerToolLabel, designerProjectsLabel,
         qaTestTypeLabel, qaBugsLabel};
 
-    EmployeeDialogHelper::createEditEmployeeDialog(dialog, form, employee, fields);
-
-    auto projects = window->currentCompany->getAllProjects();
-    managerProject->addItem("(No Project)", -1);
-    for (const auto& proj : projects) {
-        managerProject->addItem(proj.getName(), proj.getId());
-    }
-
-    if (const auto* manager = dynamic_cast<const Manager*>(employee.get()); manager) {
-        int currentProjectId = manager->getManagedProjectId();
-        if (currentProjectId > 0) {
-            auto index = managerProject->findData(currentProjectId);
-            if (index >= 0) {
-                managerProject->setCurrentIndex(index);
-            }
-        }
-    }
-
-    mainLayout->addStretch();
-    auto* okButton = new QPushButton("OK");
-    mainLayout->addWidget(okButton);
-
-    if (managerProjectLabel) managerProjectLabel->setVisible(true);
-    if (managerProject) managerProject->setVisible(true);
-    if (devLanguageLabel) devLanguageLabel->setVisible(true);
-    if (devLanguage) devLanguage->setVisible(true);
-    if (devExperienceLabel) devExperienceLabel->setVisible(true);
-    if (devExperience) devExperience->setVisible(true);
-    if (designerToolLabel) designerToolLabel->setVisible(true);
-    if (designerTool) designerTool->setVisible(true);
-    if (designerProjectsLabel) designerProjectsLabel->setVisible(true);
-    if (designerProjects) designerProjects->setVisible(true);
-    if (qaTestTypeLabel) qaTestTypeLabel->setVisible(true);
-    if (qaTestType) qaTestType->setVisible(true);
-    if (qaBugsLabel) qaBugsLabel->setVisible(true);
-    if (qaBugs) qaBugs->setVisible(true);
-
-    dialog.adjustSize();
-    QSize maxSize = dialog.size();
-    maxSize.setHeight(maxSize.height() - 227);
-
-    EmployeeDialogHelper::showManagerFields(managerProjectLabel, managerProject,
-                                            currentType == "Manager");
-    EmployeeDialogHelper::showDeveloperFields(devLanguageLabel, devLanguage,
-                                              devExperienceLabel, devExperience,
-                                              currentType == "Developer");
-    EmployeeDialogHelper::showDesignerFields(
-        designerToolLabel, designerTool, designerProjectsLabel,
-        designerProjects, currentType == "Designer");
-    EmployeeDialogHelper::showQaFields(qaTestTypeLabel, qaTestType, qaBugsLabel,
-                                       qaBugs, currentType == "QA");
-
-    dialog.setFixedSize(maxSize);
+    auto* okButton = setupEditEmployeeDialogUI(dialog, mainLayout, fields, employee, currentType, window);
+    if (!okButton) return;
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
-        try {
-            if (EmployeeDialogHandler::EditEmployeeParams params{
-                    &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
-                    nameEdit, salaryEdit, deptEdit, employmentRateCombo,
-                    managerProject, devLanguage, devExperience, designerTool,
-                    designerProjects, qaTestType, qaBugs, currentType};
-                !EmployeeDialogHandler::processEditEmployee(params)) {
-                return;
-            }
-            if (auto* mainWindow = qobject_cast<MainWindow*>(window)) {
-                MainWindowDataOperations::refreshAllData(mainWindow);
-                MainWindowDataOperations::autoSave(mainWindow);
-            }
-            dialog.hide();
-            QMessageBox::information(
-                dialog.parentWidget(), "Success",
-                "Employee updated successfully!\n\n"
-                "Name: " +
-                    nameEdit->text().trimmed() + "\nType: " + currentType +
-                    "\nSalary: $" + salaryEdit->text().trimmed());
-            dialog.accept();
-        } catch (const CompanyException& e) {
-            handleEditEmployeeError(dialog, e);
-        } catch (const FileManagerException& e) {
-            handleEditEmployeeError(dialog, e);
-        } catch (const EmployeeException& e) {
-            handleEditEmployeeError(dialog, e);
-        } catch (const ProjectException& e) {
-            handleEditEmployeeError(dialog, e);
-        } catch (const TaskException& e) {
-            handleEditEmployeeError(dialog, e);
-        }
+        handleEditEmployeeButtonClick(window, dialog, employeeId, nameEdit, salaryEdit,
+                                      deptEdit, employmentRateCombo, managerProject,
+                                      devLanguage, devExperience, designerTool,
+                                      designerProjects, qaTestType, qaBugs, currentType);
     });
 
     dialog.exec();
@@ -770,16 +824,17 @@ void ProjectOperations::addProjectTask(MainWindow* window) {
     dialog.exec();
 }
 
-void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
-    if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "assigning employees to tasks")) return;
-
-    auto projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
+static bool validateAssignEmployeeToTask(MainWindow* window, int& projectId,
+                                         std::vector<Task>& tasks, QString& projectPhase) {
+    if (projectId < 0) {
+        projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
+    }
     if (projectId < 0) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
-        return;
+        return false;
     }
     
-    auto tasks = window->currentCompany->getProjectTasks(projectId);
+    tasks = window->currentCompany->getProjectTasks(projectId);
     if (window->pendingTaskSelectionId > 0) {
         std::vector<Task> filtered;
         for (const auto& task : tasks) {
@@ -795,19 +850,18 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
     if (tasks.empty()) {
         QMessageBox::warning(
             window, "Error", "No tasks in this project. Please add tasks first.");
-        return;
+        return false;
     }
 
     const Project* project = window->currentCompany->getProject(projectId);
-    QString projectPhase = (project != nullptr) ? project->getPhase() : "";
+    projectPhase = (project != nullptr) ? project->getPhase() : "";
 
     if (projectPhase == "Completed") {
         QMessageBox::warning(window, "Error",
                              "Cannot assign employees to completed project.");
-        return;
+        return false;
     }
     
-    // Check employee availability before creating dialog to avoid memory leak
     QComboBox tempEmployeeCombo;
     int matchingCount = 0;
     TaskAssignmentHelper::populateEmployeeCombo(
@@ -815,21 +869,18 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
     
     if (tempEmployeeCombo.count() == 0) {
         QMessageBox::warning(window, "Error", "No available employees found!");
-        return;
+        return false;
     }
-    
-    QDialog dialog(window);
-    dialog.setWindowTitle("Assign Employee to Task");
-    dialog.setMinimumWidth(450);
-    dialog.setStyleSheet(
-        "QDialog { background-color: white; } "
-        "QComboBox { background-color: white; color: black; } "
-        "QLineEdit { background-color: white; color: black; } "
-        "QLabel { color: black; }");
+    return true;
+}
 
-    auto* form = new QFormLayout(&dialog);
-
-    auto* taskCombo = new QComboBox();
+static void setupAssignTaskDialogUI(QDialog& dialog, QFormLayout* form,
+                                    QComboBox*& taskCombo, QComboBox*& employeeCombo,
+                                    QLineEdit*& hoursEdit, QLabel*& taskInfoLabel,
+                                    MainWindow* window, int projectId,
+                                    const QString& projectPhase,
+                                    const std::vector<Task>& tasks, int matchingCount) {
+    taskCombo = new QComboBox();
     taskCombo->setStyleSheet(
         "QComboBox { background-color: white; color: black; } "
         "QComboBox QAbstractItemView { background-color: white; color: black; "
@@ -853,7 +904,7 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
     }
     form->addRow("Task:", taskCombo);
 
-    auto* employeeCombo = new QComboBox();
+    employeeCombo = new QComboBox();
     employeeCombo->setStyleSheet(
         "QComboBox { background-color: white; color: black; } "
         "QComboBox QAbstractItemView { background-color: white; color: black; "
@@ -883,7 +934,7 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
         expectedRoleText += " role required";
     }
 
-    auto* taskInfoLabel =
+    taskInfoLabel =
         new QLabel(QString("Project Phase: %1 | %2")
                        .arg(projectPhase.isEmpty() ? "Unknown" : projectPhase)
                        .arg(expectedRoleText));
@@ -893,11 +944,45 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
         employeeCombo, taskCombo, taskInfoLabel, window->currentCompany, projectId,
         projectPhase);
 
-    auto* hoursEdit = new QLineEdit();
+    hoursEdit = new QLineEdit();
     hoursEdit->setPlaceholderText("e.g., 20 (hours per week)");
     TaskAssignmentHelper::setupHoursEdit(hoursEdit, taskCombo, employeeCombo,
                                          tasks, window->currentCompany);
     form->addRow("Hours per week:", hoursEdit);
+}
+
+void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
+    if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "assigning employees to tasks")) return;
+
+    int projectId = -1;
+    std::vector<Task> tasks;
+    QString projectPhase;
+    if (!validateAssignEmployeeToTask(window, projectId, tasks, projectPhase)) {
+        return;
+    }
+    
+    int matchingCount = 0;
+    QComboBox tempEmployeeCombo;
+    TaskAssignmentHelper::populateEmployeeCombo(
+        &tempEmployeeCombo, window->currentCompany, projectId, projectPhase, matchingCount);
+    
+    QDialog dialog(window);
+    dialog.setWindowTitle("Assign Employee to Task");
+    dialog.setMinimumWidth(450);
+    dialog.setStyleSheet(
+        "QDialog { background-color: white; } "
+        "QComboBox { background-color: white; color: black; } "
+        "QLineEdit { background-color: white; color: black; } "
+        "QLabel { color: black; }");
+
+    auto* form = new QFormLayout(&dialog);
+    QComboBox* taskCombo = nullptr;
+    QComboBox* employeeCombo = nullptr;
+    QLineEdit* hoursEdit = nullptr;
+    QLabel* taskInfoLabel = nullptr;
+    
+    setupAssignTaskDialogUI(dialog, form, taskCombo, employeeCombo, hoursEdit,
+                            taskInfoLabel, window, projectId, projectPhase, tasks, matchingCount);
 
     auto* okButton = new QPushButton("Assign");
     form->addRow(okButton);
