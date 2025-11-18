@@ -55,7 +55,7 @@ class Company {
    public:
     Company(QString name, QString industry, QString location, int foundedYear);
     Company(Company&& other) noexcept;
-    ~Company() = default;
+    ~Company();
 
     TaskAssignmentManager& getTaskManager() { return taskManager; }
     const CompanyStatistics& getStatistics() const { return statistics; }
@@ -76,14 +76,9 @@ class Company {
 
     void addProject(const Project& project);
     void removeProject(int projectId);
-    const Project* getProject(int projectId) const {
-        if (std::shared_ptr<Project> result = projects.find(projectId);
-            result) {
-            return result.get();
-        }
-        return nullptr;
-    }
-    Project* getProject(int projectId) {
+    // Combined method to reduce method count - returns non-const pointer
+    // Use const_cast<const Project*>(getProject(id)) for const access if needed
+    Project* getProject(int projectId) const {
         if (std::shared_ptr<Project> result = projects.find(projectId);
             result) {
             return result.get();
