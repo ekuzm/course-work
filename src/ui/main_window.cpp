@@ -319,7 +319,7 @@ static void setupTaskComboForPendingSelection(QComboBox* taskCombo,
 }
 
 static void showAutoAssignSuccessMessage(MainWindow* mainWindow,
-                                         Company* company, int projectId,
+                                         const Company* company, int projectId,
                                          int allocatedBefore) {
     MainWindowDataOperations::refreshAllData(mainWindow);
     MainWindowDataOperations::selectProjectRowById(mainWindow, projectId);
@@ -340,7 +340,7 @@ static void showAutoAssignSuccessMessage(MainWindow* mainWindow,
             .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
 }
 
-static void handleAutoAssignException(MainWindow* mainWindow, Company* company,
+static void handleAutoAssignException(MainWindow* mainWindow, const Company* company,
                                       int projectId,
                                       const CompanyException& e) {
     QString errorMsg = e.what();

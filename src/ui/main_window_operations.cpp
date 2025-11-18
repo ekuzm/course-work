@@ -124,9 +124,9 @@ struct HandleAddEmployeeButtonClickParams {
 static void handleAddEmployeeButtonClick(const HandleAddEmployeeButtonClickParams& params) {
     MainWindow* window = params.window;
     QDialog& dialog = params.dialog;
-    QLineEdit* nameEdit = params.nameEdit;
-    QLineEdit* salaryEdit = params.salaryEdit;
-    QLineEdit* deptEdit = params.deptEdit;
+    const QLineEdit* nameEdit = params.nameEdit;
+    const QLineEdit* salaryEdit = params.salaryEdit;
+    const QLineEdit* deptEdit = params.deptEdit;
     QComboBox* typeCombo = params.typeCombo;
     QComboBox* employmentRateCombo = params.employmentRateCombo;
     QComboBox* managerProject = params.managerProject;
@@ -183,9 +183,9 @@ static void handleEditEmployeeButtonClick(const HandleEditEmployeeButtonClickPar
     MainWindow* window = params.window;
     QDialog& dialog = params.dialog;
     int employeeId = params.employeeId;
-    QLineEdit* nameEdit = params.nameEdit;
-    QLineEdit* salaryEdit = params.salaryEdit;
-    QLineEdit* deptEdit = params.deptEdit;
+    const QLineEdit* nameEdit = params.nameEdit;
+    const QLineEdit* salaryEdit = params.salaryEdit;
+    const QLineEdit* deptEdit = params.deptEdit;
     QComboBox* employmentRateCombo = params.employmentRateCombo;
     QComboBox* managerProject = params.managerProject;
     QLineEdit* devLanguage = params.devLanguage;
@@ -302,7 +302,7 @@ void executeWithExceptionHandling(MainWindow* window, Func&& operation,
 
 static QPushButton* setupAddEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainLayout,
                                      EmployeeDialogHelper::CreateEmployeeDialogFields& fields,
-                                     QComboBox*& typeCombo, MainWindow* window) {
+                                     QComboBox*& typeCombo, const MainWindow* window) {
     auto* form = new QFormLayout();
     mainLayout->addLayout(form);
     
@@ -358,7 +358,7 @@ static QPushButton* setupAddEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainL
 static QPushButton* setupEditEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainLayout,
                                               EmployeeDialogHelper::CreateEditEmployeeDialogFields& fields,
                                               const std::shared_ptr<Employee>& employee,
-                                              const QString& currentType, MainWindow* window) {
+                                              const QString& currentType, const MainWindow* window) {
     auto* form = new QFormLayout();
     mainLayout->addLayout(form);
     
@@ -454,7 +454,7 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
         devLanguageLabel, devExperienceLabel, designerToolLabel,
         designerProjectsLabel, qaTestTypeLabel, qaBugsLabel};
 
-    auto* okButton = setupAddEmployeeDialogUI(dialog, mainLayout, fields, typeCombo, window);
+    const auto* okButton = setupAddEmployeeDialogUI(dialog, mainLayout, fields, typeCombo, window);
     if (!okButton) return;
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs]() {
@@ -516,7 +516,7 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
         devExperienceLabel, designerToolLabel, designerProjectsLabel,
         qaTestTypeLabel, qaBugsLabel};
 
-    auto* okButton = setupEditEmployeeDialogUI(dialog, mainLayout, fields, employee, currentType, window);
+    const auto* okButton = setupEditEmployeeDialogUI(dialog, mainLayout, fields, employee, currentType, window);
     if (!okButton) return;
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {

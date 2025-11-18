@@ -381,8 +381,7 @@ static AddTaskParams createAddTaskParams(const TaskData& taskData) {
 }
 
 static bool handleProjectException(Company& company, const ProjectException& e, const TaskData& taskData) {
-    QString errorMsg = e.what();
-    if (!errorMsg.contains("exceed deadline")) {
+    if (QString errorMsg = e.what(); !errorMsg.contains("exceed deadline")) {
         return false;
     }
     try {
