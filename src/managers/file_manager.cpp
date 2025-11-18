@@ -367,16 +367,16 @@ static void addTaskWithDeadlineException(Company& company, const TaskData& taskD
 }
 
 static AddTaskParams createAddTaskParams(const TaskData& taskData) {
-    AddTaskParams addParams;
-    addParams.projectId = taskData.projectId;
-    addParams.taskId = taskData.taskId;
-    addParams.taskName = taskData.taskName;
-    addParams.taskType = taskData.taskType;
-    addParams.estimatedHours = taskData.estimatedHours;
-    addParams.allocatedHours = taskData.allocatedHours;
-    addParams.priority = taskData.priority;
-    addParams.phase = taskData.phase;
-    addParams.assignments = taskData.assignments;
+            AddTaskParams addParams;
+            addParams.projectId = taskData.projectId;
+            addParams.taskId = taskData.taskId;
+            addParams.taskName = taskData.taskName;
+            addParams.taskType = taskData.taskType;
+            addParams.estimatedHours = taskData.estimatedHours;
+            addParams.allocatedHours = taskData.allocatedHours;
+            addParams.priority = taskData.priority;
+            addParams.phase = taskData.phase;
+            addParams.assignments = taskData.assignments;
     return addParams;
 }
 
@@ -399,11 +399,11 @@ static bool handleProjectException(Company& company, const ProjectException& e, 
 static bool tryAddTaskToCompany(Company& company, const TaskData& taskData) {
     try {
         AddTaskParams addParams = createAddTaskParams(taskData);
-        addTaskToCompany(company, addParams);
+            addTaskToCompany(company, addParams);
         return true;
     } catch (const ProjectException& e) {
         return handleProjectException(company, e, taskData);
-    } catch (const CompanyException&) {
+        } catch (const CompanyException&) {
         return false;
     } catch (const TaskException&) {
         return false;
@@ -1159,11 +1159,11 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
     if (!findTaskHeader(lines, lastHeaderIndex, taskCount) || taskCount == 0) {
         return;
     }
-
+    
     if (taskCount < 0 || taskCount > kMaxTasks) {
         return;
     }
-    
+
     int startIndex = calculateStartIndex(lines, lastHeaderIndex);
     processTasks(company, lines, startIndex, taskCount);
 }
