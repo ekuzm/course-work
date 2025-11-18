@@ -104,8 +104,7 @@ void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(const Company* compa
         return;
 
     if (!hasAssignedEmployees(company, projectId)) {
-        Company* mutableCompany = const_cast<Company*>(company);
-        Project* projPtr = mutableCompany->getProject(projectId);
+        auto* projPtr = const_cast<Company*>(company)->getProject(projectId);
         if (!projPtr) {
             return;
         }
