@@ -254,7 +254,7 @@ bool MainWindowValidationHelper::checkDuplicateProjectOnEdit(
 }
 
 void MainWindowValidationHelper::validateAndFixProjectAssignments(
-    MainWindow* window, const Company* company) {
+    MainWindow* window, Company* company) {
     if (!window || !company) return;
 
     bool hasWarnings = false;

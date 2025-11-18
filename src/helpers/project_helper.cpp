@@ -95,7 +95,7 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
     }
 }
 
-void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(const Company* company,
+void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company,
                                                             int projectId) {
     if (!company) return;
 
@@ -104,7 +104,7 @@ void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(const Company* compa
         return;
 
     if (!hasAssignedEmployees(company, projectId)) {
-        auto* projPtr = const_cast<Company*>(company)->getProject(projectId);
+        auto* projPtr = company->getProject(projectId);
         if (!projPtr) {
             return;
         }
