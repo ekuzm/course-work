@@ -36,13 +36,15 @@ static bool processAddEmployeeImpl(
         return false;
 
     if (!EmployeeDialogHelper::checkDuplicateEmployee(name, params.company)) {
-        QMessageBox::warning(params.dialog, "Duplicate Error",
+        params.dialog->hide();
+        QMessageBox::warning(params.dialog->parentWidget(), "Duplicate Error",
                              "Employee with this name already exists!\n\n"
                              "Employee name: \"" +
                                  name +
                                  "\"\n"
                                  "Please choose a different name or edit the "
                                  "existing employee.");
+        params.dialog->show();
         return false;
     }
 
@@ -74,10 +76,12 @@ static bool processAddEmployeeImpl(
         params.qaBugs};
     auto employee = EmployeeDialogHelper::createEmployeeFromType(createParams);
     if (employee == nullptr) {
+        params.dialog->hide();
         QMessageBox::warning(
-            params.dialog, "Validation Error",
+            params.dialog->parentWidget(), "Validation Error",
             "Failed to create employee!\n\n"
             "Please check that all required fields are filled correctly.");
+        params.dialog->show();
         return false;
     }
 
@@ -260,7 +264,8 @@ static bool processEditEmployeeImpl(
 
     if (!EmployeeDialogHelper::checkDuplicateEmployeeOnEdit(
             name, params.employeeId, params.company)) {
-        QMessageBox::warning(params.dialog, "Duplicate Error",
+        params.dialog->hide();
+        QMessageBox::warning(params.dialog->parentWidget(), "Duplicate Error",
                              "Employee with this name already exists!\n\n"
                              "Employee name: \"" +
                                  name +
@@ -270,6 +275,7 @@ static bool processEditEmployeeImpl(
                                  "\n"
                                  "Please choose a different name or edit the "
                                  "existing employee.");
+        params.dialog->show();
         return false;
     }
 
@@ -283,7 +289,9 @@ static bool processEditEmployeeImpl(
 
     auto oldEmployee = params.company->getEmployee(params.employeeId);
     if (!oldEmployee) {
-        QMessageBox::warning(params.dialog, "Error", "Employee not found!");
+        params.dialog->hide();
+        QMessageBox::warning(params.dialog->parentWidget(), "Error", "Employee not found!");
+        params.dialog->show();
         return false;
     }
 
@@ -306,10 +314,12 @@ static bool processEditEmployeeImpl(
     }
 
     if (!hasChanges) {
+        params.dialog->hide();
         QMessageBox::information(
-            params.dialog, "No Changes",
+            params.dialog->parentWidget(), "No Changes",
             "No changes were made to the employee.\n\n"
             "Please modify at least one field before saving.");
+        params.dialog->show();
         return false;
     }
 
@@ -347,10 +357,12 @@ static bool processEditEmployeeImpl(
     auto updatedEmployee =
         EmployeeDialogHelper::createEmployeeFromType(createParams);
     if (updatedEmployee == nullptr) {
+        params.dialog->hide();
         QMessageBox::warning(
-            params.dialog, "Validation Error",
+            params.dialog->parentWidget(), "Validation Error",
             "Failed to update employee!\n\n"
             "Please check that all required fields are filled correctly.");
+        params.dialog->show();
         return false;
     }
 

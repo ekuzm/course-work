@@ -117,7 +117,7 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
         <head>
             <style>
                 body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 0; background: transparent; color: #12324a; }
-                .wrapper { background: #ffffff; border-radius: 18px; border: 1px solid #dce7f8; padding: 30px 32px; box-shadow: 0 26px 48px rgba(15, 76, 129, 0.14); }
+                .wrapper { background: #ffffff; border-radius: 18px; border: 1px solid #dce7f8; padding: 30px 32px; box-shadow: 0 26px 48px rgba(15, 76, 129, 0.14); min-width: 1600px; }
                 .header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; flex-wrap: wrap; margin-bottom: 18px; }
                 .title-block { display: flex; flex-direction: column; gap: 6px; }
                 .title { font-size: 24px; font-weight: 800; margin: 0; color: #102a43; }
@@ -127,13 +127,13 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
                 .phase-active { background: #e5f1ff; color: #0b4a85; border: 1px solid #bcd7ff; }
                 .phase-completed { background: #e8f8f0; color: #1f6b3a; border: 1px solid #c4ead3; }
                 .phase-neutral { background: #f0f4fa; color: #3b4e6b; border: 1px solid #d8e0ec; }
-                .team-table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: table; }
+                .team-table { width: 100%; min-width: 1600px; border-collapse: collapse; margin-top: 20px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: table; }
                 .team-table thead { background: #f5f5f5; color: #000000; position: sticky; top: 0; z-index: 10; display: table-header-group; }
                 .team-table tbody { display: table-row-group; }
                 .team-table tr { display: table-row; }
-                .team-table th { padding: 20px 31px; text-align: center; font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; display: table-cell; border-bottom: 2px solid #e0e0e0; color: #000000; background-color: #f8f9fa; }
-                .team-table th.row-number { text-align: center; width: 60px; }
-                .team-table td { padding: 20px 31px; border-bottom: 1px solid #e0e0e0; font-size: 14px; color: #000000; word-wrap: break-word; display: table-cell; text-align: center; }
+                .team-table th { padding: 25px 40px; text-align: center; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; display: table-cell; border-bottom: 2px solid #e0e0e0; color: #000000; background-color: #f8f9fa; }
+                .team-table th.row-number { text-align: center; width: 80px; }
+                .team-table td { padding: 25px 40px; border-bottom: 1px solid #e0e0e0; font-size: 16px; color: #000000; word-wrap: break-word; display: table-cell; text-align: center; }
                 .team-table td:first-child { text-align: center; }
                 .team-table td:nth-child(2) { text-align: left; }
                 .team-table td:nth-child(3) { text-align: left; }

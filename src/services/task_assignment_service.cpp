@@ -703,7 +703,7 @@ static bool employeeTaskTypeMatches(const std::shared_ptr<Employee>& employee,
 
 static std::vector<size_t> prepareTaskIndices(const std::vector<Task>& tasks) {
     size_t tasksSize = tasks.size();
-    if (tasksSize > 1000000) {
+    if (tasksSize > static_cast<size_t>(kMaxTasksSize)) {
         return {};
     }
     std::vector<size_t> taskIndices(tasksSize);

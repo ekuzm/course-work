@@ -13,6 +13,7 @@
 #include "entities/project.h"
 #include "entities/task.h"
 #include "ui/main_window.h"
+#include "ui/main_window_operations.h"
 
 void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
                                               const Project& project,
@@ -60,7 +61,7 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
         table->setItem(row, 4, allocatedItem);
 
         if (task.getAllocatedHours() >= task.getEstimatedHours() &&
-            task.getEstimatedHours() > 0) {
+            task.getEstimatedHours() > 0 && task.getAllocatedHours() > 0) {
             auto* fullyAllocatedItem = new QTableWidgetItem("Fully Allocated");
             fullyAllocatedItem->setFlags(Qt::ItemIsSelectable |
                                          Qt::ItemIsEnabled);
@@ -82,11 +83,8 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
                              [mainWindow, projectId = project.getId(),
                               taskId = task.getId()]() {
                                  if (mainWindow) {
-                                     QMetaObject::invokeMethod(
-                                         mainWindow, "assignTaskFromDetails",
-                                         Qt::QueuedConnection,
-                                         Q_ARG(int, projectId),
-                                         Q_ARG(int, taskId));
+                                     ProjectOperations::assignTaskFromDetails(
+                                         mainWindow, projectId, taskId);
                                  }
                              });
 

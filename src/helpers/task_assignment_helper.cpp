@@ -29,7 +29,7 @@ static bool roleMatchesSDLC(const QString& phase, const QString& role) {
 }
 
 static QString formatEmployeeInfo(const std::shared_ptr<Employee>& emp,
-                                  const QString& projectPhaseForRole) {
+                                 const QString& projectPhaseForRole) {
     int available = emp->getAvailableHours();
     int capacity = emp->getWeeklyHoursCapacity();
     int current = emp->getCurrentWeeklyHours();
@@ -45,7 +45,7 @@ static QString formatEmployeeInfo(const std::shared_ptr<Employee>& emp,
     if (!matches && !projectPhaseForRole.isEmpty()) {
         QString expectedRole =
             TaskAssignmentHelper::getExpectedRoleForProjectPhase(
-                projectPhaseForRole);
+            projectPhaseForRole);
         info += QString(" [%1 role required for %2 phase]")
                     .arg(expectedRole)
                     .arg(projectPhaseForRole);
@@ -55,7 +55,7 @@ static QString formatEmployeeInfo(const std::shared_ptr<Employee>& emp,
 }
 
 static void updateTaskInfoLabel(QLabel* taskInfoLabel, int matchingCount,
-                                const QString& projectPhaseForRole) {
+                               const QString& projectPhaseForRole) {
     QString expectedRole = TaskAssignmentHelper::getExpectedRoleForProjectPhase(
         projectPhaseForRole);
     if (matchingCount > 0) {
@@ -71,7 +71,7 @@ static void updateTaskInfoLabel(QLabel* taskInfoLabel, int matchingCount,
         taskInfoLabel->setText(
             QString("Phase: %1 | No %2 employees with available hours")
                 .arg(projectPhaseForRole.isEmpty() ? "Unknown"
-                                                   : projectPhaseForRole)
+                         : projectPhaseForRole)
                 .arg(expectedRole));
         taskInfoLabel->setStyleSheet("color: orange;");
     }
@@ -131,13 +131,17 @@ void TaskAssignmentHelper::setupTaskCombo(QComboBox* taskCombo,
         if (pendingTaskId > 0 && task.getId() != pendingTaskId) continue;
 
         int remaining = task.getEstimatedHours() - task.getAllocatedHours();
-        QString phase = remaining > 0 ? QString("Needs: %1h").arg(remaining)
-                                      : "Fully allocated";
-        taskCombo->addItem(QString("[%1] %2 (%3)")
-                               .arg(task.getType())
-                               .arg(task.getName())
-                               .arg(phase),
-                           task.getId());
+        QString phase;
+        if (task.getAllocatedHours() > 0 && remaining <= 0) {
+            phase = "Fully allocated";
+        } else if (remaining > 0) {
+            phase = QString("Needs: %1h").arg(remaining);
+        }
+        QString taskText = QString("[%1] %2").arg(task.getType()).arg(task.getName());
+        if (!phase.isEmpty()) {
+            taskText += QString(" (%1)").arg(phase);
+        }
+        taskCombo->addItem(taskText, task.getId());
     }
 }
 
@@ -148,37 +152,37 @@ static void updateHoursEditImpl(QLineEdit* hoursEdit,
                                 const Company* company) {
     int taskIndex = taskCombo->currentIndex();
     int employeeIndex = employeeCombo->currentIndex();
-
+    
     if (taskIndex < 0 || static_cast<size_t>(taskIndex) >= tasks.size()) return;
     if (employeeIndex < 0) return;
-
+    
     const auto& selectedTask = tasks[static_cast<size_t>(taskIndex)];
     int employeeId = employeeCombo->itemData(employeeIndex).toInt();
     auto employee = company->getEmployee(employeeId);
-
+    
     if (!employee) return;
-
+    
     int taskRemaining =
         selectedTask.getEstimatedHours() - selectedTask.getAllocatedHours();
     int employeeAvailable = employee->getAvailableHours();
     int maxHours = std::min(taskRemaining, employeeAvailable);
-
+    
     if (maxHours > 0) {
         hoursEdit->setText(QString::number(maxHours));
         hoursEdit->setPlaceholderText(
             QString("Max: %1h (task needs: %2h, employee has: %3h available)")
-                .arg(maxHours)
-                .arg(taskRemaining)
-                .arg(employeeAvailable));
+                                          .arg(maxHours)
+                                          .arg(taskRemaining)
+                                          .arg(employeeAvailable));
     } else {
         hoursEdit->setText("");
-        if (taskRemaining <= 0) {
+        if (taskRemaining <= 0 && selectedTask.getAllocatedHours() > 0) {
             hoursEdit->setPlaceholderText("Task is fully allocated");
         } else {
             hoursEdit->setPlaceholderText(
                 QString("Employee has only %1h available (task needs: %2h)")
-                    .arg(employeeAvailable)
-                    .arg(taskRemaining));
+                                              .arg(employeeAvailable)
+                                              .arg(taskRemaining));
         }
     }
 }
@@ -198,11 +202,11 @@ void TaskAssignmentHelper::setupHoursEdit(QLineEdit* hoursEdit,
 
     QObject::connect(taskCombo,
                      QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     [updateHoursEdit](int) { updateHoursEdit(); });
+        [updateHoursEdit](int) { updateHoursEdit(); });
 
     QObject::connect(employeeCombo,
                      QOverload<int>::of(&QComboBox::currentIndexChanged),
-                     [updateHoursEdit](int) { updateHoursEdit(); });
+        [updateHoursEdit](int) { updateHoursEdit(); });
 
     if (!tasks.empty() && employeeCombo->count() > 0) {
         updateHoursEdit();

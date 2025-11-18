@@ -159,6 +159,9 @@ void AutoSaveLoader::clearDataFiles(const QString& dataDirPath) {
     projectsDir.setNameFilters(filters);
     projectsDir.setFilter(QDir::Files);
     for (const QString& fileName : projectsDir.entryList()) {
+        if (fileName.startsWith("tasks_") || fileName.startsWith("task_assignments_")) {
+            continue;
+        }
         projectsDir.remove(fileName);
     }
 }

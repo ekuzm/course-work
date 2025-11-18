@@ -172,9 +172,8 @@ static bool isEmployeeActive(const std::shared_ptr<Employee>& employee) {
 }
 
 void EmployeeContainer::add(std::shared_ptr<Employee> employee) {
-    // Safety check: prevent adding too many employees
-    if (constexpr size_t maxEmployees = 100000; employees.size() >= maxEmployees) {
-        return;  // Don't add if limit reached
+    if (employees.size() >= static_cast<size_t>(kMaxEmployees)) {
+        return;
     }
     employees.emplace_back(employee);
 }
@@ -195,9 +194,7 @@ std::shared_ptr<Employee> EmployeeContainer::find(int employeeId) const {
 }
 
 std::vector<std::shared_ptr<Employee>> EmployeeContainer::getAll() const {
-    // Safety check: validate size to prevent bad_array_new_length
-    if (constexpr size_t maxEmployees = 100000; employees.size() > maxEmployees) {
-        // Return empty vector if size is invalid
+    if (employees.size() > static_cast<size_t>(kMaxEmployees)) {
         return {};
     }
     return employees;
@@ -206,9 +203,8 @@ std::vector<std::shared_ptr<Employee>> EmployeeContainer::getAll() const {
 size_t EmployeeContainer::size() const { return employees.size(); }
 
 void ProjectContainer::add(std::shared_ptr<Project> project) {
-    // Safety check: prevent adding too many projects
-    if (constexpr size_t maxProjects = 100000; projects.size() >= maxProjects) {
-        return;  // Don't add if limit reached
+    if (projects.size() >= static_cast<size_t>(kMaxProjects)) {
+        return;
     }
     projects.emplace_back(project);
 }
@@ -229,9 +225,7 @@ std::shared_ptr<Project> ProjectContainer::find(int projectId) const {
 }
 
 std::vector<std::shared_ptr<Project>> ProjectContainer::getAll() const {
-    // Safety check: validate size to prevent bad_array_new_length
-    if (constexpr size_t maxProjects = 100000; projects.size() > maxProjects) {
-        // Return empty vector if size is invalid
+    if (projects.size() > static_cast<size_t>(kMaxProjects)) {
         return {};
     }
     return projects;
@@ -245,6 +239,17 @@ Company::Company(QString companyName, QString companyIndustry,
       industry(std::move(companyIndustry)),
       location(std::move(companyLocation)),
       foundedYear(companyFoundedYear),
+      taskManager(taskAssignments, employees, projects),
+      statistics(employees, projects) {}
+
+Company::Company(Company&& other) noexcept
+    : name(std::move(other.name)),
+      industry(std::move(other.industry)),
+      location(std::move(other.location)),
+      foundedYear(other.foundedYear),
+      employees(std::move(other.employees)),
+      projects(std::move(other.projects)),
+      taskAssignments(std::move(other.taskAssignments)),
       taskManager(taskAssignments, employees, projects),
       statistics(employees, projects) {}
 

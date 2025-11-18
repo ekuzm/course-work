@@ -57,16 +57,16 @@ QWidget* ActionButtonHelper::createEmployeeActionButtons(
 
     connectAction(editAction, table, mainWindow, rowIndex, [mainWindow]() {
         EmployeeOperations::editEmployee(mainWindow);
-    });
+                     });
     connectAction(fireAction, table, mainWindow, rowIndex, [mainWindow]() {
         EmployeeOperations::fireEmployee(mainWindow);
-    });
+                     });
     connectAction(deleteAction, table, mainWindow, rowIndex, [mainWindow]() {
         EmployeeOperations::deleteEmployee(mainWindow);
-    });
+                     });
     connectAction(historyAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::viewEmployeeHistory(mainWindow);
-    });
+                     });
 
     return actionContainer;
 }
@@ -93,7 +93,7 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
     }
 
     actionMenu->addSeparator();
-    const auto* moreAction = actionMenu->addAction("More");
+        const auto* moreAction = actionMenu->addAction("More");
 
     actionButton->setMenu(actionMenu);
     qobject_cast<QHBoxLayout*>(actionContainer->layout())
@@ -101,13 +101,13 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
 
     connectAction(editAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::editProject(mainWindow);
-    });
+                     });
     connectAction(deleteAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::deleteProject(mainWindow);
-    });
+                     });
     connectAction(moreAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::openProjectDetails(mainWindow);
-    });
+                     });
 
     return actionContainer;
 }

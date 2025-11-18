@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "entities/derived_employees.h"
+#include "utils/consts.h"
 
 std::map<int, bool> FileManager::employeeStatusesFromFile;
 
@@ -78,8 +79,7 @@ static void parseAssignmentLine(std::string_view lineContent,
                                 std::vector<std::pair<int, int>>& assignments,
                                 int& assignmentsRead, int assignmentsCount,
                                 bool& readingAssignments) {
-    // Safety check: prevent adding too many assignments
-    if (assignmentsRead >= assignmentsCount || assignments.size() >= 10000) {
+    if (assignmentsRead >= assignmentsCount || assignments.size() >= static_cast<size_t>(kMaxSmallAssignments)) {
         readingAssignments = false;
         return;
     }
@@ -118,17 +118,14 @@ static void collectTaskAssignments(
     const Company& company, int projectId, int taskId,
     const std::vector<std::shared_ptr<Employee>>& employees,
     std::vector<std::pair<int, int>>& assignments) {
-    // Safety check: limit assignments size to prevent bad_array_new_length
-    constexpr size_t maxAssignments = 10000;
-    if (assignments.size() >= maxAssignments) {
+    if (assignments.size() >= static_cast<size_t>(kMaxSmallAssignments)) {
         return;
     }
     
     for (const auto& emp : employees) {
         if (!emp) continue;
         
-        // Safety check: prevent adding too many assignments
-        if (assignments.size() >= maxAssignments) {
+        if (assignments.size() >= static_cast<size_t>(kMaxSmallAssignments)) {
             break;
         }
 
@@ -150,8 +147,7 @@ static void processTaskAssignmentLine(
     if (lineContent.find("ASSIGNMENTS_COUNT:") == 0) {
         try {
             int parsedCount = std::stoi(lineContent.substr(18));
-            // Validate assignmentsCount to prevent bad_array_new_length
-            if (parsedCount >= 0 && parsedCount <= 10000) {
+            if (parsedCount >= 0 && parsedCount <= kMaxSmallAssignments) {
                 assignmentsCount = parsedCount;
                 readingAssignments = assignmentsCount > 0;
                 assignmentsRead = 0;
@@ -224,8 +220,7 @@ static std::vector<std::string> readFileLines(const QString& fileName) {
         return {};
     }
     
-    // Limit file size to prevent memory issues (100MB max)
-    if (const auto maxFileSize = std::streampos(100LL * 1024 * 1024); fileSize > maxFileSize) {
+    if (const auto maxFileSize = std::streampos(kMaxFileSizeBytes); fileSize > maxFileSize) {
         fileStream.close();
         throw FileManagerException("File too large: " + fileName);
     }
@@ -233,12 +228,11 @@ static std::vector<std::string> readFileLines(const QString& fileName) {
     fileStream.seekg(0, std::ios::beg);
 
     std::vector<std::string> lines;
-    lines.reserve(10000);  // Reserve reasonable initial capacity
+    lines.reserve(static_cast<size_t>(kReserveCapacity));
     std::string lineContent;
     size_t lineCount = 0;
-    constexpr size_t maxLines = 1000000;  // Max 1 million lines
     
-    while (std::getline(fileStream, lineContent) && lineCount < maxLines) {
+    while (std::getline(fileStream, lineContent) && lineCount < static_cast<size_t>(kMaxLines)) {
         lines.push_back(lineContent);
         lineCount++;
     }
@@ -253,8 +247,7 @@ static bool findTaskHeader(const std::vector<std::string>& lines,
         if (lines[i].find("TASKS_COUNT:") == 0) {
             try {
                 int parsedCount = std::stoi(lines[i].substr(12));
-                // Validate parsed count to prevent bad_array_new_length
-                if (parsedCount >= 0 && parsedCount <= 100000) {
+                if (parsedCount >= 0 && parsedCount <= kMaxTasks) {
                     taskCount = parsedCount;
                     lastHeaderIndex = i;
                     return true;
@@ -325,14 +318,30 @@ static bool processTaskVersion2(const ProcessTaskVersion2Params& params) {
 
         TaskFieldData fieldData;
         parseTaskField(lineContent, fieldData);
-        params.taskData.projectId = fieldData.projectId;
-        params.taskData.taskId = fieldData.taskId;
-        params.taskData.taskName = fieldData.taskName;
-        params.taskData.taskType = fieldData.taskType;
-        params.taskData.estimatedHours = fieldData.estimatedHours;
-        params.taskData.allocatedHours = fieldData.allocatedHours;
-        params.taskData.priority = fieldData.priority;
-        params.taskData.phase = fieldData.phase;
+        if (fieldData.projectId > 0) {
+            params.taskData.projectId = fieldData.projectId;
+        }
+        if (fieldData.taskId > 0) {
+            params.taskData.taskId = fieldData.taskId;
+        }
+        if (!fieldData.taskName.isEmpty()) {
+            params.taskData.taskName = fieldData.taskName;
+        }
+        if (!fieldData.taskType.isEmpty()) {
+            params.taskData.taskType = fieldData.taskType;
+        }
+        if (fieldData.estimatedHours >= 0) {
+            params.taskData.estimatedHours = fieldData.estimatedHours;
+        }
+        if (fieldData.allocatedHours >= 0) {
+            params.taskData.allocatedHours = fieldData.allocatedHours;
+        }
+        if (fieldData.priority >= 0) {
+            params.taskData.priority = fieldData.priority;
+        }
+        if (!fieldData.phase.isEmpty()) {
+            params.taskData.phase = fieldData.phase;
+        }
 
         processTaskAssignmentLine(lineContent, params.taskData.assignments,
                                   assignmentsRead, assignmentsCount,
@@ -362,6 +371,23 @@ static void processTasksVersion2(Company& company,
             continue;
         }
 
+        if (const Project* project = company.getProject(taskData.projectId);
+            !project) {
+            continue;
+        }
+
+        auto existingTasks = company.getProjectTasks(taskData.projectId);
+        bool taskExists = false;
+        for (const auto& existingTask : existingTasks) {
+            if (existingTask.getId() == taskData.taskId) {
+                taskExists = true;
+                break;
+            }
+        }
+        if (taskExists) {
+            continue;
+        }
+
         try {
             AddTaskParams addParams;
             addParams.projectId = taskData.projectId;
@@ -374,9 +400,27 @@ static void processTasksVersion2(Company& company,
             addParams.phase = taskData.phase;
             addParams.assignments = taskData.assignments;
             addTaskToCompany(company, addParams);
+        } catch (const ProjectException& e) {
+            if (QString errorMsg = e.what(); errorMsg.contains("exceed deadline")) {
+                try {
+                    Project* project = company.getProject(taskData.projectId);
+                    if (project) {
+                        Task task(taskData.taskId, taskData.taskName, taskData.taskType,
+                                  taskData.estimatedHours, taskData.priority);
+                        task.setPhase(taskData.phase);
+                        task.setAllocatedHours(taskData.allocatedHours);
+                        project->getTasks().push_back(task);
+                        project->recomputeTotalsFromTasks();
+                        processTaskAssignments(company, taskData.projectId, taskData.taskId,
+                                               taskData.assignments);
+                    }
+                } catch (...) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
         } catch (const CompanyException&) {
-            continue;
-        } catch (const ProjectException&) {
             continue;
         } catch (const TaskException&) {
             continue;
@@ -388,15 +432,12 @@ static void collectEmployeeTaskAssignments(
     const Company& company, int employeeId,
     const std::vector<Project>& projects,
     std::vector<std::tuple<int, int, int, int>>& assignments) {
-    // Safety check: limit assignments size to prevent bad_array_new_length
-    constexpr size_t maxAssignments = 100000;
-    if (assignments.size() >= maxAssignments) {
+    if (assignments.size() >= static_cast<size_t>(kMaxLargeAssignments)) {
         return;
     }
     
     for (const auto& project : projects) {
-        // Safety check: prevent adding too many assignments
-        if (assignments.size() >= maxAssignments) {
+        if (assignments.size() >= static_cast<size_t>(kMaxLargeAssignments)) {
             break;
         }
         
@@ -404,8 +445,7 @@ static void collectEmployeeTaskAssignments(
         auto tasks = company.getProjectTasks(projectId);
 
         for (const auto& task : tasks) {
-            // Safety check: prevent adding too many assignments
-            if (assignments.size() >= maxAssignments) {
+            if (assignments.size() >= static_cast<size_t>(kMaxLargeAssignments)) {
                 break;
             }
             
@@ -749,11 +789,10 @@ void FileManager::saveEmployees(const Company& company,
 
     auto employees = company.getAllEmployees();
     
-    // Safety check: limit employees count to prevent bad_array_new_length
-    if (constexpr size_t maxEmployees = 100000; employees.size() > maxEmployees) {
+    if (employees.size() > static_cast<size_t>(kMaxEmployees)) {
         fileStream.close();
         throw FileManagerException("Too many employees to save (max: " + 
-                                   QString::number(maxEmployees) + "): " + 
+                                   QString::number(kMaxEmployees) + "): " + 
                                    fileName);
     }
     
@@ -820,8 +859,7 @@ void FileManager::loadEmployees(Company& company, const QString& fileName) {
 
     int employeeCount = parseIntFromStream(fileStream, "employee count");
 
-    // Validate employeeCount to prevent bad_array_new_length
-    if (employeeCount < 0 || employeeCount > 100000) {
+    if (employeeCount < 0 || employeeCount > kMaxEmployees) {
         fileStream.close();
         throw FileManagerException("Invalid employee count: " + QString::number(employeeCount));
     }
@@ -892,11 +930,10 @@ void FileManager::saveProjects(const Company& company,
 
     auto projects = company.getAllProjects();
     
-    // Safety check: limit projects count to prevent bad_array_new_length
-    if (constexpr size_t maxProjects = 100000; projects.size() > maxProjects) {
+    if (projects.size() > static_cast<size_t>(kMaxProjects)) {
         fileStream.close();
         throw FileManagerException("Too many projects to save (max: " + 
-                                   QString::number(maxProjects) + "): " + 
+                                   QString::number(kMaxProjects) + "): " + 
                                    fileName);
     }
     
@@ -940,14 +977,17 @@ void FileManager::loadProjects(Company& company, const QString& fileName) {
         throw FileManagerException("Invalid project count format in file");
     }
 
-    // Validate projectCount to prevent bad_array_new_length
-    if (projectCount < 0 || projectCount > 100000) {
+    if (projectCount < 0 || projectCount > kMaxProjects) {
         fileStream.close();
         throw FileManagerException("Invalid project count: " + QString::number(projectCount));
     }
 
     for (int i = 0; i < projectCount; ++i) {
         Project project = loadProjectFromStream(fileStream);
+        if (const Project* existing = company.getProject(project.getId());
+            existing != nullptr) {
+            continue;
+        }
         company.addProject(project);
     }
 
@@ -1000,15 +1040,13 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
     auto projects = company.getAllProjects();
     auto employees = company.getAllEmployees();
 
-    // Safety check: limit total tasks to prevent bad_array_new_length
-    constexpr size_t maxTotalTasks = 100000;
     size_t totalTasksCount = 0;
     for (const auto& project : projects) {
         auto tasks = company.getProjectTasks(project.getId());
         totalTasksCount += tasks.size();
-        if (totalTasksCount > maxTotalTasks) {
+        if (totalTasksCount > static_cast<size_t>(kMaxTasks)) {
             throw FileManagerException("Too many tasks to save (max: " + 
-                                       QString::number(maxTotalTasks) + "): " + 
+                                       QString::number(kMaxTasks) + "): " + 
                                        fileName);
         }
     }
@@ -1016,7 +1054,7 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
     std::vector<std::tuple<int, int, QString, QString, int, int, int, QString,
                            std::vector<std::pair<int, int>>>>
         allTasks;
-    allTasks.reserve(std::min(totalTasksCount, maxTotalTasks));
+    allTasks.reserve(std::min(totalTasksCount, static_cast<size_t>(kMaxTasks)));
 
     for (const auto& project : projects) {
         auto tasks = company.getProjectTasks(project.getId());
@@ -1110,9 +1148,8 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
         return;
     }
 
-    // Validate taskCount to prevent bad_array_new_length
-    if (taskCount < 0 || taskCount > 100000) {
-        return;  // Skip loading if count is invalid or too large
+    if (taskCount < 0 || taskCount > kMaxTasks) {
+        return;
     }
 
     int formatVersion = determineFormatVersion(lines, lastHeaderIndex);
@@ -1133,16 +1170,13 @@ void FileManager::saveTaskAssignments(const Company& company,
     auto employees = company.getAllEmployees();
     auto projects = company.getAllProjects();
 
-    // Safety check: limit assignments to prevent bad_array_new_length
-    constexpr size_t maxAssignments = 100000;
     std::vector<std::tuple<int, int, int, int>> assignments;
-    assignments.reserve(std::min(maxAssignments, size_t(10000)));
+    assignments.reserve(std::min(static_cast<size_t>(kMaxLargeAssignments), static_cast<size_t>(kMaxSmallAssignments)));
 
     for (const auto& emp : employees) {
         if (!emp) continue;
         
-        // Safety check: prevent adding too many assignments
-        if (assignments.size() >= maxAssignments) {
+        if (assignments.size() >= static_cast<size_t>(kMaxLargeAssignments)) {
             break;
         }
         
@@ -1244,10 +1278,9 @@ void FileManager::loadTaskAssignments(Company& company,
         return;
     }
 
-    // Validate assignmentCount to prevent bad_array_new_length
-    if (assignmentCount < 0 || assignmentCount > 1000000) {
+    if (assignmentCount < 0 || assignmentCount > kMaxAssignmentCount) {
         fileStream.close();
-        return;  // Skip loading if count is invalid or too large
+        return;
     }
 
     for (int i = 0; i < assignmentCount; ++i) {

@@ -163,7 +163,8 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
 
             MainWindowDataOperations::refreshAllData(window);
             MainWindowDataOperations::autoSave(window);
-            QMessageBox::information(&dialog, "Success",
+            dialog.hide();
+            QMessageBox::information(window, "Success",
                                      "Employee added successfully!\n\n"
                                      "Name: " +
                                          nameEdit->text().trimmed() +
@@ -172,11 +173,22 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
                                          salaryEdit->text().trimmed());
             dialog.accept();
         } catch (const CompanyException& e) {
-            ExceptionHandler::handleCompanyException(e, &dialog,
-                                                     "add employee");
+            dialog.hide();
+            QMessageBox::warning(window, "Error",
+                                 QString("Failed to add employee!\n\nError details: %1\n\nPlease "
+                                         "check the input data and try again.")
+                                     .arg(e.what()));
+            dialog.show();
         } catch (const FileManagerException& e) {
-            ExceptionHandler::handleFileManagerException(e, &dialog,
-                                                         "employee");
+            dialog.hide();
+            QMessageBox::warning(
+                window, "Auto-save Error",
+                QString("Failed to auto-save changes!\n\nError details: %1\n\n"
+                        "The employee was completed but the data could not be saved "
+                        "automatically.\n"
+                        "Please check file permissions and try again.")
+                    .arg(e.what()));
+            dialog.show();
         } catch (const std::exception& e) {
             ExceptionHandler::handleGenericException(e, &dialog);
         }
@@ -933,7 +945,7 @@ void ProjectOperations::viewProjectAssignments(MainWindow* window) {
     table->setHorizontalHeaderLabels(headers);
     
     size_t projectCount = allProjects.size();
-    if (projectCount > 100000) {
+    if (projectCount > static_cast<size_t>(kMaxProjects)) {
         QMessageBox::warning(window, "Error", 
                              "Too many projects to display. Data may be corrupted.");
         delete table;
@@ -1059,7 +1071,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
     table->setHorizontalHeaderLabels(headers);
     
     size_t employeeProjectCount = employeeProjects.size();
-    if (employeeProjectCount > 100000) {
+    if (employeeProjectCount > kMaxProjects) {
         QMessageBox::warning(window, "Error", 
                              "Too many projects to display. Data may be corrupted.");
         delete table;

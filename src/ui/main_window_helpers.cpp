@@ -513,6 +513,11 @@ void MainWindowProjectDialogHandler::handleAddTaskDialog(
             return;
         }
 
+        Project* project = const_cast<Project*>(window->currentCompany->getProject(projectId));
+        if (project) {
+            project->recomputeTotalsFromTasks();
+        }
+
         MainWindowDataOperations::refreshAllData(window);
         MainWindowDataOperations::autoSave(window);
         QMessageBox::information(
@@ -574,6 +579,13 @@ void MainWindowProjectDialogHandler::handleAssignEmployeeToTaskDialog(
 
         window->currentCompany->assignEmployeeToTask(employeeId, projectId,
                                                      taskId, hours);
+        window->currentCompany->recalculateTaskAllocatedHours();
+        
+        Project* project = const_cast<Project*>(window->currentCompany->getProject(projectId));
+        if (project) {
+            project->recomputeTotalsFromTasks();
+        }
+        
         MainWindowDataOperations::refreshAllData(window);
         MainWindowDataOperations::autoSave(window);
 
