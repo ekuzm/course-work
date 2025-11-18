@@ -48,6 +48,33 @@ struct ProcessTaskVersion2Params {
     TaskData& taskData;
 };
 
+static void updateTaskDataFromField(TaskData& taskData, const TaskFieldData& fieldData) {
+    if (fieldData.projectId > 0) {
+        taskData.projectId = fieldData.projectId;
+    }
+    if (fieldData.taskId > 0) {
+        taskData.taskId = fieldData.taskId;
+    }
+    if (!fieldData.taskName.isEmpty()) {
+        taskData.taskName = fieldData.taskName;
+    }
+    if (!fieldData.taskType.isEmpty()) {
+        taskData.taskType = fieldData.taskType;
+    }
+    if (fieldData.estimatedHours >= 0) {
+        taskData.estimatedHours = fieldData.estimatedHours;
+    }
+    if (fieldData.allocatedHours >= 0) {
+        taskData.allocatedHours = fieldData.allocatedHours;
+    }
+    if (fieldData.priority >= 0) {
+        taskData.priority = fieldData.priority;
+    }
+    if (!fieldData.phase.isEmpty()) {
+        taskData.phase = fieldData.phase;
+    }
+}
+
 static void parseTaskField(std::string_view lineContent, TaskFieldData& data) {
     if (lineContent.find("PROJECT_ID:") == 0) {
         std::string subStr(lineContent.substr(11));
@@ -76,9 +103,9 @@ static void parseTaskField(std::string_view lineContent, TaskFieldData& data) {
 }
 
 static void parseAssignmentLine(std::string_view lineContent,
-                                std::vector<std::pair<int, int>>& assignments,
-                                int& assignmentsRead, int assignmentsCount,
-                                bool& readingAssignments) {
+                         std::vector<std::pair<int, int>>& assignments,
+                         int& assignmentsRead, int assignmentsCount,
+                         bool& readingAssignments) {
     if (assignmentsRead >= assignmentsCount || assignments.size() >= static_cast<size_t>(kMaxSmallAssignments)) {
         readingAssignments = false;
         return;
@@ -86,12 +113,12 @@ static void parseAssignmentLine(std::string_view lineContent,
     
     size_t empPos = lineContent.find("EMPLOYEE_ID:");
     size_t hoursPos = lineContent.find("HOURS:");
-
+    
     if (empPos == std::string_view::npos ||
         hoursPos == std::string_view::npos) {
         return;
     }
-
+    
     int employeeId = 0;
     int hours = 0;
     try {
@@ -104,7 +131,7 @@ static void parseAssignmentLine(std::string_view lineContent,
     } catch (const std::out_of_range&) {
         return;
     }
-
+    
     if (employeeId > 0 && hours > 0) {
         assignments.emplace_back(employeeId, hours);
         assignmentsRead++;
@@ -116,8 +143,8 @@ static void parseAssignmentLine(std::string_view lineContent,
 
 static void collectTaskAssignments(
     const Company& company, int projectId, int taskId,
-    const std::vector<std::shared_ptr<Employee>>& employees,
-    std::vector<std::pair<int, int>>& assignments) {
+                                   const std::vector<std::shared_ptr<Employee>>& employees,
+                                   std::vector<std::pair<int, int>>& assignments) {
     if (assignments.size() >= static_cast<size_t>(kMaxSmallAssignments)) {
         return;
     }
@@ -131,11 +158,11 @@ static void collectTaskAssignments(
 
         auto taskHours =
             company.getEmployeeTaskHours(emp->getId(), projectId, taskId);
-
+        
         if (taskHours <= 0) {
             continue;
         }
-
+        
         assignments.push_back(std::make_pair(emp->getId(), taskHours));
     }
 }
@@ -149,8 +176,8 @@ static void processTaskAssignmentLine(
             int parsedCount = std::stoi(lineContent.substr(18));
             if (parsedCount >= 0 && parsedCount <= kMaxSmallAssignments) {
                 assignmentsCount = parsedCount;
-                readingAssignments = assignmentsCount > 0;
-                assignmentsRead = 0;
+            readingAssignments = assignmentsCount > 0;
+            assignmentsRead = 0;
             } else {
                 assignmentsCount = 0;
                 readingAssignments = false;
@@ -161,16 +188,16 @@ static void processTaskAssignmentLine(
             assignmentsCount = 0;
         }
     }
-
+    
     if (readingAssignments && lineContent.find("  [") == 0) {
         parseAssignmentLine(lineContent, assignments, assignmentsRead,
-                            assignmentsCount, readingAssignments);
+                           assignmentsCount, readingAssignments);
     }
 }
 
 static void processTaskAssignments(
     Company& company, int projectId, int taskId,
-    const std::vector<std::pair<int, int>>& assignments) {
+                                  const std::vector<std::pair<int, int>>& assignments) {
     for (const auto& assignment : assignments) {
         const auto& [empId, hours] = assignment;
         try {
@@ -237,20 +264,20 @@ static std::vector<std::string> readFileLines(const QString& fileName) {
         lineCount++;
     }
     fileStream.close();
-
+    
     return lines;
 }
 
 static bool findTaskHeader(const std::vector<std::string>& lines,
-                           int& lastHeaderIndex, int& taskCount) {
+                          int& lastHeaderIndex, int& taskCount) {
     for (int i = lines.size() - 1; i >= 0; --i) {
         if (lines[i].find("TASKS_COUNT:") == 0) {
             try {
                 int parsedCount = std::stoi(lines[i].substr(12));
                 if (parsedCount >= 0 && parsedCount <= kMaxTasks) {
                     taskCount = parsedCount;
-                    lastHeaderIndex = i;
-                    return true;
+                lastHeaderIndex = i;
+                return true;
                 }
             } catch (const std::invalid_argument&) {
                 continue;
@@ -263,8 +290,8 @@ static bool findTaskHeader(const std::vector<std::string>& lines,
 }
 
 static int determineFormatVersion(const std::vector<std::string>& lines,
-                                  int lastHeaderIndex) {
-    if (lastHeaderIndex + 1 < static_cast<int>(lines.size()) &&
+                                 int lastHeaderIndex) {
+    if (lastHeaderIndex + 1 < static_cast<int>(lines.size()) && 
         lines[lastHeaderIndex + 1].find("FORMAT_VERSION:") == 0) {
         try {
             return std::stoi(lines[lastHeaderIndex + 1].substr(15));
@@ -278,7 +305,7 @@ static int determineFormatVersion(const std::vector<std::string>& lines,
 }
 
 static int calculateStartIndex(const std::vector<std::string>& lines,
-                               int lastHeaderIndex) {
+                              int lastHeaderIndex) {
     int startIndex = lastHeaderIndex + 2;
     if (startIndex < static_cast<int>(lines.size()) &&
         lines[startIndex] == "---") {
@@ -287,83 +314,54 @@ static int calculateStartIndex(const std::vector<std::string>& lines,
     return startIndex;
 }
 
-static void updateTaskDataFromField(const TaskFieldData& fieldData,
-                                    TaskData& taskData) {
-    if (fieldData.projectId > 0) {
-        taskData.projectId = fieldData.projectId;
-    }
-    if (fieldData.taskId > 0) {
-        taskData.taskId = fieldData.taskId;
-    }
-    if (!fieldData.taskName.isEmpty()) {
-        taskData.taskName = fieldData.taskName;
-    }
-    if (!fieldData.taskType.isEmpty()) {
-        taskData.taskType = fieldData.taskType;
-    }
-    if (fieldData.estimatedHours >= 0) {
-        taskData.estimatedHours = fieldData.estimatedHours;
-    }
-    if (fieldData.allocatedHours >= 0) {
-        taskData.allocatedHours = fieldData.allocatedHours;
-    }
-    if (fieldData.priority >= 0) {
-        taskData.priority = fieldData.priority;
-    }
-    if (!fieldData.phase.isEmpty()) {
-        taskData.phase = fieldData.phase;
-    }
-}
-
 static bool processTaskVersion2(const ProcessTaskVersion2Params& params) {
-    while (params.lineIndex < static_cast<int>(params.lines.size()) &&
+    while (params.lineIndex < static_cast<int>(params.lines.size()) && 
            params.lines[params.lineIndex].find("[TASK") != 0) {
         params.lineIndex++;
     }
-
+    
     if (params.lineIndex >= static_cast<int>(params.lines.size())) {
         return false;
     }
-
+    
     params.lineIndex++;
-
+    
     bool readingAssignments = false;
     int assignmentsCount = 0;
     int assignmentsRead = 0;
-
+    
     while (params.lineIndex < static_cast<int>(params.lines.size())) {
         std::string lineContent = params.lines[params.lineIndex];
-
+        
         if (lineContent.empty() || lineContent == "---") {
             params.lineIndex++;
             continue;
         }
-
+        
         if (lineContent.find("[TASK") == 0 &&
             params.taskIndex < params.taskCount - 1) {
             break;
         }
-
+        
         TaskFieldData fieldData;
         parseTaskField(lineContent, fieldData);
-        updateTaskDataFromField(fieldData, params.taskData);
-
+        updateTaskDataFromField(params.taskData, fieldData);
+        
         processTaskAssignmentLine(lineContent, params.taskData.assignments,
                                   assignmentsRead, assignmentsCount,
                                   readingAssignments);
-
+        
         params.lineIndex++;
     }
-
+    
     return true;
 }
 
-static bool isTaskDataValid(const TaskData& taskData) {
-    return taskData.projectId > 0 && taskData.taskId > 0 &&
-           !taskData.taskName.isEmpty();
+static bool isValidTaskData(const TaskData& taskData) {
+    return taskData.projectId > 0 && taskData.taskId > 0 && !taskData.taskName.isEmpty();
 }
 
-static bool taskExists(const Company& company, int projectId, int taskId) {
+static bool taskExistsInProject(const Company& company, int projectId, int taskId) {
     auto existingTasks = company.getProjectTasks(projectId);
     for (const auto& existingTask : existingTasks) {
         if (existingTask.getId() == taskId) {
@@ -373,7 +371,7 @@ static bool taskExists(const Company& company, int projectId, int taskId) {
     return false;
 }
 
-static void addTaskDirectlyToProject(Company& company, const TaskData& taskData) {
+static void addTaskWithDeadlineException(Company& company, const TaskData& taskData) {
     Project* project = company.getProject(taskData.projectId);
     if (project) {
         Task task(taskData.taskId, taskData.taskName, taskData.taskType,
@@ -387,49 +385,9 @@ static void addTaskDirectlyToProject(Company& company, const TaskData& taskData)
     }
 }
 
-static void processSingleTask(Company& company, const TaskData& taskData) {
-    if (!isTaskDataValid(taskData)) {
-        return;
-    }
-
-    if (const Project* project = company.getProject(taskData.projectId);
-        !project) {
-        return;
-    }
-
-    if (taskExists(company, taskData.projectId, taskData.taskId)) {
-        return;
-    }
-
-    try {
-        AddTaskParams addParams;
-        addParams.projectId = taskData.projectId;
-        addParams.taskId = taskData.taskId;
-        addParams.taskName = taskData.taskName;
-        addParams.taskType = taskData.taskType;
-        addParams.estimatedHours = taskData.estimatedHours;
-        addParams.allocatedHours = taskData.allocatedHours;
-        addParams.priority = taskData.priority;
-        addParams.phase = taskData.phase;
-        addParams.assignments = taskData.assignments;
-        addTaskToCompany(company, addParams);
-    } catch (const ProjectException& e) {
-        if (QString errorMsg = e.what(); errorMsg.contains("exceed deadline")) {
-            try {
-                addTaskDirectlyToProject(company, taskData);
-            } catch (const CompanyException&) {
-            } catch (const ProjectException&) {
-            } catch (const TaskException&) {
-            }
-        }
-    } catch (const CompanyException&) {
-    } catch (const TaskException&) {
-    }
-}
-
 static void processTasksVersion2(Company& company,
                                  const std::vector<std::string>& lines,
-                                 int startIndex, int taskCount) {
+                                int startIndex, int taskCount) {
     int lineIndex = startIndex;
     for (int i = 0; i < taskCount && lineIndex < static_cast<int>(lines.size());
          ++i) {
@@ -439,15 +397,58 @@ static void processTasksVersion2(Company& company,
             !processTaskVersion2(params)) {
             break;
         }
+        
+        if (!isValidTaskData(taskData)) {
+            continue;
+        }
 
-        processSingleTask(company, taskData);
+        if (const Project* project = company.getProject(taskData.projectId);
+            !project) {
+            continue;
+        }
+
+        if (taskExistsInProject(company, taskData.projectId, taskData.taskId)) {
+            continue;
+        }
+        
+        try {
+            AddTaskParams addParams;
+            addParams.projectId = taskData.projectId;
+            addParams.taskId = taskData.taskId;
+            addParams.taskName = taskData.taskName;
+            addParams.taskType = taskData.taskType;
+            addParams.estimatedHours = taskData.estimatedHours;
+            addParams.allocatedHours = taskData.allocatedHours;
+            addParams.priority = taskData.priority;
+            addParams.phase = taskData.phase;
+            addParams.assignments = taskData.assignments;
+            addTaskToCompany(company, addParams);
+        } catch (const ProjectException& e) {
+            if (QString errorMsg = e.what(); errorMsg.contains("exceed deadline")) {
+                try {
+                    addTaskWithDeadlineException(company, taskData);
+                } catch (const ProjectException&) {
+                    continue;
+                } catch (const CompanyException&) {
+                    continue;
+                } catch (const TaskException&) {
+                    continue;
+                }
+            } else {
+                continue;
+            }
+        } catch (const CompanyException&) {
+            continue;
+        } catch (const TaskException&) {
+            continue;
+        }
     }
 }
 
 static void collectEmployeeTaskAssignments(
     const Company& company, int employeeId,
-    const std::vector<Project>& projects,
-    std::vector<std::tuple<int, int, int, int>>& assignments) {
+                                          const std::vector<Project>& projects,
+                                          std::vector<std::tuple<int, int, int, int>>& assignments) {
     if (assignments.size() >= static_cast<size_t>(kMaxLargeAssignments)) {
         return;
     }
@@ -459,7 +460,7 @@ static void collectEmployeeTaskAssignments(
         
         auto projectId = project.getId();
         auto tasks = company.getProjectTasks(projectId);
-
+        
         for (const auto& task : tasks) {
             if (assignments.size() >= static_cast<size_t>(kMaxLargeAssignments)) {
                 break;
@@ -467,11 +468,11 @@ static void collectEmployeeTaskAssignments(
             
             int taskHours = company.getEmployeeTaskHours(employeeId, projectId,
                                                          task.getId());
-
+            
             if (taskHours <= 0) {
                 continue;
             }
-
+            
             assignments.push_back(std::make_tuple(employeeId, projectId,
                                                   task.getId(), taskHours));
         }
@@ -484,7 +485,7 @@ T parseNumericFromStream(std::ifstream& fileStream, const QString& fieldName) {
     std::getline(fileStream, lineContent);
     try {
         if constexpr (std::is_same_v<T, int>) {
-            return std::stoi(lineContent);
+        return std::stoi(lineContent);
         } else if constexpr (std::is_same_v<T, double>) {
             return std::stod(lineContent);
         }
@@ -569,12 +570,12 @@ FileManager::EmployeeBaseData FileManager::loadEmployeeBaseData(
     data.salary = parseDoubleFromStream(fileStream, "salary");
     data.department = parseStringFromStream(fileStream);
     data.employmentRate = parseEmploymentRate(fileStream);
-
+    
     std::streampos currentPos = fileStream.tellg();
     if (std::string lineContent; std::getline(fileStream, lineContent)) {
         lineContent.erase(0, lineContent.find_first_not_of(" \t\n\r"));
         lineContent.erase(lineContent.find_last_not_of(" \t\n\r") + 1);
-
+        
         if (lineContent == "0" || lineContent == "1") {
             data.isActive = (lineContent == "1");
         } else {
@@ -585,7 +586,7 @@ FileManager::EmployeeBaseData FileManager::loadEmployeeBaseData(
         fileStream.seekg(currentPos);
         data.isActive = true;
     }
-
+    
     return data;
 }
 
@@ -614,11 +615,11 @@ Company FileManager::loadFromFile(const QString& fileName) {
 
     Company company = loadSingleCompany(fileStream);
     fileStream.close();
-
+    
     company.fixTaskAssignmentsToCapacity();
-
+    
     company.recalculateTaskAllocatedHours();
-
+    
     return company;
 }
 
@@ -682,7 +683,7 @@ void FileManager::loadEmployeesFromStream(Company& company,
         EmployeeBaseData baseData = loadEmployeeBaseData(fileStream);
 
         std::shared_ptr<Employee> employee;
-
+        
         if (employeeType == "MANAGER") {
             int managedProjectId =
                 parseIntFromStream(fileStream, "managed project ID");
@@ -713,7 +714,7 @@ void FileManager::loadEmployeesFromStream(Company& company,
                 baseData.department, qaTestingType, qaBugsFound,
                 baseData.employmentRate);
         }
-
+        
         if (employee) {
             employee->setIsActive(baseData.isActive);
             company.addEmployee(employee);
@@ -813,7 +814,7 @@ void FileManager::saveEmployees(const Company& company,
     }
     
     fileStream << employees.size() << "\n";
-
+    
     if (!fileStream.good()) {
         fileStream.close();
         throw FileManagerException("Error writing employee count to file: " +
@@ -829,13 +830,13 @@ void FileManager::saveEmployees(const Company& company,
                                        fileName);
         }
     }
-
+    
     fileStream.flush();
     if (!fileStream.good()) {
         fileStream.close();
         throw FileManagerException("Error flushing data to file: " + fileName);
     }
-
+    
     fileStream.close();
 }
 
@@ -860,7 +861,7 @@ void FileManager::saveEmployeeToStream(std::shared_ptr<Employee> employee,
 
 void FileManager::loadEmployees(Company& company, const QString& fileName) {
     employeeStatusesFromFile.clear();
-
+    
     std::ifstream fileStream(fileName.toStdString());
     if (!fileStream.is_open()) {
         throw FileManagerException("Cannot open file for reading: " + fileName);
@@ -899,7 +900,7 @@ std::shared_ptr<Employee> FileManager::loadEmployeeFromStream(
     EmployeeBaseData baseData = loadEmployeeBaseData(fileStream);
 
     std::shared_ptr<Employee> employee;
-
+    
     if (employeeType == "[MANAGER]") {
         int managedProjectId =
             parseIntFromStream(fileStream, "managed project ID");
@@ -928,12 +929,12 @@ std::shared_ptr<Employee> FileManager::loadEmployeeFromStream(
             baseData.id, baseData.name, baseData.salary, baseData.department,
             qaTestingType, qaBugsFound, baseData.employmentRate);
     }
-
+    
     if (employee) {
         employeeStatusesFromFile[baseData.id] = baseData.isActive;
         employee->setIsActive(baseData.isActive);
     }
-
+    
     return employee;
 }
 
@@ -1089,19 +1090,19 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
     fileStream << "TASKS_COUNT:" << allTasks.size() << "\n";
     fileStream << "FORMAT_VERSION:2\n";
     fileStream << "---\n";
-
+    
     if (!fileStream.good()) {
         fileStream.close();
         QFile::remove(tempFileName);
         throw FileManagerException("Error writing task header to file: " +
                                    fileName);
     }
-
+    
     for (size_t i = 0; i < allTasks.size(); ++i) {
         const auto& [projectId, taskId, taskName, taskType, estimatedHours,
                      allocatedHours, priority, phase, assignments] =
             allTasks[i];
-
+        
         fileStream << "\n[TASK " << (i + 1) << "]\n";
         fileStream << "PROJECT_ID:" << projectId << "\n";
         fileStream << "TASK_ID:" << taskId << "\n";
@@ -1112,17 +1113,17 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
         fileStream << "PRIORITY:" << priority << "\n";
         fileStream << "PHASE:" << phase.toStdString() << "\n";
         fileStream << "ASSIGNMENTS_COUNT:" << assignments.size() << "\n";
-
+        
         if (!assignments.empty()) {
             fileStream << "ASSIGNMENTS:\n";
             int j = 1;
             for (const auto& [empId, hours] : assignments) {
-                fileStream << "  [" << j << "] EMPLOYEE_ID:" << empId
+                fileStream << "  [" << j << "] EMPLOYEE_ID:" << empId 
                            << " HOURS:" << hours << "\n";
                 j++;
             }
         }
-
+        
         if (!fileStream.good()) {
             fileStream.close();
             QFile::remove(tempFileName);
@@ -1137,9 +1138,9 @@ void FileManager::saveTasks(const Company& company, const QString& fileName) {
         QFile::remove(tempFileName);
         throw FileManagerException("Error flushing data to file: " + fileName);
     }
-
+    
     fileStream.close();
-
+    
     if (QFile::exists(fileName)) {
         QFile::remove(fileName);
     }
@@ -1157,7 +1158,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
     if (lines.empty()) {
         return;
     }
-
+    
     int lastHeaderIndex = -1;
     int taskCount = 0;
     if (!findTaskHeader(lines, lastHeaderIndex, taskCount) || taskCount == 0) {
@@ -1167,7 +1168,7 @@ void FileManager::loadTasks(Company& company, const QString& fileName) {
     if (taskCount < 0 || taskCount > kMaxTasks) {
         return;
     }
-
+    
     int formatVersion = determineFormatVersion(lines, lastHeaderIndex);
     int startIndex = calculateStartIndex(lines, lastHeaderIndex);
 
@@ -1306,8 +1307,8 @@ void FileManager::loadTaskAssignments(Company& company,
     }
 
     fileStream.close();
-
+    
     company.fixTaskAssignmentsToCapacity();
-
+    
     company.recalculateTaskAllocatedHours();
 }

@@ -49,6 +49,116 @@ void handleOperationExceptions(QWidget* parent, const std::exception& e,
         QString("Failed to %1: %2").arg(operation).arg(e.what()));
 }
 
+static void handleAddEmployeeSuccess(MainWindow* window, QDialog& dialog,
+                                     QLineEdit* nameEdit, QComboBox* typeCombo,
+                                     QLineEdit* salaryEdit) {
+    MainWindowDataOperations::refreshAllData(window);
+    MainWindowDataOperations::autoSave(window);
+    dialog.hide();
+    QMessageBox::information(window, "Success",
+                             "Employee added successfully!\n\n"
+                             "Name: " +
+                                 nameEdit->text().trimmed() +
+                                 "\nType: " + typeCombo->currentText() +
+                                 "\nSalary: $" +
+                                 salaryEdit->text().trimmed());
+    dialog.accept();
+}
+
+static void handleAddEmployeeError(MainWindow* window, QDialog& dialog,
+                                    const std::exception& e) {
+    dialog.hide();
+    if (const auto* companyEx = dynamic_cast<const CompanyException*>(&e)) {
+        QMessageBox::warning(window, "Error",
+                             QString("Failed to add employee!\n\nError details: %1\n\nPlease "
+                                     "check the input data and try again.")
+                                 .arg(companyEx->what()));
+    } else if (const auto* fileEx = dynamic_cast<const FileManagerException*>(&e)) {
+        QMessageBox::warning(
+            window, "Auto-save Error",
+            QString("Failed to auto-save changes!\n\nError details: %1\n\n"
+                    "The employee was completed but the data could not be saved "
+                    "automatically.\n"
+                    "Please check file permissions and try again.")
+                .arg(fileEx->what()));
+    } else {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
+    dialog.show();
+}
+
+static void handleEditEmployeeSuccess(QDialog& dialog, QLineEdit* nameEdit,
+                                      const QString& currentType,
+                                      QLineEdit* salaryEdit) {
+    MainWindowDataOperations::refreshAllData(
+        qobject_cast<MainWindow*>(dialog.parent()));
+    MainWindowDataOperations::autoSave(
+        qobject_cast<MainWindow*>(dialog.parent()));
+    dialog.hide();
+    QMessageBox::information(
+        dialog.parentWidget(), "Success",
+        "Employee updated successfully!\n\n"
+        "Name: " +
+            nameEdit->text().trimmed() + "\nType: " + currentType +
+            "\nSalary: $" + salaryEdit->text().trimmed());
+    dialog.accept();
+}
+
+static void handleEditEmployeeError(QDialog& dialog, const std::exception& e) {
+    dialog.hide();
+    if (const auto* companyEx = dynamic_cast<const CompanyException*>(&e)) {
+        ExceptionHandler::handleCompanyException(*companyEx, &dialog,
+                                                 "edit employee");
+    } else if (const auto* fileEx = dynamic_cast<const FileManagerException*>(&e)) {
+        ExceptionHandler::handleFileManagerException(*fileEx, &dialog,
+                                                     "employee update");
+    } else if (const auto* empEx = dynamic_cast<const EmployeeException*>(&e)) {
+        ExceptionHandler::handleGenericException(*empEx, &dialog);
+    } else if (const auto* projEx = dynamic_cast<const ProjectException*>(&e)) {
+        ExceptionHandler::handleGenericException(*projEx, &dialog);
+    } else if (const auto* taskEx = dynamic_cast<const TaskException*>(&e)) {
+        ExceptionHandler::handleGenericException(*taskEx, &dialog);
+    } else {
+        ExceptionHandler::handleGenericException(e, &dialog);
+    }
+    dialog.show();
+}
+
+static void handleAutoAssignCompanyException(MainWindow* window, int projectId,
+                                             const CompanyException& e) {
+    QString errorMsg = e.what();
+    if (errorMsg.contains("ASSIGNED_HOURS:")) {
+        QStringList parts = errorMsg.split(":");
+        int trackedHours = parts.size() > 1 ? parts[1].toInt() : 0;
+        int actualHours = parts.size() > 2 ? parts[2].toInt() : 0;
+
+        MainWindowDataOperations::refreshAllData(window);
+        const auto* projectAfter = window->currentCompany->getProject(projectId);
+        int allocatedAfter = projectAfter ? projectAfter->getAllocatedHours() : 0;
+
+        QMessageBox::information(
+            window, "Success",
+            QString("Employees auto-assigned successfully!\n\n"
+                    "Hours assigned (tracked): %1h\n"
+                    "Hours assigned (actual): %2h\n"
+                    "Total allocated: %3h / %4h estimated")
+                .arg(trackedHours)
+                .arg(actualHours)
+                .arg(allocatedAfter)
+                .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
+    } else {
+        QString detailedMessage = errorMsg;
+        if (!errorMsg.contains("Error details:")) {
+            detailedMessage = QString("Failed to assign employee to task!\n\n"
+                                      "Error details:\n%1\n\n"
+                                      "Please check the input data and try again.")
+                                  .arg(errorMsg);
+        }
+        QMessageBox::warning(window, "Failed to assign employee to task!",
+                             detailedMessage);
+    }
+}
+
 template <typename Func>
 void executeWithExceptionHandling(MainWindow* window, Func&& operation,
                                   const QString& operationName) {
@@ -160,161 +270,33 @@ void EmployeeOperations::addEmployee(MainWindow* window) {
                 !EmployeeDialogHandler::processAddEmployee(params)) {
                 return;
             }
-
-            MainWindowDataOperations::refreshAllData(window);
-            MainWindowDataOperations::autoSave(window);
-            dialog.hide();
-            QMessageBox::information(window, "Success",
-                                     "Employee added successfully!\n\n"
-                                     "Name: " +
-                                         nameEdit->text().trimmed() +
-                                         "\nType: " + typeCombo->currentText() +
-                                         "\nSalary: $" +
-                                         salaryEdit->text().trimmed());
-            dialog.accept();
+            handleAddEmployeeSuccess(window, dialog, nameEdit, typeCombo, salaryEdit);
         } catch (const CompanyException& e) {
-            dialog.hide();
-            QMessageBox::warning(window, "Error",
-                                 QString("Failed to add employee!\n\nError details: %1\n\nPlease "
-                                         "check the input data and try again.")
-                                     .arg(e.what()));
-            dialog.show();
+            handleAddEmployeeError(window, dialog, e);
         } catch (const FileManagerException& e) {
-            dialog.hide();
-            QMessageBox::warning(
-                window, "Auto-save Error",
-                QString("Failed to auto-save changes!\n\nError details: %1\n\n"
-                        "The employee was completed but the data could not be saved "
-                        "automatically.\n"
-                        "Please check file permissions and try again.")
-                    .arg(e.what()));
-            dialog.show();
+            handleAddEmployeeError(window, dialog, e);
         } catch (const EmployeeException& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
+            handleAddEmployeeError(window, dialog, e);
         } catch (const ProjectException& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
+            handleAddEmployeeError(window, dialog, e);
         } catch (const TaskException& e) {
-            ExceptionHandler::handleGenericException(e, &dialog);
+            handleAddEmployeeError(window, dialog, e);
         }
     });
 
     dialog.exec();
 }
 
-static void handleEditEmployeeButtonClick(MainWindow* window, QDialog& dialog,
-                                         int employeeId, QLineEdit* nameEdit,
-                                         QLineEdit* salaryEdit, QLineEdit* deptEdit,
-                                         QComboBox* employmentRateCombo,
-                                         QComboBox* managerProject,
-                                         QLineEdit* devLanguage,
-                                         QLineEdit* devExperience,
-                                         QLineEdit* designerTool,
-                                         QLineEdit* designerProjects,
-                                         QLineEdit* qaTestType,
-                                         QLineEdit* qaBugs,
-                                         const QString& currentType) {
-    try {
-        if (EmployeeDialogHandler::EditEmployeeParams params{
-                &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
-                nameEdit, salaryEdit, deptEdit, employmentRateCombo,
-                managerProject, devLanguage, devExperience, designerTool,
-                designerProjects, qaTestType, qaBugs, currentType};
-            !EmployeeDialogHandler::processEditEmployee(params)) {
-            return;
-        }
-
-        MainWindowDataOperations::refreshAllData(window);
-        MainWindowDataOperations::autoSave(window);
-        QMessageBox::information(
-            &dialog, "Success",
-            "Employee updated successfully!\n\n"
-            "Name: " +
-                nameEdit->text().trimmed() + "\nType: " + currentType +
-                "\nSalary: $" + salaryEdit->text().trimmed());
-        dialog.accept();
-    } catch (const CompanyException& e) {
-        ExceptionHandler::handleCompanyException(e, &dialog,
-                                                 "edit employee");
-    } catch (const FileManagerException& e) {
-        ExceptionHandler::handleFileManagerException(e, &dialog,
-                                                     "employee update");
-    } catch (const EmployeeException& e) {
-        ExceptionHandler::handleGenericException(e, &dialog);
-    } catch (const ProjectException& e) {
-        ExceptionHandler::handleGenericException(e, &dialog);
-    } catch (const TaskException& e) {
-        ExceptionHandler::handleGenericException(e, &dialog);
-    }
-}
-
-static void handleAddEmployeeButtonClick(MainWindow* window, QDialog& dialog,
-                                         QLineEdit* nameEdit, QLineEdit* salaryEdit,
-                                         QLineEdit* deptEdit, QComboBox* typeCombo,
-                                         QComboBox* employmentRateCombo,
-                                         QComboBox* managerProject,
-                                         QLineEdit* devLanguage,
-                                         QLineEdit* devExperience,
-                                         QLineEdit* designerTool,
-                                         QLineEdit* designerProjects,
-                                         QLineEdit* qaTestType,
-                                         QLineEdit* qaBugs) {
-    try {
-        if (EmployeeDialogHandler::AddEmployeeParams params{
-                &dialog, window->currentCompany, window->nextEmployeeId,
-                nameEdit, salaryEdit, deptEdit, typeCombo, employmentRateCombo,
-                managerProject, devLanguage, devExperience, designerTool,
-                designerProjects, qaTestType, qaBugs};
-            !EmployeeDialogHandler::processAddEmployee(params)) {
-            return;
-        }
-
-        MainWindowDataOperations::refreshAllData(window);
-        MainWindowDataOperations::autoSave(window);
-        dialog.hide();
-        QMessageBox::information(window, "Success",
-                                 "Employee added successfully!\n\n"
-                                 "Name: " +
-                                     nameEdit->text().trimmed() +
-                                     "\nType: " + typeCombo->currentText() +
-                                     "\nSalary: $" +
-                                     salaryEdit->text().trimmed());
-        dialog.accept();
-    } catch (const CompanyException& e) {
-        dialog.hide();
-        QMessageBox::warning(window, "Error",
-                             QString("Failed to add employee!\n\nError details: %1\n\nPlease "
-                                     "check the input data and try again.")
-                                 .arg(e.what()));
-        dialog.show();
-    } catch (const FileManagerException& e) {
-        dialog.hide();
-        QMessageBox::warning(
-            window, "Auto-save Error",
-            QString("Failed to auto-save changes!\n\nError details: %1\n\n"
-                    "The employee was completed but the data could not be saved "
-                    "automatically.\n"
-                    "Please check file permissions and try again.")
-                .arg(e.what()));
-        dialog.show();
-    } catch (const EmployeeException& e) {
-        ExceptionHandler::handleGenericException(e, &dialog);
-    } catch (const ProjectException& e) {
-        ExceptionHandler::handleGenericException(e, &dialog);
-    } catch (const TaskException& e) {
-        ExceptionHandler::handleGenericException(e, &dialog);
-    }
-}
-
 void EmployeeOperations::editEmployee(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "editing employees")) return;
-
+    
     auto employeeId = MainWindowSelectionHelper::getSelectedEmployeeId(window);
     if (employeeId < 0) {
         QMessageBox::warning(window, "Error",
                              "Please select an employee to edit.");
         return;
     }
-
+    
     auto employee = window->currentCompany->getEmployee(employeeId);
     if (employee == nullptr) {
         QMessageBox::warning(window, "Error", "Employee not found!");
@@ -411,7 +393,38 @@ void EmployeeOperations::editEmployee(MainWindow* window) {
     dialog.setFixedSize(maxSize);
 
     QObject::connect(okButton, &QPushButton::clicked, [window, &dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType]() {
-        handleEditEmployeeButtonClick(window, dialog, employeeId, nameEdit, salaryEdit, deptEdit, employmentRateCombo, managerProject, devLanguage, devExperience, designerTool, designerProjects, qaTestType, qaBugs, currentType);
+        try {
+            if (EmployeeDialogHandler::EditEmployeeParams params{
+                    &dialog, window->currentCompany, employeeId, window->nextEmployeeId,
+                    nameEdit, salaryEdit, deptEdit, employmentRateCombo,
+                    managerProject, devLanguage, devExperience, designerTool,
+                    designerProjects, qaTestType, qaBugs, currentType};
+                !EmployeeDialogHandler::processEditEmployee(params)) {
+                return;
+            }
+            if (auto* mainWindow = qobject_cast<MainWindow*>(window)) {
+                MainWindowDataOperations::refreshAllData(mainWindow);
+                MainWindowDataOperations::autoSave(mainWindow);
+            }
+            dialog.hide();
+            QMessageBox::information(
+                dialog.parentWidget(), "Success",
+                "Employee updated successfully!\n\n"
+                "Name: " +
+                    nameEdit->text().trimmed() + "\nType: " + currentType +
+                    "\nSalary: $" + salaryEdit->text().trimmed());
+            dialog.accept();
+        } catch (const CompanyException& e) {
+            handleEditEmployeeError(dialog, e);
+        } catch (const FileManagerException& e) {
+            handleEditEmployeeError(dialog, e);
+        } catch (const EmployeeException& e) {
+            handleEditEmployeeError(dialog, e);
+        } catch (const ProjectException& e) {
+            handleEditEmployeeError(dialog, e);
+        } catch (const TaskException& e) {
+            handleEditEmployeeError(dialog, e);
+        }
     });
 
     dialog.exec();
@@ -426,11 +439,11 @@ void EmployeeOperations::deleteEmployee(MainWindow* window) {
                              "Please select an employee to delete.");
         return;
     }
-
+    
     int userChoice =
         QMessageBox::question(window, "Confirm Delete",
                               "Are you sure you want to delete this employee?",
-                              QMessageBox::Yes | QMessageBox::No);
+        QMessageBox::Yes | QMessageBox::No);
     if (userChoice == QMessageBox::Yes) {
         try {
             window->currentCompany->removeEmployee(employeeId);
@@ -456,26 +469,26 @@ void EmployeeOperations::deleteEmployee(MainWindow* window) {
 
 void EmployeeOperations::fireEmployee(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "firing employees")) return;
-
+    
     auto employeeId = MainWindowSelectionHelper::getSelectedEmployeeId(window);
     if (employeeId < 0) {
         QMessageBox::warning(window, "Error",
                              "Please select an employee to fire.");
         return;
     }
-
+    
     auto employee = window->currentCompany->getEmployee(employeeId);
     if (!employee) {
         QMessageBox::warning(window, "Error", "Employee not found.");
         return;
     }
-
+    
     if (!employee->getIsActive()) {
         QMessageBox::information(window, "Information",
                                  "This employee is already fired.");
         return;
     }
-
+    
     if (employee->getCurrentWeeklyHours() > 0) {
         if (int userChoice = QMessageBox::question(
             window, "Confirm Fire",
@@ -518,49 +531,49 @@ void EmployeeOperations::fireEmployee(MainWindow* window) {
 
 void EmployeeOperations::searchEmployee(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "searching employees")) return;
-
+    
     auto searchTerm = window->employeeUI.searchEdit->text().trimmed().toLower();
 
     if (searchTerm.isEmpty()) {
         DisplayHelper::displayEmployees(window->employeeUI.table, window->currentCompany, window);
         return;
     }
-
+    
     auto employees = window->currentCompany->getAllEmployees();
     window->employeeUI.table->setRowCount(0);
     int rowIndex = 0;
 
     for (const auto& employee : employees) {
         if (!employee) continue;
-
+        
         auto name = employee->getName().toLower();
         auto department = employee->getDepartment().toLower();
         auto position = employee->getPosition().toLower();
 
         if (name.contains(searchTerm) || department.contains(searchTerm) ||
             position.contains(searchTerm)) {
-            window->employeeUI.table->insertRow(rowIndex);
-            window->employeeUI.table->setItem(
+        window->employeeUI.table->insertRow(rowIndex);
+        window->employeeUI.table->setItem(
                 rowIndex, 0,
                 new QTableWidgetItem(QString::number(employee->getId())));
-            window->employeeUI.table->setItem(rowIndex, 1,
-                                   new QTableWidgetItem(employee->getName()));
-            window->employeeUI.table->setItem(
-                rowIndex, 2, new QTableWidgetItem(employee->getDepartment()));
-            window->employeeUI.table->setItem(rowIndex, 3,
+        window->employeeUI.table->setItem(rowIndex, 1,
+                                         new QTableWidgetItem(employee->getName()));
+        window->employeeUI.table->setItem(
+            rowIndex, 2, new QTableWidgetItem(employee->getDepartment()));
+        window->employeeUI.table->setItem(rowIndex, 3,
                                    new QTableWidgetItem(QString::number(
                                        employee->getSalary(), 'f', 2)));
-            window->employeeUI.table->setItem(
-                rowIndex, 4, new QTableWidgetItem(employee->getEmployeeType()));
+        window->employeeUI.table->setItem(
+            rowIndex, 4, new QTableWidgetItem(employee->getEmployeeType()));
 
             QString projectInfo =
                 DisplayHelper::formatProjectInfo(employee, window->currentCompany);
-            window->employeeUI.table->setItem(rowIndex, 5,
+        window->employeeUI.table->setItem(rowIndex, 5,
                                    new QTableWidgetItem(projectInfo));
 
-            window->employeeUI.table->setCellWidget(rowIndex, 6,
-                                         MainWindowUIHelper::createEmployeeActionButtons(window, rowIndex));
-            rowIndex++;
+        window->employeeUI.table->setCellWidget(rowIndex, 6,
+                                               MainWindowUIHelper::createEmployeeActionButtons(window, rowIndex));
+        rowIndex++;
         }
     }
 }
@@ -594,7 +607,7 @@ void ProjectOperations::addProject(MainWindow* window) {
 
 void ProjectOperations::editProject(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "editing projects")) return;
-
+    
     auto projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
     if (projectId < 0) {
         QMessageBox::warning(window, "Error", "Please select a project to edit.");
@@ -606,7 +619,7 @@ void ProjectOperations::editProject(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Project not found!");
         return;
     }
-
+    
     QDialog dialog(window);
     dialog.setWindowTitle("Edit Project");
     dialog.setStyleSheet("QDialog { background-color: white; }");
@@ -629,14 +642,14 @@ void ProjectOperations::editProject(MainWindow* window) {
 
 void ProjectOperations::deleteProject(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "deleting projects")) return;
-
+    
     auto projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
     if (projectId < 0) {
         QMessageBox::warning(window, "Error",
                              "Please select a project to delete.");
         return;
     }
-
+    
     int userChoice = QMessageBox::question(
         window, "Confirm Delete", "Are you sure you want to delete this project?",
         QMessageBox::Yes | QMessageBox::No);
@@ -695,7 +708,7 @@ void ProjectOperations::autoAssignDetailedProject(MainWindow* window) {
                                  "Open a project to manage its tasks first.");
         return;
     }
-
+    
     ProjectOperations::autoAssignToProject(window, window->detailedProjectId);
 
     if (window->projectUI.detailContainer != nullptr &&
@@ -765,7 +778,7 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
         return;
     }
-
+    
     auto tasks = window->currentCompany->getProjectTasks(projectId);
     if (window->pendingTaskSelectionId > 0) {
         std::vector<Task> filtered;
@@ -793,18 +806,18 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
                              "Cannot assign employees to completed project.");
         return;
     }
-
+    
     // Check employee availability before creating dialog to avoid memory leak
     QComboBox tempEmployeeCombo;
     int matchingCount = 0;
     TaskAssignmentHelper::populateEmployeeCombo(
         &tempEmployeeCombo, window->currentCompany, projectId, projectPhase, matchingCount);
-
+    
     if (tempEmployeeCombo.count() == 0) {
         QMessageBox::warning(window, "Error", "No available employees found!");
         return;
     }
-
+    
     QDialog dialog(window);
     dialog.setWindowTitle("Assign Employee to Task");
     dialog.setMinimumWidth(450);
@@ -900,7 +913,7 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
 
 void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "auto-assigning employees")) return;
-
+    
     if (projectId < 0) {
         projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
     }
@@ -921,7 +934,7 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
                              "before using auto-assign!");
         return;
     }
-
+    
     int response = QMessageBox::question(
         window, "Auto Assign",
         QString("Automatically assign available employees to project "
@@ -935,7 +948,7 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
         try {
             auto allocatedBefore = project->getAllocatedHours();
 
-            window->currentCompany->autoAssignEmployeesToProject(projectId);
+        window->currentCompany->autoAssignEmployeesToProject(projectId);
             MainWindowDataOperations::refreshAllData(window);
 
             MainWindowDataOperations::selectProjectRowById(window, projectId);
@@ -946,7 +959,7 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
                                      : allocatedBefore;
             int hoursAssigned = allocatedAfter - allocatedBefore;
 
-            MainWindowDataOperations::autoSave(window);
+        MainWindowDataOperations::autoSave(window);
             QMessageBox::information(
                 window, "Success",
                 QString("Employees auto-assigned successfully!\n\n"
@@ -955,41 +968,8 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
                     .arg(hoursAssigned)
                     .arg(allocatedAfter)
                     .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
-        } catch (const CompanyException& e) {
-            QString errorMsg = e.what();
-            if (errorMsg.contains("ASSIGNED_HOURS:")) {
-                QStringList parts = errorMsg.split(":");
-                int trackedHours = parts.size() > 1 ? parts[1].toInt() : 0;
-                int actualHours = parts.size() > 2 ? parts[2].toInt() : 0;
-
-                MainWindowDataOperations::refreshAllData(window);
-                const auto* projectAfter =
-                    window->currentCompany->getProject(projectId);
-                int allocatedAfter =
-                    projectAfter ? projectAfter->getAllocatedHours() : 0;
-
-                QMessageBox::information(
-                    window, "Success",
-                    QString("Employees auto-assigned successfully!\n\n"
-                            "Hours assigned (tracked): %1h\n"
-                            "Hours assigned (actual): %2h\n"
-                            "Total allocated: %3h / %4h estimated")
-                        .arg(trackedHours)
-                        .arg(actualHours)
-                        .arg(allocatedAfter)
-                        .arg(projectAfter ? projectAfter->getEstimatedHours()
-                                          : 0));
-            } else {
-                QString detailedMessage = errorMsg;
-                if (!errorMsg.contains("Error details:")) {
-                    detailedMessage = QString("Failed to assign employee to task!\n\n"
-                                              "Error details:\n%1\n\n"
-                                              "Please check the input data and try again.")
-                                          .arg(errorMsg);
-                }
-                QMessageBox::warning(window, "Failed to assign employee to task!",
-                                     detailedMessage);
-            }
+    } catch (const CompanyException& e) {
+            handleAutoAssignCompanyException(window, projectId, e);
         } catch (const EmployeeException& e) {
             QString detailedMessage = QString("Failed to assign employee to task!\n\n"
                                               "Error details:\n%1\n\n"
@@ -1011,13 +991,20 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
                                           .arg(e.what());
             QMessageBox::warning(window, "Failed to assign employee to task!",
                                  detailedMessage);
+        } catch (const FileManagerException& e) {
+            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
+                                              "Error details:\n%1\n\n"
+                                              "Please check the input data and try again.")
+                                          .arg(e.what());
+            QMessageBox::warning(window, "Failed to assign employee to task!",
+                                 detailedMessage);
         }
     }
 }
 
 void ProjectOperations::viewProjectAssignments(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "viewing project assignments")) return;
-
+    
     auto projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
     if (projectId < 0) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
@@ -1119,7 +1106,7 @@ void ProjectOperations::viewProjectAssignments(MainWindow* window) {
 
 void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
     if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "viewing employee history")) return;
-
+    
     auto employeeId = MainWindowSelectionHelper::getSelectedEmployeeId(window);
     if (employeeId < 0) {
         QMessageBox::warning(window, "Error", "Please select an employee first.");
@@ -1131,7 +1118,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
         QMessageBox::warning(window, "Error", "Employee not found!");
         return;
     }
-
+    
     auto assignedProjectIds = employee->getAssignedProjects();
     auto historyProjectIds = employee->getProjectHistory();
 
@@ -1157,7 +1144,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
                                  "No project history available for this employee.");
         return;
     }
-
+    
     auto* table = new QTableWidget();
     auto headers = QStringList{"ID", "Project Name", "Client", "Phase", 
                                "Budget ($)", "Estimated Hours", "Allocated Hours", 
@@ -1210,7 +1197,7 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
 
 void ProjectOperations::showStatistics(MainWindow* window) {
     if (!window || !window->currentCompany) return;
-
+    
     DisplayHelper::showStatistics(window->statisticsUI.text,
                                   window->currentCompany);
     if (window->statisticsUI.chartWidget != nullptr) {
@@ -1254,7 +1241,7 @@ void CompanyOperations::addCompany(MainWindow* window) {
 void CompanyOperations::switchCompany(MainWindow* window) {
     if (!window) return;
     if (window->companyUI.selector != nullptr) {
-        int newIndex = window->companyUI.selector->currentIndex();
+    int newIndex = window->companyUI.selector->currentIndex();
         CompanyManager::switchCompany(window->companies, window->currentCompany,
                                       window->currentCompanyIndex,
                                       window->companyUI.selector, newIndex);
