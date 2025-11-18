@@ -300,6 +300,53 @@ void executeWithExceptionHandling(MainWindow* window, Func&& operation,
     }
 }
 
+struct SetupEmployeeDialogCommonFieldsParams {
+    QDialog& dialog;
+    QVBoxLayout* mainLayout;
+    QLabel* managerProjectLabel;
+    QComboBox* managerProject;
+    QLabel* devLanguageLabel;
+    QLineEdit* devLanguage;
+    QLabel* devExperienceLabel;
+    QLineEdit* devExperience;
+    QLabel* designerToolLabel;
+    QLineEdit* designerTool;
+    QLabel* designerProjectsLabel;
+    QLineEdit* designerProjects;
+    QLabel* qaTestTypeLabel;
+    QLineEdit* qaTestType;
+    QLabel* qaBugsLabel;
+    QLineEdit* qaBugs;
+};
+
+static QPushButton* setupEmployeeDialogCommonFields(const SetupEmployeeDialogCommonFieldsParams& params) {
+    params.mainLayout->addStretch();
+    auto* okButton = new QPushButton("OK");
+    params.mainLayout->addWidget(okButton);
+    
+    if (params.managerProjectLabel) params.managerProjectLabel->setVisible(true);
+    if (params.managerProject) params.managerProject->setVisible(true);
+    if (params.devLanguageLabel) params.devLanguageLabel->setVisible(true);
+    if (params.devLanguage) params.devLanguage->setVisible(true);
+    if (params.devExperienceLabel) params.devExperienceLabel->setVisible(true);
+    if (params.devExperience) params.devExperience->setVisible(true);
+    if (params.designerToolLabel) params.designerToolLabel->setVisible(true);
+    if (params.designerTool) params.designerTool->setVisible(true);
+    if (params.designerProjectsLabel) params.designerProjectsLabel->setVisible(true);
+    if (params.designerProjects) params.designerProjects->setVisible(true);
+    if (params.qaTestTypeLabel) params.qaTestTypeLabel->setVisible(true);
+    if (params.qaTestType) params.qaTestType->setVisible(true);
+    if (params.qaBugsLabel) params.qaBugsLabel->setVisible(true);
+    if (params.qaBugs) params.qaBugs->setVisible(true);
+    
+    params.dialog.adjustSize();
+    QSize maxSize = params.dialog.size();
+    maxSize.setHeight(maxSize.height() - 227);
+    params.dialog.setFixedSize(maxSize);
+    
+    return okButton;
+}
+
 static QPushButton* setupAddEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainLayout,
                                      EmployeeDialogHelper::CreateEmployeeDialogFields& fields,
                                      QComboBox*& typeCombo, const MainWindow* window) {
@@ -314,28 +361,17 @@ static QPushButton* setupAddEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainL
         fields.managerProject->addItem(proj.getName(), proj.getId());
     }
     
-    mainLayout->addStretch();
-    auto* okButton = new QPushButton("OK");
-    mainLayout->addWidget(okButton);
-    
-    if (fields.managerProjectLabel) fields.managerProjectLabel->setVisible(true);
-    if (fields.managerProject) fields.managerProject->setVisible(true);
-    if (fields.devLanguageLabel) fields.devLanguageLabel->setVisible(true);
-    if (fields.devLanguage) fields.devLanguage->setVisible(true);
-    if (fields.devExperienceLabel) fields.devExperienceLabel->setVisible(true);
-    if (fields.devExperience) fields.devExperience->setVisible(true);
-    if (fields.designerToolLabel) fields.designerToolLabel->setVisible(true);
-    if (fields.designerTool) fields.designerTool->setVisible(true);
-    if (fields.designerProjectsLabel) fields.designerProjectsLabel->setVisible(true);
-    if (fields.designerProjects) fields.designerProjects->setVisible(true);
-    if (fields.qaTestTypeLabel) fields.qaTestTypeLabel->setVisible(true);
-    if (fields.qaTestType) fields.qaTestType->setVisible(true);
-    if (fields.qaBugsLabel) fields.qaBugsLabel->setVisible(true);
-    if (fields.qaBugs) fields.qaBugs->setVisible(true);
-    
-    dialog.adjustSize();
-    QSize maxSize = dialog.size();
-    maxSize.setHeight(maxSize.height() - 227);
+    SetupEmployeeDialogCommonFieldsParams commonParams{
+        dialog, mainLayout,
+        fields.managerProjectLabel, fields.managerProject,
+        fields.devLanguageLabel, fields.devLanguage,
+        fields.devExperienceLabel, fields.devExperience,
+        fields.designerToolLabel, fields.designerTool,
+        fields.designerProjectsLabel, fields.designerProjects,
+        fields.qaTestTypeLabel, fields.qaTestType,
+        fields.qaBugsLabel, fields.qaBugs
+    };
+    auto* okButton = setupEmployeeDialogCommonFields(commonParams);
     
     if (typeCombo) {
         int index = typeCombo->currentIndex();
@@ -351,7 +387,6 @@ static QPushButton* setupAddEmployeeDialogUI(QDialog& dialog, QVBoxLayout* mainL
                                                 fields.managerProject, index == 0);
     }
     
-    dialog.setFixedSize(maxSize);
     return okButton;
 }
 
@@ -380,28 +415,17 @@ static QPushButton* setupEditEmployeeDialogUI(QDialog& dialog, QVBoxLayout* main
         }
     }
     
-    mainLayout->addStretch();
-    auto* okButton = new QPushButton("OK");
-    mainLayout->addWidget(okButton);
-    
-    if (fields.managerProjectLabel) fields.managerProjectLabel->setVisible(true);
-    if (fields.managerProject) fields.managerProject->setVisible(true);
-    if (fields.devLanguageLabel) fields.devLanguageLabel->setVisible(true);
-    if (fields.devLanguage) fields.devLanguage->setVisible(true);
-    if (fields.devExperienceLabel) fields.devExperienceLabel->setVisible(true);
-    if (fields.devExperience) fields.devExperience->setVisible(true);
-    if (fields.designerToolLabel) fields.designerToolLabel->setVisible(true);
-    if (fields.designerTool) fields.designerTool->setVisible(true);
-    if (fields.designerProjectsLabel) fields.designerProjectsLabel->setVisible(true);
-    if (fields.designerProjects) fields.designerProjects->setVisible(true);
-    if (fields.qaTestTypeLabel) fields.qaTestTypeLabel->setVisible(true);
-    if (fields.qaTestType) fields.qaTestType->setVisible(true);
-    if (fields.qaBugsLabel) fields.qaBugsLabel->setVisible(true);
-    if (fields.qaBugs) fields.qaBugs->setVisible(true);
-    
-    dialog.adjustSize();
-    QSize maxSize = dialog.size();
-    maxSize.setHeight(maxSize.height() - 227);
+    SetupEmployeeDialogCommonFieldsParams commonParams{
+        dialog, mainLayout,
+        fields.managerProjectLabel, fields.managerProject,
+        fields.devLanguageLabel, fields.devLanguage,
+        fields.devExperienceLabel, fields.devExperience,
+        fields.designerToolLabel, fields.designerTool,
+        fields.designerProjectsLabel, fields.designerProjects,
+        fields.qaTestTypeLabel, fields.qaTestType,
+        fields.qaBugsLabel, fields.qaBugs
+    };
+    auto* okButton = setupEmployeeDialogCommonFields(commonParams);
     
     EmployeeDialogHelper::showManagerFields(fields.managerProjectLabel, fields.managerProject,
                                             currentType == "Manager");
@@ -414,7 +438,6 @@ static QPushButton* setupEditEmployeeDialogUI(QDialog& dialog, QVBoxLayout* main
     EmployeeDialogHelper::showQaFields(fields.qaTestTypeLabel, fields.qaTestType, fields.qaBugsLabel,
                                        fields.qaBugs, currentType == "QA");
     
-    dialog.setFixedSize(maxSize);
     return okButton;
 }
 
