@@ -475,7 +475,7 @@ void TaskAssignmentService::fixTaskAssignmentsToCapacity() {
     }
 }
 
-static void clearProjectCosts(Company* company) {
+static void clearProjectCosts(const Company* company) {
     auto allProjects = company->getAllProjects();
     for (const auto& project : allProjects) {
         Project* mutableProject = company->getProject(project.getId());
@@ -517,7 +517,7 @@ static void calculateTaskAllocatedHours(const Company* company, int projectId,
     }
 }
 
-static void recalculateProjectHours(Company* company, const Project& project) {
+static void recalculateProjectHours(const Company* company, const Project& project) {
     Project* mutableProject = company->getProject(project.getId());
     if (!mutableProject) return;
     
