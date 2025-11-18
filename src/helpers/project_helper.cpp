@@ -95,7 +95,7 @@ void ProjectHelper::populateProjectTasksTable(QTableWidget* table,
     }
 }
 
-void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(const Company* company,
+void ProjectHelper::clearProjectAllocatedHoursIfNoEmployees(Company* company,
                                                             int projectId) {
     if (!company) return;
 
