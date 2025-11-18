@@ -253,17 +253,7 @@ Company::Company(Company&& other) noexcept
       taskManager(taskAssignments, employees, projects),
       statistics(employees, projects) {}
 
-Company::~Company() {
-    // Explicit destructor for resource management
-    // All resources are automatically managed and cleaned up in reverse order of declaration:
-    // - statistics (value type, automatic cleanup)
-    // - taskManager (value type with references, automatic cleanup)
-    // - taskAssignments (std::map, automatic cleanup)
-    // - projects (ProjectContainer with std::vector<std::shared_ptr<Project>>, automatic cleanup)
-    // - employees (EmployeeContainer with std::vector<std::shared_ptr<Employee>>, automatic cleanup)
-    // - Primitive types (name, industry, location, foundedYear) - automatic cleanup
-    // Smart pointers in containers automatically release resources when destroyed
-}
+Company::~Company() = default
 
 void Company::addEmployee(std::shared_ptr<Employee> employee) {
     if (std::shared_ptr<Employee> existing = getEmployee(employee->getId());
