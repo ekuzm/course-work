@@ -52,7 +52,7 @@ void TaskDialogHelper::createAddTaskDialog(QDialog* dialog, QFormLayout* form,
 bool TaskDialogHelper::validateAndAddTask(const QString& taskName,
                                           const QString& taskType, int taskEst,
                                           int priority, int projectId,
-                                          Company* company, QDialog* dialog) {
+                                          const Company* company, QDialog* dialog) {
     if (!company || !dialog) return false;
 
     auto tasks = company->getProjectTasks(projectId);

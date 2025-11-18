@@ -88,7 +88,7 @@ class MainWindowTaskAssignmentHelper {
         const std::vector<Task>& savedTasks,
         std::vector<std::tuple<int, int, int, int>>& savedTaskAssignments);
     static void handleEmployeeActiveAssignments(
-        MainWindow* window, int employeeId,
+        const MainWindow* window, int employeeId,
         const std::shared_ptr<Employee>& employee);
 };
 
@@ -100,7 +100,7 @@ class MainWindowValidationHelper {
                                             int excludeId,
                                             const Company* currentCompany);
     static void validateAndFixProjectAssignments(MainWindow* window,
-                                                 Company* company);
+                                                 const Company* company);
 };
 
 class MainWindowDataOperations {

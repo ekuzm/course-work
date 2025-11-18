@@ -254,7 +254,7 @@ bool MainWindowValidationHelper::checkDuplicateProjectOnEdit(
 }
 
 void MainWindowValidationHelper::validateAndFixProjectAssignments(
-    MainWindow* window, Company* company) {
+    MainWindow* window, const Company* company) {
     if (!window || !company) return;
 
     bool hasWarnings = false;
@@ -697,7 +697,7 @@ void MainWindowTaskAssignmentHelper::collectTaskAssignments(
 }
 
 void MainWindowTaskAssignmentHelper::handleEmployeeActiveAssignments(
-    MainWindow* window, int employeeId,
+    const MainWindow* window, int employeeId,
     const std::shared_ptr<Employee>& employee) {
     if (!window || !window->currentCompany || !employee) return;
 
