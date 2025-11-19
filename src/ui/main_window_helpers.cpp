@@ -193,7 +193,6 @@ void MainWindowProjectDetailHelper::refreshProjectDetailView(
             HtmlGenerator::generateProjectDetailHtml(*project,
                                                      window->currentCompany));
     }
-
     populateProjectTasksTable(window, *project);
     MainWindowUIHelper::selectProjectRowById(window, window->detailedProjectId);
 }
