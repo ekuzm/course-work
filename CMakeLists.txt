@@ -7,12 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTOUIC OFF)  # No .ui files in this project
+set(CMAKE_AUTOUIC OFF)
 set(CMAKE_AUTORCC ON)
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
-# Entities
 set(ENTITY_SOURCES
     src/entities/company.cpp
     src/entities/company_managers.cpp
@@ -31,7 +30,6 @@ set(ENTITY_HEADERS
     include/entities/task.h
 )
 
-# Services
 set(SERVICE_SOURCES
     src/services/cost_calculation_service.cpp
     src/services/task_assignment_service.cpp
@@ -46,7 +44,6 @@ set(SERVICE_HEADERS
     include/services/project_service.h
 )
 
-# UI
 set(UI_SOURCES
     src/ui/main_window.cpp
     src/ui/main_window_operations.cpp
@@ -63,7 +60,6 @@ set(UI_HEADERS
     include/ui/statistics_chart_widget.h
 )
 
-# Helpers
 set(HELPER_SOURCES
     src/helpers/action_button_helper.cpp
     src/helpers/dialog_helper.cpp
@@ -98,7 +94,6 @@ set(HELPER_HEADERS
     include/helpers/employee_validator.h
 )
 
-# Managers
 set(MANAGER_SOURCES
     src/managers/company_manager.cpp
     src/managers/file_manager.cpp
@@ -111,7 +106,6 @@ set(MANAGER_HEADERS
     include/managers/auto_save_loader.h
 )
 
-# Exceptions
 set(EXCEPTION_SOURCES
     src/exceptions/exceptions.cpp
     src/exceptions/exception_handler.cpp
@@ -122,7 +116,6 @@ set(EXCEPTION_HEADERS
     include/exceptions/exception_handler.h
 )
 
-# Utils
 set(UTIL_SOURCES
     src/utils/app_styles.cpp
 )
@@ -133,7 +126,6 @@ set(UTIL_HEADERS
     include/utils/container_utils.h
 )
 
-# All sources and headers
 set(SOURCES
     src/main.cpp
     ${ENTITY_SOURCES}
