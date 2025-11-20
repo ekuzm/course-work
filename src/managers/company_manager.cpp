@@ -34,10 +34,7 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
     int foundedYear =
         params.yearEdit->text().trimmed().toInt(&conversionSuccess);
 
-    QWidget* parent = params.dialog.parentWidget();
-    if (!parent) {
-        parent = &params.dialog;
-    }
+    QWidget* parent = &params.dialog;
 
         if (companyName.isEmpty()) {
         QMessageBox::warning(parent, "Validation Error",
@@ -100,8 +97,7 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
         params.selector->setCurrentIndex(params.currentCompanyIndex);
     }
 
-    params.dialog.hide();
-    QMessageBox::information(params.dialog.parentWidget(), "Success",
+    QMessageBox::information(&params.dialog, "Success",
                              "Company added successfully!\n\n"
                              "Name: " +
                                  companyName +

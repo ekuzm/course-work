@@ -135,8 +135,7 @@ void handleEditEmployeeButtonClick(const EditEmployeeButtonParams& params) {
 
         MainWindowDataOperations::refreshAllData(params.window);
         MainWindowDataOperations::autoSave(params.window);
-        params.dialog.hide();
-        QMessageBox::information(params.dialog.parentWidget(), "Success",
+        QMessageBox::information(&params.dialog, "Success",
             "Employee updated successfully!\n\n"
             "Name: " +
                                      params.nameEdit->text().trimmed() +
@@ -220,8 +219,7 @@ void handleAddProjectButtonClick(
             IdHelper::calculateNextId(IdHelper::findMaxProjectId(projects));
         MainWindowDataOperations::refreshAllData(window);
         MainWindowDataOperations::autoSave(window);
-        dialog.hide();
-        QMessageBox::information(window, "Success",
+        QMessageBox::information(&dialog, "Success",
             "Project added successfully!\n\n"
             "Name: " +
                 projectName +

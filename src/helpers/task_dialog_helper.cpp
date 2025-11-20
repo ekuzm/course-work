@@ -58,10 +58,7 @@ bool TaskDialogHelper::validateAndAddTask(const QString& taskName,
     auto tasks = company->getProjectTasks(projectId);
     for (const auto& existingTask : tasks) {
         if (existingTask.getName().toLower() == taskName.toLower()) {
-            QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-            if (!parent && dialog) {
-                parent = dialog;
-            }
+            QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
             QMessageBox::warning(
                 parent, "Duplicate Error",
                 QString("A task with this name already exists!\n\n"
@@ -75,10 +72,7 @@ bool TaskDialogHelper::validateAndAddTask(const QString& taskName,
 
     const auto* proj = company->getProject(projectId);
     if (!proj) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QMessageBox::warning(parent, "Error", "Project not found!");
         return false;
     }

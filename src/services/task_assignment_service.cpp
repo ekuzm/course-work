@@ -750,6 +750,7 @@ static bool isEmployeeEligibleForTask(const std::shared_ptr<Employee>& employee,
 
 static int getTrulyAvailableHours(const std::shared_ptr<Employee>& employee,
                                const std::map<int, int>& employeeUsage) {
+    if (!employee) return 0;
     int available = employee->getAvailableHours();
     int employeeId = employee->getId();
     int alreadyUsed = 0;
@@ -855,10 +856,12 @@ static void processTaskAssignment(const ProcessTaskAssignmentParams& params) {
                           params.projectBudget, maxAffordableHourlyRate,
                           params.projectEstimatedHours, params.employeeUsage);
 
-    std::ranges::sort(pool, [&params](const std::shared_ptr<Employee>& a,
-                               const std::shared_ptr<Employee>& b) {
-                  return compareEmployeesForSorting(a, b, params.employeeUsage) < 0;
-              });
+    if (!pool.empty()) {
+        std::ranges::sort(pool, [&params](const std::shared_ptr<Employee>& a,
+                                   const std::shared_ptr<Employee>& b) {
+                      return compareEmployeesForSorting(a, b, params.employeeUsage) < 0;
+                  });
+    }
 
     for (const auto& poolEmployee : pool) {
         if (remaining <= 0) break;

@@ -7,10 +7,7 @@
 void ExceptionHandler::handleCompanyException(const CompanyException& e,
                                               QDialog* dialog,
                                               const QString& action) {
-    QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-    if (!parent && dialog) {
-        parent = dialog;
-    }
+    QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
     QMessageBox::warning(parent, "Error",
                          QString("Failed to %1!\n\nError details: %2\n\nPlease "
                                  "check the input data and try again.")
@@ -20,10 +17,7 @@ void ExceptionHandler::handleCompanyException(const CompanyException& e,
 void ExceptionHandler::handleFileManagerException(const FileManagerException& e,
                                                   QDialog* dialog,
                                                   const QString& action) {
-    QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-    if (!parent && dialog) {
-        parent = dialog;
-    }
+    QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
     QMessageBox::warning(
         parent, "Auto-save Error",
         QString("Failed to auto-save changes!\n\nError details: %1\n\n"
@@ -35,10 +29,7 @@ void ExceptionHandler::handleFileManagerException(const FileManagerException& e,
 
 void ExceptionHandler::handleGenericException(const std::exception& e,
                                               QDialog* dialog) {
-    QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-    if (!parent && dialog) {
-        parent = dialog;
-    }
+    QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
     QMessageBox::critical(
         parent, "Unexpected Error",
         QString("An unexpected error occurred!\n\nError details: %1\n\n"

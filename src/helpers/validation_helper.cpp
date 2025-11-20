@@ -8,10 +8,7 @@ bool ValidationHelper::validateNonEmpty(const QString& value,
                                         const QString& fieldName,
                                         QDialog* dialog) {
     if (value.isEmpty()) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QMessageBox::warning(
             parent, "Validation Error",
             QString("%1 cannot be empty!\n\nPlease enter a valid %2.")
@@ -29,10 +26,7 @@ bool ValidationHelper::validateDouble(const QString& text, double& result,
     double value = text.toDouble(&conversionSuccess);
 
     if (!conversionSuccess) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QMessageBox::warning(
             parent, "Validation Error",
             QString("Invalid %1 format!\n\nPlease enter a valid number.\n"
@@ -43,10 +37,7 @@ bool ValidationHelper::validateDouble(const QString& text, double& result,
     }
 
     if (value < min || value > max) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QMessageBox::warning(parent, "Validation Error",
                              QString("%1 out of valid range!\n\nCurrent value: "
                                      "$%2\nValid range: $%3 to $%4")
@@ -67,10 +58,7 @@ bool ValidationHelper::validateInt(const QString& text, int& result, int min,
     int value = text.toInt(&conversionSuccess);
 
     if (!conversionSuccess || text.isEmpty()) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QMessageBox::warning(
             parent, "Validation Error",
             QString("Invalid %1 format!\n\nPlease enter a valid number.\n"
@@ -81,10 +69,7 @@ bool ValidationHelper::validateInt(const QString& text, int& result, int min,
     }
 
     if (value < min || value > max) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QString errorMessage;
         if (max < min) {
             errorMessage =
@@ -115,10 +100,7 @@ bool ValidationHelper::validateDateRange(const QDate& startDate,
                                          const QDate& endDate,
                                          QDialog* dialog) {
     if (endDate < startDate) {
-        QWidget* parent = dialog ? dialog->parentWidget() : nullptr;
-        if (!parent && dialog) {
-            parent = dialog;
-        }
+        QWidget* parent = dialog ? static_cast<QWidget*>(dialog) : nullptr;
         QMessageBox::warning(parent, "Validation Error",
                              QString("End date cannot be before start date!\n\n"
                                      "Start date: %1\n"

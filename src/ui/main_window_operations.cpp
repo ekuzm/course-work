@@ -38,6 +38,8 @@
 #include "helpers/task_dialog_helper.h"
 #include "helpers/validation_helper.h"
 #include "managers/company_manager.h"
+#include "services/cost_calculation_service.h"
+#include "services/task_assignment_service.h"
 #include "ui/main_window.h"
 #include "ui/main_window_helpers.h"
 #include "utils/consts.h"
@@ -54,8 +56,7 @@ static void handleAddEmployeeSuccess(MainWindow* window, QDialog& dialog,
                                      const QLineEdit* salaryEdit) {
     MainWindowDataOperations::refreshAllData(window);
     MainWindowDataOperations::autoSave(window);
-    dialog.hide();
-    QMessageBox::information(window, "Success",
+    QMessageBox::information(&dialog, "Success",
                              "Employee added successfully!\n\n"
                              "Name: " +
                                  nameEdit->text().trimmed() +
@@ -67,15 +68,14 @@ static void handleAddEmployeeSuccess(MainWindow* window, QDialog& dialog,
 
 static void handleAddEmployeeError(MainWindow* window, QDialog& dialog,
                                     const std::exception& e) {
-    dialog.hide();
     if (const auto* companyEx = dynamic_cast<const CompanyException*>(&e)) {
-        QMessageBox::warning(window, "Error",
+        QMessageBox::warning(&dialog, "Error",
                              QString("Failed to add employee!\n\nError details: %1\n\nPlease "
                                      "check the input data and try again.")
                                  .arg(companyEx->what()));
     } else if (const auto* fileEx = dynamic_cast<const FileManagerException*>(&e)) {
         QMessageBox::warning(
-            window, "Auto-save Error",
+            &dialog, "Auto-save Error",
             QString("Failed to auto-save changes!\n\nError details: %1\n\n"
                     "The employee was completed but the data could not be saved "
                     "automatically.\n"
@@ -84,7 +84,6 @@ static void handleAddEmployeeError(MainWindow* window, QDialog& dialog,
     } else {
         ExceptionHandler::handleGenericException(e, &dialog);
     }
-    dialog.show();
 }
 
 static void handleEditEmployeeSuccess(QDialog& dialog, const QLineEdit* nameEdit,
@@ -94,9 +93,8 @@ static void handleEditEmployeeSuccess(QDialog& dialog, const QLineEdit* nameEdit
         qobject_cast<MainWindow*>(dialog.parent()));
     MainWindowDataOperations::autoSave(
         qobject_cast<MainWindow*>(dialog.parent()));
-    dialog.hide();
     QMessageBox::information(
-        dialog.parentWidget(), "Success",
+        &dialog, "Success",
         "Employee updated successfully!\n\n"
         "Name: " +
             nameEdit->text().trimmed() + "\nType: " + currentType +
@@ -208,9 +206,8 @@ static void handleEditEmployeeButtonClick(const HandleEditEmployeeButtonClickPar
             MainWindowDataOperations::refreshAllData(mainWindow);
             MainWindowDataOperations::autoSave(mainWindow);
         }
-        dialog.hide();
         QMessageBox::information(
-            dialog.parentWidget(), "Success",
+            &dialog, "Success",
             "Employee updated successfully!\n\n"
             "Name: " +
                 nameEdit->text().trimmed() + "\nType: " + currentType +
@@ -230,7 +227,6 @@ static void handleEditEmployeeButtonClick(const HandleEditEmployeeButtonClickPar
 }
 
 static void handleEditEmployeeError(QDialog& dialog, const std::exception& e) {
-    dialog.hide();
     if (const auto* companyEx = dynamic_cast<const CompanyException*>(&e)) {
         ExceptionHandler::handleCompanyException(*companyEx, &dialog,
                                                  "edit employee");
@@ -246,7 +242,6 @@ static void handleEditEmployeeError(QDialog& dialog, const std::exception& e) {
     } else {
         ExceptionHandler::handleGenericException(e, &dialog);
     }
-    dialog.show();
 }
 
 static void handleAutoAssignCompanyException(MainWindow* window, int projectId,
@@ -260,17 +255,17 @@ static void handleAutoAssignCompanyException(MainWindow* window, int projectId,
         MainWindowDataOperations::refreshAllData(window);
         const auto* projectAfter = window->currentCompany->getProject(projectId);
         int allocatedAfter = projectAfter ? projectAfter->getAllocatedHours() : 0;
-
-        QMessageBox::information(
-            window, "Success",
-            QString("Employees auto-assigned successfully!\n\n"
-                    "Hours assigned (tracked): %1h\n"
-                    "Hours assigned (actual): %2h\n"
-                    "Total allocated: %3h / %4h estimated")
-                .arg(trackedHours)
-                .arg(actualHours)
-                .arg(allocatedAfter)
-                .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
+        
+        QString message = QString("Employees auto-assigned successfully!\n\n"
+                                  "Hours assigned (tracked): %1h\n"
+                                  "Hours assigned (actual): %2h\n"
+                                  "Total allocated: %3h / %4h estimated")
+                              .arg(trackedHours)
+                              .arg(actualHours)
+                              .arg(allocatedAfter)
+                              .arg(projectAfter ? projectAfter->getEstimatedHours() : 0);
+        
+        QMessageBox::information(window, "Success", message);
     } else {
         QString detailedMessage = errorMsg;
         if (!errorMsg.contains("Error details:")) {
@@ -1118,14 +1113,51 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
             int hoursAssigned = allocatedAfter - allocatedBefore;
 
         MainWindowDataOperations::autoSave(window);
-            QMessageBox::information(
-                window, "Success",
-                QString("Employees auto-assigned successfully!\n\n"
-                        "Hours assigned: %1h\n"
-                        "Total allocated: %2h / %3h estimated")
-                    .arg(hoursAssigned)
-                    .arg(allocatedAfter)
-                    .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
+        
+        QString message = QString("Employees auto-assigned successfully!\n\n"
+                                  "Hours assigned: %1h\n"
+                                  "Total allocated: %2h / %3h estimated")
+                              .arg(hoursAssigned)
+                              .arg(allocatedAfter)
+                              .arg(projectAfter ? projectAfter->getEstimatedHours() : 0);
+        
+        QStringList warnings;
+        if (projectAfter) {
+            int estimated = projectAfter->getEstimatedHours();
+            if (allocatedAfter < estimated && hoursAssigned == 0) {
+                QString projectPhase = projectAfter->getPhase();
+                QString expectedRole = TaskAssignmentHelper::getExpectedRoleForProjectPhase(projectPhase);
+                warnings.append(
+                    QString("No employees were assigned.\n"
+                            "Possible reasons:\n"
+                            "- No employees match project phase: %1\n"
+                            "- Expected role: %2\n"
+                            "- No employees have available hours\n"
+                            "- Employee salaries exceed project budget")
+                        .arg(projectPhase)
+                        .arg(expectedRole));
+            } else if (allocatedAfter < estimated) {
+                int remaining = estimated - allocatedAfter;
+                warnings.append(
+                    QString("Not all hours were assigned.\n"
+                            "Remaining: %1h / %2h estimated\n"
+                            "Possible reasons:\n"
+                            "- Not enough employees match project phase\n"
+                            "- Employees have insufficient available hours\n"
+                            "- Project budget constraints")
+                        .arg(remaining)
+                        .arg(estimated));
+            }
+        }
+        
+        if (!warnings.isEmpty()) {
+            message += "\n\n--- Warnings ---\n";
+            for (const auto& warning : warnings) {
+                message += warning + "\n";
+            }
+        }
+        
+        QMessageBox::information(window, "Success", message);
     } catch (const CompanyException& e) {
             handleAutoAssignCompanyException(window, projectId, e);
     } catch (const EmployeeException& e) {
