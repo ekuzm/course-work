@@ -172,12 +172,13 @@ static void validateHourlyRateBudget(const std::shared_ptr<Employee>& employee,
             QString("Employee hourly rate is too high for this "
                     "project.\n"
                     "Employee hourly rate: $%1/hour\n"
-                    "Max affordable hourly rate (70%% of budget "
-                    "avg): $%2/hour\n"
-                    "Project budget: $%3\n"
-                    "Project estimated hours: %4h\n"
-                    "Average budget per hour: $%5/hour")
+                    "Max affordable hourly rate (%2%% of budget "
+                    "avg): $%3/hour\n"
+                    "Project budget: $%4\n"
+                    "Project estimated hours: %5h\n"
+                    "Average budget per hour: $%6/hour")
                 .arg(employeeHourlyRate, 0, 'f', 2)
+                .arg(kMaxAffordableHourlyRatePercent)
                 .arg(maxAffordableHourlyRate, 0, 'f', 2)
                 .arg(projPtr->getBudget(), 0, 'f', 2)
                 .arg(projectEstimatedHours)

@@ -357,7 +357,7 @@ static QPushButton* setupEmployeeDialogCommonFields(const SetupEmployeeDialogCom
     
     params.dialog.adjustSize();
     QSize maxSize = params.dialog.size();
-    maxSize.setHeight(maxSize.height() - 227);
+    maxSize.setHeight(maxSize.height() - kEmployeeDialogHeightOffset);
     params.dialog.setFixedSize(maxSize);
     
     return okButton;
@@ -727,7 +727,7 @@ void ProjectOperations::editProject(MainWindow* window) {
     QDialog dialog(window);
     dialog.setWindowTitle("Edit Project");
     dialog.setStyleSheet("QDialog { background-color: white; }");
-    dialog.setMinimumWidth(400);
+    dialog.setMinimumWidth(kDefaultDialogMinWidth);
 
     auto* form = new QFormLayout(&dialog);
     ProjectDialogHelper::ProjectDialogFields fields;
@@ -1013,7 +1013,7 @@ static void setupAssignTaskDialogUI(const SetupAssignTaskDialogUIParams& params)
         projectPhase);
 
     hoursEdit = new QLineEdit();
-    hoursEdit->setPlaceholderText("e.g., 20 (hours per week)");
+    hoursEdit->setPlaceholderText(QString("e.g., %1 (hours per week)").arg(kExampleHoursPerWeek));
     TaskAssignmentHelper::setupHoursEdit(hoursEdit, taskCombo, employeeCombo,
                                          tasks, window->currentCompany);
     form->addRow("Hours per week:", hoursEdit);
@@ -1036,7 +1036,7 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
     
     QDialog dialog(window);
     dialog.setWindowTitle("Assign Employee to Task");
-    dialog.setMinimumWidth(450);
+    dialog.setMinimumWidth(kAssignTaskDialogMinWidth);
     dialog.setStyleSheet(
         "QDialog { background-color: white; } "
         "QComboBox { background-color: white; color: black; } "
@@ -1277,20 +1277,20 @@ void ProjectOperations::viewProjectAssignments(MainWindow* window) {
     header->setSectionResizeMode(7, QHeaderView::Fixed);  
     header->setSectionResizeMode(8, QHeaderView::Fixed);  
     
-    table->setColumnWidth(0, 50);   
-    table->setColumnWidth(2, 130);  
-    table->setColumnWidth(3, 110);  
-    table->setColumnWidth(4, 130);  
-    table->setColumnWidth(5, 140);  
-    table->setColumnWidth(6, 135);  
-    table->setColumnWidth(7, 160);  
-    table->setColumnWidth(8, 90);   
+    table->setColumnWidth(0, kTableColumnWidthId);   
+    table->setColumnWidth(2, kTableColumnWidth130);  
+    table->setColumnWidth(3, kTableColumnWidth110);  
+    table->setColumnWidth(4, kTableColumnWidth130);  
+    table->setColumnWidth(5, kTableColumnWidth140);  
+    table->setColumnWidth(6, kTableColumnWidth135);  
+    table->setColumnWidth(7, kTableColumnWidth160);  
+    table->setColumnWidth(8, kTableColumnWidth90);   
     
     header->setSectionResizeMode(1, QHeaderView::Stretch);  
 
     QDialog dialog(window);
     DialogHelper::createTableDialog(
-        &dialog, "Projects and Clients: " + project->getName(), table, 1400, 700);
+        &dialog, "Projects and Clients: " + project->getName(), table, kProjectsTableDialogWidth, kProjectsTableDialogHeight);
     dialog.exec();
 }
 
@@ -1369,19 +1369,19 @@ void ProjectOperations::viewEmployeeHistory(MainWindow* window) {
 }
 
     table->resizeColumnsToContents();
-    table->setColumnWidth(0, 50); 
-    table->setColumnWidth(1, 200); 
-    table->setColumnWidth(2, 150); 
-    table->setColumnWidth(3, 140); 
-    table->setColumnWidth(4, 150); 
-    table->setColumnWidth(5, 170); 
-    table->setColumnWidth(6, 180); 
-    table->setColumnWidth(7, 180); 
-    table->setColumnWidth(8, 110); 
+    table->setColumnWidth(0, kTableColumnWidthId); 
+    table->setColumnWidth(1, kTableColumnWidth200); 
+    table->setColumnWidth(2, kTableColumnWidthName); 
+    table->setColumnWidth(3, kTableColumnWidth140); 
+    table->setColumnWidth(4, kTableColumnWidthName); 
+    table->setColumnWidth(5, kTableColumnWidth170); 
+    table->setColumnWidth(6, kTableColumnWidth180); 
+    table->setColumnWidth(7, kTableColumnWidth180); 
+    table->setColumnWidth(8, kTableColumnWidth110); 
 
     QDialog dialog(window);
     DialogHelper::createTableDialog(
-        &dialog, "Employee History: " + employee->getName(), table, 1405, 800);
+        &dialog, "Employee History: " + employee->getName(), table, kEmployeeHistoryDialogWidth, kEmployeeHistoryDialogHeight);
     dialog.exec();
 }
 

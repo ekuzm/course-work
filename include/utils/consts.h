@@ -15,6 +15,7 @@ inline const int kMaxNumberOfProjects = 10000;
 inline const int kMaxBugsFound = 100000;
 
 inline const int kDefaultDialogMinWidth = 400;
+inline const int kAssignTaskDialogMinWidth = 450;
 inline const int kCompanySelectorMinWidth = 200;
 inline const int kSearchEditMinHeight = 35;
 inline const int kDateEditMinWidth = 200;
@@ -30,6 +31,15 @@ inline const int kTableColumnWidthProjectName = 200;
 inline const int kTableColumnWidthPhase = 120;
 inline const int kTableColumnWidthBudget = 120;
 inline const int kTableColumnWidthClient = 200;
+inline const int kTableColumnWidth130 = 130;
+inline const int kTableColumnWidth110 = 110;
+inline const int kTableColumnWidth140 = 140;
+inline const int kTableColumnWidth135 = 135;
+inline const int kTableColumnWidth160 = 160;
+inline const int kTableColumnWidth90 = 90;
+inline const int kTableColumnWidth170 = 170;
+inline const int kTableColumnWidth180 = 180;
+inline const int kTableColumnWidth200 = 200;
 
 inline const int kTableRowHeight = 50;
 
@@ -63,3 +73,11 @@ inline const int kMaxTasksSize = 1000000;
 inline const int kReserveCapacity = 10000;
 inline const int kMaxFileSizeMB = 100;
 inline const long long kMaxFileSizeBytes = 100LL * 1024 * 1024;
+
+inline const int kEmployeeDialogHeightOffset = 227;
+inline const int kProjectsTableDialogWidth = 1400;
+inline const int kProjectsTableDialogHeight = 700;
+inline const int kEmployeeHistoryDialogWidth = 1405;
+inline const int kEmployeeHistoryDialogHeight = 800;
+inline const int kExampleHoursPerWeek = 20;
+inline const int kMaxAffordableHourlyRatePercent = 70;
