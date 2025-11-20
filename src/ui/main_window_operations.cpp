@@ -66,7 +66,7 @@ static void handleAddEmployeeSuccess(MainWindow* window, QDialog& dialog,
     dialog.accept();
 }
 
-static void handleAddEmployeeError(MainWindow* window, QDialog& dialog,
+static void handleAddEmployeeError(MainWindow* [[maybe_unused]] window, QDialog& dialog,
                                     const std::exception& e) {
     if (const auto* companyEx = dynamic_cast<const CompanyException*>(&e)) {
         QMessageBox::warning(&dialog, "Error",
