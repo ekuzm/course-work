@@ -1179,9 +1179,7 @@ static void executeAutoAssignAndShowResult(MainWindow* window, int projectId, co
     
     QString message = buildSuccessMessage(hoursAssigned, allocatedAfter, projectAfter);
     
-    QStringList warnings = buildWarnings(projectAfter, allocatedAfter, hoursAssigned);
-    
-    if (!warnings.isEmpty()) {
+    if (auto warnings = buildWarnings(projectAfter, allocatedAfter, hoursAssigned);!warnings.isEmpty()) {
         message += "\n\n--- Warnings ---\n";
         for (const auto& warning : warnings) {
             message += warning + "\n";
