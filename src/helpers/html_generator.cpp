@@ -131,9 +131,9 @@ QString HtmlGenerator::generateProjectDetailHtml(const Project& project,
                 .team-table thead { background: #f5f5f5; color: #000000; position: sticky; top: 0; z-index: 10; display: table-header-group; }
                 .team-table tbody { display: table-row-group; }
                 .team-table tr { display: table-row; }
-                .team-table th { padding: 25px 40px; text-align: center; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; display: table-cell; border-bottom: 2px solid #e0e0e0; color: #000000; background-color: #f8f9fa; }
+                .team-table th { padding: 12px 40px; text-align: center; font-weight: 600; font-size: 15px; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; display: table-cell; border-bottom: 2px solid #e0e0e0; color: #000000; background-color: #f8f9fa; }
                 .team-table th.row-number { text-align: center; width: 80px; }
-                .team-table td { padding: 25px 40px; border-bottom: 1px solid #e0e0e0; font-size: 16px; color: #000000; word-wrap: break-word; display: table-cell; text-align: center; }
+                .team-table td { padding: 12px 40px; border-bottom: 1px solid #e0e0e0; font-size: 16px; color: #000000; word-wrap: break-word; display: table-cell; text-align: center; }
                 .team-table td:first-child { text-align: center; }
                 .team-table td:nth-child(2) { text-align: left; }
                 .team-table td:nth-child(3) { text-align: left; }

@@ -1064,30 +1064,34 @@ void ProjectOperations::assignEmployeeToTask(MainWindow* window) {
     ProjectDetailOperations::refreshProjectDetailView(window);
 }
 
-void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
-    if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "auto-assigning employees")) return;
-    
+static int validateAndGetProjectId(MainWindow* window, int projectId) {
     if (projectId < 0) {
         projectId = MainWindowSelectionHelper::getSelectedProjectId(window);
     }
     if (projectId < 0) {
         QMessageBox::warning(window, "Error", "Please select a project first.");
-        return;
+        return -1;
     }
-    
+    return projectId;
+}
+
+static const Project* validateProjectAndTasks(MainWindow* window, int projectId) {
     const auto* project = window->currentCompany->getProject(projectId);
     if (!project) {
         QMessageBox::warning(window, "Error", "Project not found!");
-        return;
+        return nullptr;
     }
 
     if (auto tasks = window->currentCompany->getProjectTasks(projectId); tasks.empty()) {
         QMessageBox::warning(window, "Error",
                              "Project has no tasks. Please add tasks first "
                              "before using auto-assign!");
-        return;
+        return nullptr;
     }
-    
+    return project;
+}
+
+static bool confirmAutoAssign(MainWindow* window, const Project* project) {
     int response = QMessageBox::question(
         window, "Auto Assign",
         QString("Automatically assign available employees to project "
@@ -1096,99 +1100,130 @@ void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
             .arg(project->getEstimatedHours())
             .arg(project->getAllocatedHours()),
         QMessageBox::Yes | QMessageBox::No);
+    return response == QMessageBox::Yes;
+}
 
-    if (response == QMessageBox::Yes) {
-        try {
-            auto allocatedBefore = project->getAllocatedHours();
+static QString buildSuccessMessage(int hoursAssigned, int allocatedAfter, const Project* projectAfter) {
+    if (hoursAssigned == 0) {
+        return QString("Auto-assignment was not successful.\n\n"
+                      "Hours assigned: %1h\n"
+                      "Total allocated: %2h / %3h estimated")
+                  .arg(hoursAssigned)
+                  .arg(allocatedAfter)
+                  .arg(projectAfter ? projectAfter->getEstimatedHours() : 0);
+    }
+    return QString("Employees auto-assigned successfully!\n\n"
+                  "Hours assigned: %1h\n"
+                  "Total allocated: %2h / %3h estimated")
+              .arg(hoursAssigned)
+              .arg(allocatedAfter)
+              .arg(projectAfter ? projectAfter->getEstimatedHours() : 0);
+}
 
-        window->currentCompany->autoAssignEmployeesToProject(projectId);
-            MainWindowDataOperations::refreshAllData(window);
-
-            MainWindowDataOperations::selectProjectRowById(window, projectId);
-
-            const auto* projectAfter = window->currentCompany->getProject(projectId);
-            int allocatedAfter = projectAfter
-                                     ? projectAfter->getAllocatedHours()
-                                     : allocatedBefore;
-            int hoursAssigned = allocatedAfter - allocatedBefore;
-
-        MainWindowDataOperations::autoSave(window);
-        
-        QString message = QString("Employees auto-assigned successfully!\n\n"
-                                  "Hours assigned: %1h\n"
-                                  "Total allocated: %2h / %3h estimated")
-                              .arg(hoursAssigned)
-                              .arg(allocatedAfter)
-                              .arg(projectAfter ? projectAfter->getEstimatedHours() : 0);
-        
-        QStringList warnings;
-        if (projectAfter) {
-            int estimated = projectAfter->getEstimatedHours();
-            if (allocatedAfter < estimated && hoursAssigned == 0) {
-                QString projectPhase = projectAfter->getPhase();
-                QString expectedRole = TaskAssignmentHelper::getExpectedRoleForProjectPhase(projectPhase);
-                warnings.append(
-                    QString("No employees were assigned.\n"
-                            "Possible reasons:\n"
-                            "- No employees match project phase: %1\n"
-                            "- Expected role: %2\n"
-                            "- No employees have available hours\n"
-                            "- Employee salaries exceed project budget")
-                        .arg(projectPhase)
-                        .arg(expectedRole));
-            } else if (allocatedAfter < estimated) {
-                int remaining = estimated - allocatedAfter;
-                warnings.append(
-                    QString("Not all hours were assigned.\n"
-                            "Remaining: %1h / %2h estimated\n"
-                            "Possible reasons:\n"
-                            "- Not enough employees match project phase\n"
-                            "- Employees have insufficient available hours\n"
-                            "- Project budget constraints")
-                        .arg(remaining)
-                        .arg(estimated));
-            }
+static QStringList buildWarnings(const Project* projectAfter, int allocatedAfter, int hoursAssigned) {
+    QStringList warnings;
+    if (projectAfter) {
+        int estimated = projectAfter->getEstimatedHours();
+        if (allocatedAfter < estimated && hoursAssigned == 0) {
+            QString projectPhase = projectAfter->getPhase();
+            QString expectedRole = TaskAssignmentHelper::getExpectedRoleForProjectPhase(projectPhase);
+            warnings.append(
+                QString("No employees were assigned.\n"
+                        "Possible reasons:\n"
+                        "- No employees match project phase: %1\n"
+                        "- Expected role: %2\n"
+                        "- No employees have available hours\n"
+                        "- Employee salaries exceed project budget")
+                    .arg(projectPhase)
+                    .arg(expectedRole));
+        } else if (allocatedAfter < estimated) {
+            int remaining = estimated - allocatedAfter;
+            warnings.append(
+                QString("Not all hours were assigned.\n"
+                        "Remaining: %1h / %2h estimated\n"
+                        "Possible reasons:\n"
+                        "- Not enough employees match project phase\n"
+                        "- Employees have insufficient available hours\n"
+                        "- Project budget constraints")
+                    .arg(remaining)
+                    .arg(estimated));
         }
-        
-        if (!warnings.isEmpty()) {
-            message += "\n\n--- Warnings ---\n";
-            for (const auto& warning : warnings) {
-                message += warning + "\n";
-            }
+    }
+    return warnings;
+}
+
+static void handleAutoAssignGenericException(MainWindow* window, const std::exception& e) {
+    QString detailedMessage = QString("Failed to assign employee to task!\n\n"
+                                      "Error details:\n%1\n\n"
+                                      "Please check the input data and try again.")
+                                  .arg(e.what());
+    QMessageBox::warning(window, "Failed to assign employee to task!",
+                         detailedMessage);
+}
+
+static void executeAutoAssignAndShowResult(MainWindow* window, int projectId, const Project* project) {
+    auto allocatedBefore = project->getAllocatedHours();
+
+    window->currentCompany->autoAssignEmployeesToProject(projectId);
+    MainWindowDataOperations::refreshAllData(window);
+
+    MainWindowDataOperations::selectProjectRowById(window, projectId);
+
+    const auto* projectAfter = window->currentCompany->getProject(projectId);
+    int allocatedAfter = projectAfter
+                             ? projectAfter->getAllocatedHours()
+                             : allocatedBefore;
+    int hoursAssigned = allocatedAfter - allocatedBefore;
+
+    MainWindowDataOperations::autoSave(window);
+    
+    QString message = buildSuccessMessage(hoursAssigned, allocatedAfter, projectAfter);
+    
+    QStringList warnings = buildWarnings(projectAfter, allocatedAfter, hoursAssigned);
+    
+    if (!warnings.isEmpty()) {
+        message += "\n\n--- Warnings ---\n";
+        for (const auto& warning : warnings) {
+            message += warning + "\n";
         }
-        
+    }
+    
+    if (hoursAssigned == 0) {
+        QMessageBox::warning(window, "Auto-assignment Failed", message);
+    } else {
         QMessageBox::information(window, "Success", message);
+    }
+}
+
+void ProjectOperations::autoAssignToProject(MainWindow* window, int projectId) {
+    if (!MainWindowValidationHelper::checkCompanyAndHandleError(window, "auto-assigning employees")) return;
+    
+    projectId = validateAndGetProjectId(window, projectId);
+    if (projectId < 0) {
+        return;
+    }
+    
+    const auto* project = validateProjectAndTasks(window, projectId);
+    if (!project) {
+        return;
+    }
+    
+    if (!confirmAutoAssign(window, project)) {
+        return;
+    }
+
+    try {
+        executeAutoAssignAndShowResult(window, projectId, project);
     } catch (const CompanyException& e) {
-            handleAutoAssignCompanyException(window, projectId, e);
+        handleAutoAssignCompanyException(window, projectId, e);
     } catch (const EmployeeException& e) {
-            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
-                                              "Error details:\n%1\n\n"
-                                              "Please check the input data and try again.")
-                                          .arg(e.what());
-            QMessageBox::warning(window, "Failed to assign employee to task!",
-                                 detailedMessage);
+        handleAutoAssignGenericException(window, e);
     } catch (const ProjectException& e) {
-            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
-                                              "Error details:\n%1\n\n"
-                                              "Please check the input data and try again.")
-                                          .arg(e.what());
-            QMessageBox::warning(window, "Failed to assign employee to task!",
-                                 detailedMessage);
-        } catch (const TaskException& e) {
-            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
-                                              "Error details:\n%1\n\n"
-                                              "Please check the input data and try again.")
-                                          .arg(e.what());
-            QMessageBox::warning(window, "Failed to assign employee to task!",
-                                 detailedMessage);
-        } catch (const FileManagerException& e) {
-            QString detailedMessage = QString("Failed to assign employee to task!\n\n"
-                                              "Error details:\n%1\n\n"
-                                              "Please check the input data and try again.")
-                                          .arg(e.what());
-            QMessageBox::warning(window, "Failed to assign employee to task!",
-                                 detailedMessage);
-        }
+        handleAutoAssignGenericException(window, e);
+    } catch (const TaskException& e) {
+        handleAutoAssignGenericException(window, e);
+    } catch (const FileManagerException& e) {
+        handleAutoAssignGenericException(window, e);
     }
 }
 
