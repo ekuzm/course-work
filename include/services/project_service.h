@@ -9,7 +9,9 @@
 
 class ProjectService {
    public:
-    static void addTaskToProject(const Company* company, int projectId, const Task& task);
-    static std::vector<Task> getProjectTasks(const Company* company, int projectId);
+    static void addTaskToProject(const Company* company, int projectId,
+                                 const Task& task);
+    static std::vector<Task> getProjectTasks(const Company* company,
+                                             int projectId);
     static void recomputeProjectTotals(const Company* company, int projectId);
 };

@@ -77,8 +77,7 @@ class Company {
 
     void addProject(const Project& project);
     void removeProject(int projectId);
-    // Combined method to reduce method count - returns non-const pointer
-    // Use const_cast<const Project*>(getProject(id)) for const access if needed
+
     Project* getProject(int projectId) const {
         if (std::shared_ptr<Project> result = projects.find(projectId);
             result) {
@@ -89,13 +88,12 @@ class Company {
     std::vector<Project> getAllProjects() const {
         std::vector<Project> projectList;
         auto allProjects = projects.getAll();
-        
-        // Safety check: limit projects to prevent bad_array_new_length
+
         constexpr size_t maxProjects = 100000;
         if (allProjects.size() > maxProjects) {
-            return {};  // Return empty vector if size is invalid
+            return {};
         }
-        
+
         projectList.reserve(std::min(allProjects.size(), maxProjects));
         for (const auto& proj : allProjects) {
             if (proj) {
@@ -139,7 +137,7 @@ class Company {
     void fixTaskAssignmentsToCapacity() {
         getTaskManager().fixTaskAssignmentsToCapacity();
     }
-    // Combined method to reduce method count
+
     void recalculateAllHours() {
         recalculateEmployeeHours();
         recalculateTaskAllocatedHours();
@@ -147,8 +145,7 @@ class Company {
     void autoAssignEmployeesToProject(int projectId) {
         getTaskManager().autoAssignEmployeesToProject(projectId);
     }
-    // Combined method to reduce method count
-    // If taskId is -1, returns project hours; otherwise returns task hours
+
     int getEmployeeHours(int employeeId, int projectId, int taskId = -1) const {
         if (taskId == -1) {
             return taskManager.getEmployeeProjectHours(employeeId, projectId);

@@ -84,11 +84,11 @@ void handleAddEmployeeButtonClick(const AddEmployeeButtonParams& params) {
         MainWindowDataOperations::autoSave(params.window);
         QMessageBox::information(
             &params.dialog, "Success",
-                                 "Employee added successfully!\n\n"
-                                 "Name: " +
-                                     params.nameEdit->text().trimmed() +
+            "Employee added successfully!\n\n"
+            "Name: " +
+                params.nameEdit->text().trimmed() +
                 "\nType: " + params.typeCombo->currentText() + "\nSalary: $" +
-                                     params.salaryEdit->text().trimmed());
+                params.salaryEdit->text().trimmed());
         params.dialog.accept();
     } catch (const CompanyException& e) {
         ExceptionHandler::handleCompanyException(e, &params.dialog,
@@ -136,8 +136,8 @@ void handleEditEmployeeButtonClick(const EditEmployeeButtonParams& params) {
         MainWindowDataOperations::refreshAllData(params.window);
         MainWindowDataOperations::autoSave(params.window);
         QMessageBox::information(&params.dialog, "Success",
-            "Employee updated successfully!\n\n"
-            "Name: " +
+                                 "Employee updated successfully!\n\n"
+                                 "Name: " +
                                      params.nameEdit->text().trimmed() +
                                      "\nType: " + params.currentType +
                                      "\nSalary: $" +
@@ -204,13 +204,13 @@ void handleAddProjectButtonClick(
         window->nextProjectId = window->nextProjectId + 1;
         ProjectParams projectParams{projectId,
                                     projectName,
-            fields.descEdit->toPlainText().trimmed(),
+                                    fields.descEdit->toPlainText().trimmed(),
                                     selectedPhase,
                                     fields.startDate->date(),
                                     fields.endDate->date(),
                                     projectBudget,
                                     clientName,
-            estimatedHours};
+                                    estimatedHours};
         Project project(projectParams);
 
         window->currentCompany->addProject(project);
@@ -220,15 +220,15 @@ void handleAddProjectButtonClick(
         MainWindowDataOperations::refreshAllData(window);
         MainWindowDataOperations::autoSave(window);
         QMessageBox::information(&dialog, "Success",
-            "Project added successfully!\n\n"
-            "Name: " +
-                projectName +
-                "\n"
-                "Phase: " +
-                selectedPhase +
-                "\n"
-                "Budget: $" +
-                QString::number(projectBudget, 'f', 2));
+                                 "Project added successfully!\n\n"
+                                 "Name: " +
+                                     projectName +
+                                     "\n"
+                                     "Phase: " +
+                                     selectedPhase +
+                                     "\n"
+                                     "Budget: $" +
+                                     QString::number(projectBudget, 'f', 2));
         dialog.accept();
     } catch (const CompanyException& e) {
         ExceptionHandler::handleCompanyException(e, &dialog, "add project");
@@ -267,12 +267,12 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 
 void MainWindow::refreshAllData() {
     MainWindowDataOperations::refreshAllData(this);
-            }
+}
 
 static void filterTasksByPendingId(int pendingTaskSelectionId,
                                    std::vector<Task>& tasks) {
     if (pendingTaskSelectionId <= 0) return;
-    
+
     std::vector<Task> filtered;
     for (const auto& task : tasks) {
         if (task.getId() == pendingTaskSelectionId) {
@@ -321,7 +321,7 @@ static void showAutoAssignSuccessMessage(MainWindow* mainWindow,
                                          int allocatedBefore) {
     MainWindowDataOperations::refreshAllData(mainWindow);
     MainWindowDataOperations::selectProjectRowById(mainWindow, projectId);
-    
+
     const auto* projectAfter = company->getProject(projectId);
     int allocatedAfter =
         projectAfter ? projectAfter->getAllocatedHours() : allocatedBefore;
@@ -338,8 +338,8 @@ static void showAutoAssignSuccessMessage(MainWindow* mainWindow,
             .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
 }
 
-static void handleAutoAssignException(MainWindow* mainWindow, const Company* company,
-                                      int projectId,
+static void handleAutoAssignException(MainWindow* mainWindow,
+                                      const Company* company, int projectId,
                                       const CompanyException& e) {
     QString errorMsg = e.what();
     if (errorMsg.contains("ASSIGNED_HOURS:")) {
@@ -364,7 +364,7 @@ static void handleAutoAssignException(MainWindow* mainWindow, const Company* com
                 .arg(projectAfter ? projectAfter->getEstimatedHours() : 0));
     } else {
         QMessageBox::warning(mainWindow, "Error",
-            QString("Failed to auto-assign: ") + e.what());
+                             QString("Failed to auto-assign: ") + e.what());
     }
 }
 

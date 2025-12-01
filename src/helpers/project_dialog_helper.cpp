@@ -8,7 +8,7 @@
 #include "utils/consts.h"
 
 void ProjectDialogHelper::createProjectDialogFields(
-    QDialog& /*dialog*/, QFormLayout* form, ProjectDialogFields& fields) {
+    QDialog&, QFormLayout* form, ProjectDialogFields& fields) {
     fields.projectTypeCombo = new QComboBox();
     fields.projectTypeCombo->addItems({"Web Development", "Mobile App",
                                        "Software Product", "Consulting",

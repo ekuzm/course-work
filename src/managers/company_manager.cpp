@@ -30,30 +30,30 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
     QString companyName = params.nameEdit->text().trimmed();
     QString companyIndustry = params.industryEdit->text().trimmed();
     QString companyLocation = params.locationEdit->text().trimmed();
-        bool conversionSuccess = false;
+    bool conversionSuccess = false;
     int foundedYear =
         params.yearEdit->text().trimmed().toInt(&conversionSuccess);
 
     QWidget* parent = &params.dialog;
 
-        if (companyName.isEmpty()) {
+    if (companyName.isEmpty()) {
         QMessageBox::warning(parent, "Validation Error",
                              "Company name cannot be empty!\n\n"
                              "Please enter a name for the company.");
         return;
-        }
-        if (companyIndustry.isEmpty()) {
+    }
+    if (companyIndustry.isEmpty()) {
         QMessageBox::warning(parent, "Validation Error",
                              "Industry cannot be empty!\n\n"
                              "Please enter the industry of the company.");
         return;
-        }
-        if (companyLocation.isEmpty()) {
+    }
+    if (companyLocation.isEmpty()) {
         QMessageBox::warning(parent, "Validation Error",
                              "Location cannot be empty!\n\n"
                              "Please enter the location of the company.");
         return;
-        }
+    }
     if (!conversionSuccess) {
         QMessageBox::warning(parent, "Validation Error",
                              "Invalid year format!\n\n"
@@ -116,8 +116,7 @@ static void handleCreateCompanyButtonClick(const CreateCompanyParams& params) {
 void CompanyManager::initializeCompany(
     std::span<Company* const> companies,
     [[maybe_unused]] Company*& currentCompany, const int& currentCompanyIndex,
-    [[maybe_unused]] int& /*nextEmployeeId*/,
-    [[maybe_unused]] int& /*nextProjectId*/, QComboBox* selector) {
+    [[maybe_unused]] int&, [[maybe_unused]] int&, QComboBox* selector) {
     if (!companies.empty() && selector != nullptr) {
         selector->clear();
         for (const auto* company : companies) {
@@ -175,7 +174,7 @@ void CompanyManager::addCompany(std::vector<Company*>& companies,
                 nameEdit, industryEdit, locationEdit,   yearEdit,
                 selector};
             handleCreateCompanyButtonClick(params);
-    });
+        });
 
     dialog.exec();
 }

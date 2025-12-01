@@ -40,8 +40,7 @@ static bool isEmployeeAffordable(const std::shared_ptr<Employee>& employee,
         return false;
     }
     if (projectEstimatedHours > 0) {
-        auto employeeHourlyRate =
-            calculateHourlyRate(employee->getSalary());
+        auto employeeHourlyRate = calculateHourlyRate(employee->getSalary());
         if (employeeHourlyRate > maxAffordableHourlyRate) {
             return false;
         }
@@ -146,8 +145,7 @@ static void processTaskAssignment(const ProcessTaskAssignmentParams& params) {
                           params.projectEstimatedHours, params.employeeUsage);
 
     std::ranges::sort(pool, [&params](const auto& a, const auto& b) {
-        return compareEmployeesForSorting(
-                   a, b, params.employeeUsage) < 0;
+        return compareEmployeesForSorting(a, b, params.employeeUsage) < 0;
     });
 
     for (const auto& poolEmployee : pool) {
@@ -157,8 +155,7 @@ static void processTaskAssignment(const ProcessTaskAssignmentParams& params) {
             getTrulyAvailableHours(poolEmployee, params.employeeUsage);
         if (trulyAvailable <= 0) continue;
 
-        double hourlyRate =
-            calculateHourlyRate(poolEmployee->getSalary());
+        double hourlyRate = calculateHourlyRate(poolEmployee->getSalary());
         int maxAffordableHours = 0;
         if (hourlyRate > 0 && params.remainingBudget > 0) {
             maxAffordableHours =
@@ -169,8 +166,8 @@ static void processTaskAssignment(const ProcessTaskAssignmentParams& params) {
                                               maxAffordableHours);
         if (toAssign <= 0) continue;
 
-        double assignmentCost = calculateEmployeeCost(
-            poolEmployee->getSalary(), toAssign);
+        double assignmentCost =
+            calculateEmployeeCost(poolEmployee->getSalary(), toAssign);
         if (double totalCost = params.currentEmployeeCosts + assignmentCost;
             totalCost > params.projectBudget) {
             continue;
@@ -252,8 +249,8 @@ static void calculateTaskAllocatedHoursForProject(
             if (const auto assignmentIt = taskAssignments.find(key);
                 assignmentIt != taskAssignments.end()) {
                 totalAllocated += assignmentIt->second;
-                taskCost += calculateEmployeeCost(
-                    employee->getSalary(), assignmentIt->second);
+                taskCost += calculateEmployeeCost(employee->getSalary(),
+                                                  assignmentIt->second);
             }
         }
         task.setAllocatedHours(totalAllocated);
@@ -399,8 +396,8 @@ void TaskAssignmentManager::assignEmployeeToTask(int employeeId, int projectId,
                         .arg(toAssign));
             }
 
-            auto assignmentCost = calculateEmployeeCost(
-                employee->getSalary(), toAssign);
+            auto assignmentCost =
+                calculateEmployeeCost(employee->getSalary(), toAssign);
 
             if (assignmentCost >
                 projPtr->getBudget() - projPtr->getEmployeeCosts()) {
@@ -594,8 +591,7 @@ void TaskAssignmentManager::scaleEmployeeTaskAssignments(int employeeId,
     if (!employee) return;
 
     int capacity = employee->getWeeklyHoursCapacity();
-    adjustAssignmentsToCapacity(assignmentsData, capacity,
-                                               totalScaledHours);
+    adjustAssignmentsToCapacity(assignmentsData, capacity, totalScaledHours);
     applyScaledAssignments(assignmentsData, employeeId, taskAssignments);
 }
 

@@ -2,7 +2,8 @@
 
 #include "exceptions/exceptions.h"
 
-void ProjectService::addTaskToProject(const Company* company, int projectId, const Task& task) {
+void ProjectService::addTaskToProject(const Company* company, int projectId,
+                                      const Task& task) {
     if (!company) {
         throw CompanyException("Company cannot be null");
     }
@@ -13,14 +14,16 @@ void ProjectService::addTaskToProject(const Company* company, int projectId, con
     project->addTask(task);
 }
 
-std::vector<Task> ProjectService::getProjectTasks(const Company* company, int projectId) {
+std::vector<Task> ProjectService::getProjectTasks(const Company* company,
+                                                  int projectId) {
     if (!company) {
         return {};
     }
     return company->getProjectTasks(projectId);
 }
 
-void ProjectService::recomputeProjectTotals(const Company* company, int projectId) {
+void ProjectService::recomputeProjectTotals(const Company* company,
+                                            int projectId) {
     if (!company) {
         return;
     }

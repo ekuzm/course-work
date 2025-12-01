@@ -210,8 +210,8 @@ static void collectTaskAssignmentsForEmployee(
     for (int projectId : assignedProjects) {
         auto tasks = company->getProjectTasks(projectId);
         for (const auto& task : tasks) {
-            int hours = company->getEmployeeHours(employeeId, projectId,
-                                                      task.getId());
+            int hours =
+                company->getEmployeeHours(employeeId, projectId, task.getId());
             if (hours > 0) {
                 savedTaskAssignments.push_back(std::make_tuple(
                     employeeId, projectId, task.getId(), hours));

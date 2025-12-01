@@ -51,7 +51,7 @@ void MainWindowUIBuilder::setupMainUI(MainWindow* window) {
 
     QObject::connect(
         window->companyUI.selector,
-                     QOverload<int>::of(&QComboBox::currentIndexChanged),
+        QOverload<int>::of(&QComboBox::currentIndexChanged),
         [window](int) { CompanyOperations::switchCompany(window); });
     QObject::connect(window->companyUI.addBtn, &QPushButton::clicked,
                      [window]() { CompanyOperations::addCompany(window); });
@@ -105,7 +105,7 @@ void MainWindowUIBuilder::setupEmployeeTab(MainWindow* window,
 
     window->employeeUI.table = new QTableWidget();
     auto headers = QStringList{"ID",   "Name",    "Department", "Salary",
-                           "Type", "Project", "Actions"};
+                               "Type", "Project", "Actions"};
     auto columnWidths = QList<int>{110, 280, 250, 210, 250, 590, 10};
     MainWindowUIHelper::setupTableWidget(window->employeeUI.table, headers,
                                          columnWidths);
@@ -144,7 +144,7 @@ void MainWindowUIBuilder::setupProjectTab(MainWindow* window,
     window->projectUI.table = new QTableWidget();
     auto headers =
         QStringList{"ID",         "Name",         "Phase",  "Budget",
-                           "Est. Hours", "Alloc. Hours", "Client", "Actions"};
+                    "Est. Hours", "Alloc. Hours", "Client", "Actions"};
     auto columnWidths = QList<int>{110, 340, 240, 220, 240, 240, 300, 100};
     MainWindowUIHelper::setupTableWidget(window->projectUI.table, headers,
                                          columnWidths);
@@ -217,7 +217,7 @@ void MainWindowUIBuilder::setupProjectTab(MainWindow* window,
     window->projectUI.tasksTable->horizontalHeader()->setSectionResizeMode(
         QHeaderView::Stretch);
     window->projectUI.tasksTable->setSizePolicy(QSizePolicy::Expanding,
-                                             QSizePolicy::Expanding);
+                                                QSizePolicy::Expanding);
     window->projectUI.tasksTable->verticalHeader()->setDefaultSectionSize(56);
 
     projectDetailLayout->addWidget(window->projectUI.tasksTable);

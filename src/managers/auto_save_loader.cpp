@@ -14,7 +14,7 @@ static bool hasEmployeeTaskAssignments(const Company& company, int employeeId,
     return std::ranges::any_of(
         tasks, [&company, employeeId, projectId](const auto& task) {
             return company.getEmployeeHours(employeeId, projectId,
-                                                task.getId()) > 0;
+                                            task.getId()) > 0;
         });
 }
 
@@ -159,7 +159,8 @@ void AutoSaveLoader::clearDataFiles(const QString& dataDirPath) {
     projectsDir.setNameFilters(filters);
     projectsDir.setFilter(QDir::Files);
     for (const QString& fileName : projectsDir.entryList()) {
-        if (fileName.startsWith("tasks_") || fileName.startsWith("task_assignments_")) {
+        if (fileName.startsWith("tasks_") ||
+            fileName.startsWith("task_assignments_")) {
             continue;
         }
         projectsDir.remove(fileName);

@@ -59,16 +59,16 @@ QWidget* ActionButtonHelper::createEmployeeActionButtons(
 
     connectAction(editAction, table, mainWindow, rowIndex, [mainWindow]() {
         EmployeeOperations::editEmployee(mainWindow);
-                     });
+    });
     connectAction(fireAction, table, mainWindow, rowIndex, [mainWindow]() {
         EmployeeOperations::fireEmployee(mainWindow);
-                     });
+    });
     connectAction(deleteAction, table, mainWindow, rowIndex, [mainWindow]() {
         EmployeeOperations::deleteEmployee(mainWindow);
-                     });
+    });
     connectAction(historyAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::viewEmployeeHistory(mainWindow);
-                     });
+    });
 
     return actionContainer;
 }
@@ -97,26 +97,26 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
     actionMenu->addSeparator();
     const auto* moreAction = actionMenu->addAction("📋 More");
 
-    QObject::connect(actionMenu, &QMenu::aboutToShow, actionMenu,
-                     [actionButton, actionMenu]() {
-                         const int buttonWidth = actionButton->width();
-                         actionMenu->setMinimumWidth(buttonWidth);
-                         const QPoint pos = actionButton->mapToGlobal(
-                             QPoint(0, actionButton->height()));
-                         QTimer::singleShot(0, actionMenu, [actionMenu, pos]() {
-                             actionMenu->move(pos);
-                         });
-                         QTimer::singleShot(10, actionMenu, [actionMenu, pos]() {
-                             if (actionMenu->isVisible()) {
-                                 actionMenu->move(pos);
-                             }
-                         });
-                         QTimer::singleShot(30, actionMenu, [actionMenu, pos]() {
-                             if (actionMenu->isVisible()) {
-                                 actionMenu->move(pos);
-                             }
-                         });
-                     });
+    QObject::connect(
+        actionMenu, &QMenu::aboutToShow, actionMenu,
+        [actionButton, actionMenu]() {
+            const int buttonWidth = actionButton->width();
+            actionMenu->setMinimumWidth(buttonWidth);
+            const QPoint pos =
+                actionButton->mapToGlobal(QPoint(0, actionButton->height()));
+            QTimer::singleShot(0, actionMenu,
+                               [actionMenu, pos]() { actionMenu->move(pos); });
+            QTimer::singleShot(10, actionMenu, [actionMenu, pos]() {
+                if (actionMenu->isVisible()) {
+                    actionMenu->move(pos);
+                }
+            });
+            QTimer::singleShot(30, actionMenu, [actionMenu, pos]() {
+                if (actionMenu->isVisible()) {
+                    actionMenu->move(pos);
+                }
+            });
+        });
 
     actionButton->setMenu(actionMenu);
 
@@ -125,13 +125,13 @@ QWidget* ActionButtonHelper::createProjectActionButtons(QTableWidget* table,
 
     connectAction(editAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::editProject(mainWindow);
-                     });
+    });
     connectAction(deleteAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::deleteProject(mainWindow);
-                     });
+    });
     connectAction(moreAction, table, mainWindow, rowIndex, [mainWindow]() {
         ProjectOperations::openProjectDetails(mainWindow);
-                     });
+    });
 
     return actionContainer;
 }
