@@ -355,22 +355,15 @@ static QPushButton* setupEmployeeDialogCommonFields(
     auto* okButton = new QPushButton("OK");
     params.mainLayout->addWidget(okButton);
 
-    if (params.managerProjectLabel)
-        params.managerProjectLabel->setVisible(true);
-    if (params.managerProject) params.managerProject->setVisible(true);
-    if (params.devLanguageLabel) params.devLanguageLabel->setVisible(true);
-    if (params.devLanguage) params.devLanguage->setVisible(true);
-    if (params.devExperienceLabel) params.devExperienceLabel->setVisible(true);
-    if (params.devExperience) params.devExperience->setVisible(true);
-    if (params.designerToolLabel) params.designerToolLabel->setVisible(true);
-    if (params.designerTool) params.designerTool->setVisible(true);
-    if (params.designerProjectsLabel)
-        params.designerProjectsLabel->setVisible(true);
-    if (params.designerProjects) params.designerProjects->setVisible(true);
-    if (params.qaTestTypeLabel) params.qaTestTypeLabel->setVisible(true);
-    if (params.qaTestType) params.qaTestType->setVisible(true);
-    if (params.qaBugsLabel) params.qaBugsLabel->setVisible(true);
-    if (params.qaBugs) params.qaBugs->setVisible(true);
+    EmployeeDialogHelper::SetAllFieldsVisibleParams visibleParams{
+        params.managerProjectLabel, params.managerProject,
+        params.devLanguageLabel,    params.devLanguage,
+        params.devExperienceLabel, params.devExperience,
+        params.designerToolLabel,  params.designerTool,
+        params.designerProjectsLabel, params.designerProjects,
+        params.qaTestTypeLabel,    params.qaTestType,
+        params.qaBugsLabel,         params.qaBugs};
+    EmployeeDialogHelper::setAllFieldsVisible(visibleParams);
 
     params.dialog.adjustSize();
     QSize maxSize = params.dialog.size();
