@@ -73,7 +73,7 @@ cmake --build .
 
 Анализ качества кода доступен на SonarCloud:
 
-🔗 [Перейти к анализу на SonarCloud]((https://sonarcloud.io/project/overview?id=ekuzm_course-work))
+🔗 [Перейти к анализу на SonarCloud](https://sonarcloud.io/project/overview?id=ekuzm_course-work)
 
 ## Структура проекта
 
